@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPE & Person Detection</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00d4ff;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #16213e;
+            border: none;
+            color: #eee;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .tab:hover, .tab.active {
+            background: #0f3460;
+        }
+
+        .panel {
+            display: none;
+            background: #16213e;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        .upload-area {
+            border: 2px dashed #0f3460;
+            padding: 40px;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #00d4ff;
+        }
+
+        .upload-area input {
+            display: none;
+        }
+
+        .btn {
+            background: #00d4ff;
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            background: #00b8e6;
+        }
+
+        .btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .results {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .result-image {
+            background: #0f3460;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .result-image img {
+            max-width: 100%;
+            border-radius: 5px;
+        }
+
+        .result-info {
+            background: #0f3460;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .result-info h3 {
+            margin-bottom: 15px;
+            color: #00d4ff;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #16213e;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-ok {
+            color: #00ff88;
+        }
+
+        .status-warning {
+            color: #ff6b6b;
+        }
+
+        .preview-img {
+            max-width: 300px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loader.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #0f3460;
+            border-top: 4px solid #00d4ff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .face-list {
+            margin-top: 10px;
+        }
+
+        .face-item {
+            background: #16213e;
+            padding: 8px 15px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+
+        .register-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .register-form input[type="text"] {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #0f3460;
+            color: #eee;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .message.success {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+        }
+
+        .message.error {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PPE & Person Detection</h1>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showPanel('detect')">Detect PPE</button>
+            <button class="tab" onclick="showPanel('register')">Register Face</button>
+            <button class="tab" onclick="showPanel('faces')">Known Faces</button>
+        </div>
+
+        <!-- Detection Panel -->
+        <div id="detect-panel" class="panel active">
+            <div class="upload-area" onclick="document.getElementById('detect-file').click()">
+                <p>Click or drag an image here to upload</p>
+                <input type="file" id="detect-file" accept="image/*" onchange="previewImage(this, 'detect-preview')">
+            </div>
+            <img id="detect-preview" class="preview-img" style="display:none">
+            <button class="btn" id="detect-btn" onclick="detectPPE()" disabled>Analyze Image</button>
+
+            <div class="loader" id="detect-loader">
+                <div class="spinner"></div>
+                <p>Analyzing image...</p>
+            </div>
+
+            <div class="results" id="results" style="display:none">
+                <div class="result-image">
+                    <h3>Annotated Image</h3>
+                    <img id="result-img" src="" alt="Result">
+                </div>
+                <div class="result-info">
+                    <h3>Detection Summary</h3>
+                    <div id="summary-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Face Panel -->
+        <div id="register-panel" class="panel">
+            <h3>Register a New Face</h3>
+            <p style="margin: 15px 0; color: #888;">Upload a clear photo of a person's face to register them for identification.</p>
+
+            <div class="upload-area" onclick="document.getElementById('register-file').click()">
+                <p>Click or drag an image here to upload</p>
+                <input type="file" id="register-file" accept="image/*" onchange="previewImage(this, 'register-preview')">
+            </div>
+            <img id="register-preview" class="preview-img" style="display:none">
+
+            <div class="register-form">
+                <input type="text" id="person-name" placeholder="Enter person's name">
+                <button class="btn" onclick="registerFace()">Register Face</button>
+            </div>
+
+            <div id="register-message"></div>
+        </div>
+
+        <!-- Known Faces Panel -->
+        <div id="faces-panel" class="panel">
+            <h3>Registered Faces</h3>
+            <p style="margin: 15px 0; color: #888;">These are the people that can be identified.</p>
+            <div id="faces-list" class="face-list">
+                <p>Loading...</p>
+            </div>
+            <button class="btn" onclick="loadKnownFaces()">Refresh List</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        function showPanel(name) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(name + '-panel').classList.add('active');
+            event.target.classList.add('active');
+
+            if (name === 'faces') {
+                loadKnownFaces();
+            }
+        }
+
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
+
+                // Enable detect button
+                if (previewId === 'detect-preview') {
+                    document.getElementById('detect-btn').disabled = false;
+                }
+            }
+        }
+
+        async function detectPPE() {
+            const fileInput = document.getElementById('detect-file');
+            if (!fileInput.files[0]) {
+                alert('Please select an image first');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            document.getElementById('detect-loader').classList.add('active');
+            document.getElementById('results').style.display = 'none';
+
+            try {
+                const response = await fetch(API_URL + '/detect', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('result-img').src = data.image;
+                    document.getElementById('summary-content').innerHTML = formatSummary(data.detections);
+                    document.getElementById('results').style.display = 'grid';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error connecting to server: ' + error.message);
+            }
+
+            document.getElementById('detect-loader').classList.remove('active');
+        }
+
+        function formatSummary(detections) {
+            const s = detections.summary;
+            const compliant = s.safety_compliant;
+
+            let html = `
+                <div class="info-item">
+                    <span>Safety Compliant:</span>
+                    <span class="${compliant ? 'status-ok' : 'status-warning'}">${compliant ? 'YES' : 'NO'}</span>
+                </div>
+                <div class="info-item">
+                    <span>Faces Detected:</span>
+                    <span>${s.faces_detected}</span>
+                </div>
+                <div class="info-item">
+                    <span>PPE Items Detected:</span>
+                    <span class="status-ok">${s.total_ppe_items}</span>
+                </div>
+                <div class="info-item">
+                    <span>Violations:</span>
+                    <span class="${s.total_violations > 0 ? 'status-warning' : 'status-ok'}">${s.total_violations}</span>
+                </div>
+            `;
+
+            // Show PPE detected breakdown
+            const ppeDetected = s.ppe_detected || {};
+            if (Object.keys(ppeDetected).length > 0) {
+                html += `<div class="info-item" style="flex-direction: column; align-items: flex-start;">
+                    <span style="margin-bottom: 5px;">PPE Breakdown:</span>
+                    <div style="padding-left: 10px;">`;
+                for (const [item, count] of Object.entries(ppeDetected)) {
+                    html += `<div class="status-ok">${item}: ${count}</div>`;
+                }
+                html += `</div></div>`;
+            }
+
+            // Show violations breakdown
+            const violations = s.violations || {};
+            if (Object.keys(violations).length > 0) {
+                html += `<div class="info-item" style="flex-direction: column; align-items: flex-start;">
+                    <span style="margin-bottom: 5px;">Missing PPE:</span>
+                    <div style="padding-left: 10px;">`;
+                for (const [item, count] of Object.entries(violations)) {
+                    html += `<div class="status-warning">${item}: ${count}</div>`;
+                }
+                html += `</div></div>`;
+            }
+
+            if (s.identified_persons && s.identified_persons.length > 0) {
+                html += `
+                    <div class="info-item">
+                        <span>Identified:</span>
+                        <span>${s.identified_persons.join(', ')}</span>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        async function registerFace() {
+            const fileInput = document.getElementById('register-file');
+            const nameInput = document.getElementById('person-name');
+
+            if (!fileInput.files[0]) {
+                showMessage('register-message', 'Please select an image', 'error');
+                return;
+            }
+
+            if (!nameInput.value.trim()) {
+                showMessage('register-message', 'Please enter a name', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(API_URL + '/register-face?name=' + encodeURIComponent(nameInput.value), {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('register-message', data.message, 'success');
+                    nameInput.value = '';
+                    fileInput.value = '';
+                    document.getElementById('register-preview').style.display = 'none';
+                } else {
+                    showMessage('register-message', data.message || data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('register-message', 'Error: ' + error.message, 'error');
+            }
+        }
+
+        async function loadKnownFaces() {
+            const listDiv = document.getElementById('faces-list');
+
+            try {
+                const response = await fetch(API_URL + '/known-faces');
+                const data = await response.json();
+
+                if (data.faces.length === 0) {
+                    listDiv.innerHTML = '<p style="color: #888;">No faces registered yet.</p>';
+                } else {
+                    listDiv.innerHTML = data.faces.map(name =>
+                        `<div class="face-item">${name}</div>`
+                    ).join('');
+                }
+            } catch (error) {
+                listDiv.innerHTML = '<p style="color: #ff6b6b;">Error loading faces</p>';
+            }
+        }
+
+        function showMessage(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `<div class="message ${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
