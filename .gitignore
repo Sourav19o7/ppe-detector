@@ -90,3 +90,8 @@ next-env.d.ts
 
 # Claude Code
 .claude/
+
+
+dataset/*
+
+downloaded_dataset/*
