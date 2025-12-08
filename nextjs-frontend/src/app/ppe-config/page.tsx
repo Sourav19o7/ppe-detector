@@ -149,15 +149,15 @@ export default function PPEConfigPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">PPE Configuration</h1>
-            <p className="text-gray-500 mt-1">Configure required PPE items for detection</p>
+            <h1 className="text-2xl font-bold text-stone-900">PPE Configuration</h1>
+            <p className="text-stone-500 mt-1">Configure required PPE items for detection</p>
           </div>
           <div className="flex items-center gap-3">
             {editMode ? (
               <>
                 <button
                   onClick={handleCancel}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                  className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200"
                 >
                   <X className="w-4 h-4" />
                   Cancel
@@ -187,14 +187,14 @@ export default function PPEConfigPage() {
         <Card title="Configuration Scope" description="Select mine and zone for PPE requirements">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mine</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Mine</label>
               <select
                 value={selectedMine}
                 onChange={(e) => {
                   setSelectedMine(e.target.value);
                   setSelectedZone('all');
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 {mines.map((mine) => (
                   <option key={mine.id} value={mine.id}>{mine.name}</option>
@@ -202,11 +202,11 @@ export default function PPEConfigPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1">Zone</label>
               <select
                 value={selectedZone}
                 onChange={(e) => setSelectedZone(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Zones (Mine-wide)</option>
                 {zones.map((zone) => (
@@ -267,36 +267,36 @@ export default function PPEConfigPage() {
         >
           {/* Add Item Form */}
           {showAddItem && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-xl">
-              <h3 className="font-medium text-gray-900 mb-4">Add New PPE Item</h3>
+            <div className="mb-6 p-4 bg-stone-50 rounded-xl">
+              <h3 className="font-medium text-stone-900 mb-4">Add New PPE Item</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Name</label>
                   <input
                     type="text"
                     value={newItem.name}
                     onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g., Safety Goggles"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Description</label>
                   <input
                     type="text"
                     value={newItem.description}
                     onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder="Purpose of this PPE"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Icon (emoji)</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Icon (emoji)</label>
                   <input
                     type="text"
                     value={newItem.icon}
                     onChange={(e) => setNewItem({ ...newItem, icon: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     placeholder="🥽"
                   />
                 </div>
@@ -304,7 +304,7 @@ export default function PPEConfigPage() {
               <div className="flex justify-end gap-2 mt-4">
                 <button
                   onClick={() => setShowAddItem(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  className="px-4 py-2 bg-stone-200 text-stone-700 rounded-lg hover:bg-stone-300"
                 >
                   Cancel
                 </button>
@@ -320,7 +320,7 @@ export default function PPEConfigPage() {
 
           {/* Required Items */}
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+            <h3 className="text-sm font-medium text-stone-700 mb-3 flex items-center gap-2">
               <CheckCircle className="w-4 h-4 text-green-500" />
               Required Items
             </h3>
@@ -336,8 +336,8 @@ export default function PPEConfigPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{item.icon}</span>
                     <div>
-                      <p className="font-medium text-gray-900">{item.name}</p>
-                      <p className="text-xs text-gray-500">{item.description}</p>
+                      <p className="font-medium text-stone-900">{item.name}</p>
+                      <p className="text-xs text-stone-500">{item.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -364,7 +364,7 @@ export default function PPEConfigPage() {
           {/* Optional Items */}
           {ppeConfig.filter(p => !p.required).length > 0 && (
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+              <h3 className="text-sm font-medium text-stone-700 mb-3 flex items-center gap-2">
                 <Settings className="w-4 h-4 text-yellow-500" />
                 Optional Items
               </h3>
@@ -372,20 +372,20 @@ export default function PPEConfigPage() {
                 {ppeConfig.filter(p => !p.required).map((item) => (
                   <div
                     key={item.id}
-                    className={`flex items-center justify-between p-4 rounded-xl border-2 border-gray-200 bg-gray-50 ${
-                      editMode ? 'cursor-pointer hover:bg-gray-100' : ''
+                    className={`flex items-center justify-between p-4 rounded-xl border-2 border-stone-200 bg-stone-50 ${
+                      editMode ? 'cursor-pointer hover:bg-stone-100' : ''
                     }`}
                     onClick={() => handleToggleRequired(item.id)}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl opacity-70">{item.icon}</span>
                       <div>
-                        <p className="font-medium text-gray-900">{item.name}</p>
-                        <p className="text-xs text-gray-500">{item.description}</p>
+                        <p className="font-medium text-stone-900">{item.name}</p>
+                        <p className="text-xs text-stone-500">{item.description}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                      <span className="px-2 py-1 bg-stone-100 text-stone-600 rounded-full text-xs font-medium">
                         Optional
                       </span>
                       {editMode && (
@@ -423,7 +423,7 @@ export default function PPEConfigPage() {
 
         {/* Detection Info */}
         <Card title="Detection Information">
-          <div className="prose prose-sm max-w-none text-gray-600">
+          <div className="prose prose-sm max-w-none text-stone-600">
             <p>
               The PPE detection system uses AI-powered computer vision to identify the following items:
             </p>

@@ -54,22 +54,41 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for frontend
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
-
+# Enable CORS for frontend - allow all origins for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # Must be False when using "*"
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=3600,
 )
+
+
+# Custom exception handler to ensure CORS headers on errors
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request, exc: HTTPException):
+    """Handle HTTP exceptions with CORS headers."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """Handle all exceptions and ensure CORS headers are included."""
+    import traceback
+    print(f"Unhandled exception: {exc}")
+    traceback.print_exc()
+
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
 
 # Initialize detector
 detector = PersonDetector()

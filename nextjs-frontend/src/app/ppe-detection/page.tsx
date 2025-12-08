@@ -74,8 +74,8 @@ export default function PPEDetectionPage() {
       <div className="space-y-6">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">PPE Detection</h1>
-          <p className="text-gray-500 mt-1">Detect personal protective equipment compliance</p>
+          <h1 className="text-2xl font-bold text-stone-800">PPE Detection</h1>
+          <p className="text-stone-500 mt-1">Detect personal protective equipment compliance</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -88,7 +88,7 @@ export default function PPEDetectionPage() {
               {/* Options */}
               <div className="mt-4 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-stone-700 mb-1">
                     Location (optional)
                   </label>
                   <input
@@ -105,9 +105,9 @@ export default function PPEDetectionPage() {
                     type="checkbox"
                     checked={logViolations}
                     onChange={(e) => setLogViolations(e.target.checked)}
-                    className="w-4 h-4 text-[#1a237e] rounded"
+                    className="w-4 h-4 text-orange-600 rounded"
                   />
-                  <span className="text-sm text-gray-700">Log violations to database</span>
+                  <span className="text-sm text-stone-700">Log violations to database</span>
                 </label>
               </div>
 
@@ -115,7 +115,7 @@ export default function PPEDetectionPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={isProcessing}
-                  className="w-full mt-4 py-3 px-4 bg-[#1a237e] text-white rounded-lg font-medium hover:bg-[#283593] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full mt-4 py-3 px-4 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isProcessing ? (
                     <>
@@ -170,7 +170,7 @@ export default function PPEDetectionPage() {
                 {/* PPE Detected */}
                 {result.detections.summary.total_ppe_items > 0 && (
                   <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">PPE Detected:</h4>
+                    <h4 className="text-sm font-medium text-stone-700 mb-2">PPE Detected:</h4>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(result.detections.summary.ppe_detected).map(([item, count]) => (
                         <span key={item} className="badge badge-success flex items-center gap-1">
@@ -185,7 +185,7 @@ export default function PPEDetectionPage() {
                 {/* Violations */}
                 {result.detections.summary.total_violations > 0 && (
                   <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Violations:</h4>
+                    <h4 className="text-sm font-medium text-stone-700 mb-2">Violations:</h4>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(result.detections.summary.violations).map(([item, count]) => (
                         <span key={item} className="badge badge-danger flex items-center gap-1">
@@ -200,7 +200,7 @@ export default function PPEDetectionPage() {
                 {/* Identified Persons */}
                 {result.detections.summary.identified_persons.length > 0 && (
                   <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Identified Persons:</h4>
+                    <h4 className="text-sm font-medium text-stone-700 mb-2">Identified Persons:</h4>
                     <div className="flex flex-wrap gap-2">
                       {result.detections.summary.identified_persons.map((person) => (
                         <span key={person} className="badge badge-info">
@@ -219,7 +219,7 @@ export default function PPEDetectionPage() {
 
                 <button
                   onClick={resetForm}
-                  className="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2 px-4 bg-stone-100 text-stone-700 rounded-lg font-medium hover:bg-stone-200 transition-colors flex items-center justify-center gap-2"
                 >
                   <RefreshCw size={18} />
                   New Detection
@@ -232,23 +232,23 @@ export default function PPEDetectionPage() {
           <Card title="Today's Violations" description="Recent PPE violations detected">
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {recentViolations.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No violations today</p>
+                <p className="text-center text-stone-500 py-8">No violations today</p>
               ) : (
                 recentViolations.map((violation) => (
                   <div
                     key={violation.id}
-                    className="p-4 bg-gray-50 rounded-lg"
+                    className="p-4 bg-stone-50 rounded-lg"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-stone-800">
                           {violation.employee_name || 'Unknown Person'}
                         </p>
                         {violation.location && (
-                          <p className="text-xs text-gray-500">{violation.location}</p>
+                          <p className="text-xs text-stone-500">{violation.location}</p>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 text-gray-500 text-sm">
+                      <div className="flex items-center gap-1 text-stone-500 text-sm">
                         <Clock size={14} />
                         {formatTime(violation.timestamp)}
                       </div>
@@ -267,7 +267,7 @@ export default function PPEDetectionPage() {
 
             <button
               onClick={loadRecentViolations}
-              className="w-full mt-4 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+              className="w-full mt-4 py-2 px-4 bg-stone-100 text-stone-700 rounded-lg font-medium hover:bg-stone-200 transition-colors flex items-center justify-center gap-2"
             >
               <RefreshCw size={18} />
               Refresh

@@ -265,37 +265,37 @@ export default function AlertsPage() {
       case 'system':
         return <Bell className="text-blue-500" size={20} />;
       default:
-        return <Bell className="text-gray-500" size={20} />;
+        return <Bell className="text-stone-500" size={20} />;
     }
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-100 text-red-700 border-red-200';
       case 'high':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
+        return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
       case 'low':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-blue-100 text-blue-700 border-blue-200';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return 'bg-stone-100 text-stone-700 border-stone-200';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-700';
       case 'acknowledged':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-700';
       case 'resolved':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-700';
       case 'dismissed':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-stone-100 text-stone-700';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-stone-100 text-stone-700';
     }
   };
 
@@ -316,14 +316,14 @@ export default function AlertsPage() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Alerts & Notifications</h1>
-            <p className="text-gray-500 mt-1">Monitor and manage safety alerts across all mines</p>
+            <h1 className="text-2xl font-bold text-stone-800">Alerts & Notifications</h1>
+            <p className="text-stone-500 mt-1">Monitor and manage safety alerts across all mines</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               className={`p-2 rounded-lg transition-colors ${
-                soundEnabled ? 'bg-[#1a237e] text-white' : 'bg-gray-200 text-gray-600'
+                soundEnabled ? 'bg-orange-600 text-white' : 'bg-stone-200 text-stone-600'
               }`}
               title={soundEnabled ? 'Mute Alerts' : 'Unmute Alerts'}
             >
@@ -358,11 +358,11 @@ export default function AlertsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className={stats.critical > 0 ? 'ring-2 ring-red-500 animate-pulse' : ''}>
             <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-lg ${stats.critical > 0 ? 'bg-red-100' : 'bg-[#1a237e]/10'}`}>
-                <AlertCircle className={stats.critical > 0 ? 'text-red-600' : 'text-[#1a237e]'} size={24} />
+              <div className={`p-3 rounded-lg ${stats.critical > 0 ? 'bg-red-100' : 'bg-orange-100'}`}>
+                <AlertCircle className={stats.critical > 0 ? 'text-red-600' : 'text-orange-600'} size={24} />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Critical Alerts</p>
+                <p className="text-sm text-stone-500">Critical Alerts</p>
                 <p className={`text-2xl font-bold ${stats.critical > 0 ? 'text-red-600' : ''}`}>
                   {stats.critical}
                 </p>
@@ -375,8 +375,8 @@ export default function AlertsPage() {
                 <AlertTriangle className="text-orange-600" size={24} />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Active Alerts</p>
-                <p className="text-2xl font-bold">{stats.active}</p>
+                <p className="text-sm text-stone-500">Active Alerts</p>
+                <p className="text-2xl font-bold text-stone-800">{stats.active}</p>
               </div>
             </div>
           </Card>
@@ -386,8 +386,8 @@ export default function AlertsPage() {
                 <Clock className="text-yellow-600" size={24} />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Acknowledged</p>
-                <p className="text-2xl font-bold">{stats.acknowledged}</p>
+                <p className="text-sm text-stone-500">Acknowledged</p>
+                <p className="text-2xl font-bold text-stone-800">{stats.acknowledged}</p>
               </div>
             </div>
           </Card>
@@ -397,8 +397,8 @@ export default function AlertsPage() {
                 <CheckCircle className="text-green-600" size={24} />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Total Alerts</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-sm text-stone-500">Total Alerts</p>
+                <p className="text-2xl font-bold text-stone-800">{stats.total}</p>
               </div>
             </div>
           </Card>
@@ -408,7 +408,7 @@ export default function AlertsPage() {
         <Card>
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={20} />
               <input
                 type="text"
                 value={search}
@@ -465,8 +465,8 @@ export default function AlertsPage() {
           ) : filteredAlerts.length === 0 ? (
             <Card>
               <div className="text-center py-12">
-                <Bell className="mx-auto text-gray-300 mb-4" size={48} />
-                <p className="text-gray-500">No alerts found</p>
+                <Bell className="mx-auto text-stone-300 mb-4" size={48} />
+                <p className="text-stone-500">No alerts found</p>
               </div>
             </Card>
           ) : (
@@ -491,7 +491,7 @@ export default function AlertsPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-gray-900">{alert.title}</h3>
+                          <h3 className="font-semibold text-stone-800">{alert.title}</h3>
                           <span className={`px-2 py-0.5 text-xs rounded-full capitalize ${getSeverityColor(alert.severity)}`}>
                             {alert.severity}
                           </span>
@@ -499,8 +499,8 @@ export default function AlertsPage() {
                             {alert.status}
                           </span>
                         </div>
-                        <p className="text-gray-600 mt-1 text-sm">{alert.message}</p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                        <p className="text-stone-600 mt-1 text-sm">{alert.message}</p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-stone-500">
                           <span className="flex items-center gap-1">
                             <Clock size={14} />
                             {getTimeAgo(alert.created_at)}
@@ -517,13 +517,13 @@ export default function AlertsPage() {
                               {alert.mine_name}
                             </span>
                           )}
-                          <span className="text-gray-400">via {alert.source}</span>
+                          <span className="text-stone-400">via {alert.source}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={() => viewAlertDetails(alert)}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          className="p-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                           title="View Details"
                         >
                           <Eye size={18} />
@@ -531,7 +531,7 @@ export default function AlertsPage() {
                         {alert.status === 'active' && (
                           <button
                             onClick={() => handleAcknowledge(alert)}
-                            className="px-3 py-1.5 bg-[#1a237e] text-white text-sm rounded-lg hover:bg-[#283593] transition-colors"
+                            className="px-3 py-1.5 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
                           >
                             Acknowledge
                           </button>
@@ -547,7 +547,7 @@ export default function AlertsPage() {
                         {(alert.status === 'active' || alert.status === 'acknowledged') && alert.type !== 'sos' && alert.type !== 'emergency' && (
                           <button
                             onClick={() => handleDismiss(alert)}
-                            className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-stone-400 hover:bg-stone-100 rounded-lg transition-colors"
                             title="Dismiss"
                           >
                             <X size={18} />
@@ -596,18 +596,18 @@ export default function AlertsPage() {
 
             <div className="p-6 space-y-4">
               <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-1">Message</h4>
-                <p className="text-gray-900">{selectedAlert.message}</p>
+                <h4 className="text-sm font-medium text-stone-500 mb-1">Message</h4>
+                <p className="text-stone-800">{selectedAlert.message}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Source</h4>
-                  <p className="text-gray-900">{selectedAlert.source}</p>
+                  <h4 className="text-sm font-medium text-stone-500 mb-1">Source</h4>
+                  <p className="text-stone-800">{selectedAlert.source}</p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500 mb-1">Created</h4>
-                  <p className="text-gray-900">{formatDateTime(selectedAlert.created_at)}</p>
+                  <h4 className="text-sm font-medium text-stone-500 mb-1">Created</h4>
+                  <p className="text-stone-800">{formatDateTime(selectedAlert.created_at)}</p>
                 </div>
               </div>
 
@@ -615,46 +615,46 @@ export default function AlertsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   {selectedAlert.worker_name && (
                     <div>
-                      <h4 className="text-sm font-medium text-gray-500 mb-1">Worker</h4>
-                      <p className="text-gray-900">{selectedAlert.worker_name} ({selectedAlert.worker_id})</p>
+                      <h4 className="text-sm font-medium text-stone-500 mb-1">Worker</h4>
+                      <p className="text-stone-800">{selectedAlert.worker_name} ({selectedAlert.worker_id})</p>
                     </div>
                   )}
                   {selectedAlert.mine_name && (
                     <div>
-                      <h4 className="text-sm font-medium text-gray-500 mb-1">Mine</h4>
-                      <p className="text-gray-900">{selectedAlert.mine_name}</p>
+                      <h4 className="text-sm font-medium text-stone-500 mb-1">Mine</h4>
+                      <p className="text-stone-800">{selectedAlert.mine_name}</p>
                     </div>
                   )}
                 </div>
               )}
 
               {selectedAlert.acknowledged_at && (
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-200">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Acknowledged</h4>
-                    <p className="text-gray-900">{formatDateTime(selectedAlert.acknowledged_at)}</p>
+                    <h4 className="text-sm font-medium text-stone-500 mb-1">Acknowledged</h4>
+                    <p className="text-stone-800">{formatDateTime(selectedAlert.acknowledged_at)}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Acknowledged By</h4>
-                    <p className="text-gray-900">{selectedAlert.acknowledged_by}</p>
+                    <h4 className="text-sm font-medium text-stone-500 mb-1">Acknowledged By</h4>
+                    <p className="text-stone-800">{selectedAlert.acknowledged_by}</p>
                   </div>
                 </div>
               )}
 
               {selectedAlert.resolved_at && (
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-stone-200">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Resolved</h4>
-                    <p className="text-gray-900">{formatDateTime(selectedAlert.resolved_at)}</p>
+                    <h4 className="text-sm font-medium text-stone-500 mb-1">Resolved</h4>
+                    <p className="text-stone-800">{formatDateTime(selectedAlert.resolved_at)}</p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Resolved By</h4>
-                    <p className="text-gray-900">{selectedAlert.resolved_by}</p>
+                    <h4 className="text-sm font-medium text-stone-500 mb-1">Resolved By</h4>
+                    <p className="text-stone-800">{selectedAlert.resolved_by}</p>
                   </div>
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4 border-t">
+              <div className="flex gap-3 pt-4 border-t border-stone-200">
                 <button
                   onClick={() => setShowDetailModal(false)}
                   className="flex-1 btn btn-secondary"

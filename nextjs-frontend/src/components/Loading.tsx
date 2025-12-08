@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
 interface LoadingProps {
   size?: 'sm' | 'md' | 'lg';
@@ -7,15 +8,15 @@ interface LoadingProps {
 
 export function Spinner({ size = 'md', className }: LoadingProps) {
   const sizeClasses = {
-    sm: 'w-4 h-4 border-2',
-    md: 'w-8 h-8 border-3',
-    lg: 'w-12 h-12 border-4',
+    sm: 'w-5 h-5',
+    md: 'w-8 h-8',
+    lg: 'w-12 h-12',
   };
 
   return (
-    <div
+    <Loader2
       className={cn(
-        'border-gray-200 border-t-[#1e3a5f] rounded-full animate-spin',
+        'text-orange-500 animate-spin',
         sizeClasses[size],
         className
       )}
@@ -25,10 +26,10 @@ export function Spinner({ size = 'md', className }: LoadingProps) {
 
 export function LoadingOverlay({ message = 'Loading...' }: { message?: string }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-8 flex flex-col items-center gap-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white border border-stone-200 rounded-2xl p-8 flex flex-col items-center gap-4 shadow-2xl">
         <Spinner size="lg" />
-        <p className="text-gray-600 font-medium">{message}</p>
+        <p className="text-stone-600 font-medium">{message}</p>
       </div>
     </div>
   );

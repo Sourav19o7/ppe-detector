@@ -97,8 +97,8 @@ export default function ReportsPage() {
       <div className="space-y-6">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="text-gray-500 mt-1">Generate attendance and violation reports</p>
+          <h1 className="text-2xl font-bold text-stone-800">Reports</h1>
+          <p className="text-stone-500 mt-1">Generate attendance and violation reports</p>
         </div>
 
         {/* Report Configuration */}
@@ -110,8 +110,8 @@ export default function ReportsPage() {
                 onClick={() => setReportType('attendance')}
                 className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
                   reportType === 'attendance'
-                    ? 'bg-[#1e3a5f] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                 }`}
               >
                 <Users size={20} />
@@ -121,8 +121,8 @@ export default function ReportsPage() {
                 onClick={() => setReportType('violations')}
                 className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
                   reportType === 'violations'
-                    ? 'bg-[#1e3a5f] text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                 }`}
               >
                 <AlertTriangle size={20} />
@@ -133,7 +133,7 @@ export default function ReportsPage() {
             {/* Date Range */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-stone-700 mb-1">
                   Start Date
                 </label>
                 <input
@@ -144,7 +144,7 @@ export default function ReportsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-stone-700 mb-1">
                   End Date
                 </label>
                 <input
@@ -158,7 +158,7 @@ export default function ReportsPage() {
 
             {/* Employee Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-stone-700 mb-1">
                 Employee (Optional)
               </label>
               <select
@@ -179,7 +179,7 @@ export default function ReportsPage() {
             <button
               onClick={generateReport}
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-[#1e3a5f] text-white rounded-lg font-medium hover:bg-[#2d4a6f] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3 px-4 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isLoading ? (
                 <>
@@ -245,7 +245,7 @@ export default function ReportsPage() {
                 <tbody>
                   {attendanceReport.records.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center text-gray-500 py-8">
+                      <td colSpan={5} className="text-center text-stone-500 py-8">
                         No records found
                       </td>
                     </tr>
@@ -255,7 +255,7 @@ export default function ReportsPage() {
                         <td>
                           <div>
                             <p className="font-medium">{record.employee_name}</p>
-                            <p className="text-xs text-gray-500">{record.employee_id}</p>
+                            <p className="text-xs text-stone-500">{record.employee_id}</p>
                           </div>
                         </td>
                         <td>{formatDate(record.date)}</td>
@@ -323,7 +323,7 @@ export default function ReportsPage() {
             {/* Violation Breakdown */}
             {Object.keys(violationReport.summary.violation_breakdown).length > 0 && (
               <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Breakdown by Type:</h4>
+                <h4 className="text-sm font-medium text-stone-700 mb-2">Breakdown by Type:</h4>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(violationReport.summary.violation_breakdown).map(([type, count]) => (
                     <span key={type} className="badge badge-danger">
@@ -348,7 +348,7 @@ export default function ReportsPage() {
                 <tbody>
                   {violationReport.violations.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center text-gray-500 py-8">
+                      <td colSpan={4} className="text-center text-stone-500 py-8">
                         No violations found
                       </td>
                     </tr>
@@ -360,15 +360,15 @@ export default function ReportsPage() {
                             {record.employee_name || 'Unknown'}
                           </p>
                           {record.employee_id && (
-                            <p className="text-xs text-gray-500">{record.employee_id}</p>
+                            <p className="text-xs text-stone-500">{record.employee_id}</p>
                           )}
                         </td>
                         <td>
-                          <div className="flex items-center gap-1 text-gray-600">
+                          <div className="flex items-center gap-1 text-stone-600">
                             <Calendar size={14} />
                             {formatDate(record.timestamp)}
                           </div>
-                          <div className="flex items-center gap-1 text-gray-500 text-sm">
+                          <div className="flex items-center gap-1 text-stone-500 text-sm">
                             <Clock size={12} />
                             {formatTime(record.timestamp)}
                           </div>
@@ -382,7 +382,7 @@ export default function ReportsPage() {
                             ))}
                           </div>
                         </td>
-                        <td className="text-gray-600">{record.location || '-'}</td>
+                        <td className="text-stone-600">{record.location || '-'}</td>
                       </tr>
                     ))
                   )}

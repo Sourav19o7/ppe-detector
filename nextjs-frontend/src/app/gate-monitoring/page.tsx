@@ -44,6 +44,19 @@ export default function GateMonitoringPage() {
     success: boolean;
     message: string;
     entry?: GateEntry;
+    image?: string;
+    detections?: {
+      ppe: Array<{ label: string; confidence: number; is_violation: boolean }>;
+      faces: Array<{ name: string | null; confidence: number }>;
+      violations: Array<{ label: string }>;
+      summary: {
+        ppe_detected: Record<string, number>;
+        violations: Record<string, number>;
+        total_violations: number;
+        identified_persons: string[];
+        safety_compliant: boolean;
+      };
+    };
   } | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -129,12 +142,18 @@ export default function GateMonitoringPage() {
           audioRef.current.play();
         }
 
+        const identifiedPerson = result.detections?.summary?.identified_persons?.[0];
+
         setDetectionResult({
           success: true,
           message: result.violations?.length > 0
-            ? `Entry recorded with violations: ${result.violations.join(', ')}`
-            : 'Entry recorded successfully - PPE compliant',
+            ? `Entry DENIED - ${result.violations.length} violation(s) detected`
+            : identifiedPerson
+              ? `Entry APPROVED - ${identifiedPerson} identified, PPE compliant`
+              : 'Entry APPROVED - PPE compliant (Worker not identified)',
           entry: result.entry,
+          image: result.image,
+          detections: result.detections,
         });
 
         // Refresh data
@@ -177,13 +196,13 @@ export default function GateMonitoringPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gate Monitoring</h1>
-            <p className="text-gray-500 mt-1">Real-time PPE detection and worker tracking</p>
+            <h1 className="text-2xl font-bold text-stone-800">Gate Monitoring</h1>
+            <p className="text-stone-500 mt-1">Real-time PPE detection and worker tracking</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className={`p-2 rounded-lg ${soundEnabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}
+              className={`p-2 rounded-lg ${soundEnabled ? 'bg-blue-100 text-blue-600' : 'bg-stone-100 text-stone-400'}`}
               title={soundEnabled ? 'Sound On' : 'Sound Off'}
             >
               {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
@@ -191,7 +210,7 @@ export default function GateMonitoringPage() {
             <button
               onClick={() => setAutoRefresh(!autoRefresh)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-                autoRefresh ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                autoRefresh ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-600'
               }`}
             >
               {autoRefresh ? <Play size={16} /> : <Pause size={16} />}
@@ -211,14 +230,14 @@ export default function GateMonitoringPage() {
         {/* Filters */}
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mine</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Mine</label>
             <select
               value={selectedMine}
               onChange={(e) => {
                 setSelectedMine(e.target.value);
                 setSelectedGate('');
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {mines.map((mine) => (
                 <option key={mine.id} value={mine.id}>{mine.name}</option>
@@ -226,11 +245,11 @@ export default function GateMonitoringPage() {
             </select>
           </div>
           <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Gate</label>
+            <label className="block text-sm font-medium text-stone-700 mb-1">Gate</label>
             <select
               value={selectedGate}
               onChange={(e) => setSelectedGate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">All Gates</option>
               {gates.map((gate) => (
@@ -304,21 +323,91 @@ export default function GateMonitoringPage() {
                 </div>
               )}
               {detectionResult && (
-                <div className={`p-4 rounded-lg ${
-                  detectionResult.success
-                    ? 'bg-green-50 border border-green-200'
-                    : 'bg-red-50 border border-red-200'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    {detectionResult.success ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-red-600" />
-                    )}
-                    <span className={detectionResult.success ? 'text-green-700' : 'text-red-700'}>
-                      {detectionResult.message}
-                    </span>
+                <div className="space-y-4">
+                  {/* Status Message */}
+                  <div className={`p-4 rounded-lg ${
+                    detectionResult.detections?.summary?.total_violations === 0
+                      ? 'bg-green-50 border border-green-200'
+                      : 'bg-red-50 border border-red-200'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      {detectionResult.detections?.summary?.total_violations === 0 ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-600" />
+                      )}
+                      <span className={detectionResult.detections?.summary?.total_violations === 0 ? 'text-green-700 font-medium' : 'text-red-700 font-medium'}>
+                        {detectionResult.message}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Annotated Image with Bounding Boxes */}
+                  {detectionResult.image && (
+                    <div className="border rounded-lg overflow-hidden">
+                      <img
+                        src={detectionResult.image}
+                        alt="Detection Result"
+                        className="w-full max-h-[400px] object-contain bg-stone-900"
+                      />
+                    </div>
+                  )}
+
+                  {/* Detection Details */}
+                  {detectionResult.detections && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Identified Person */}
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <h4 className="text-sm font-medium text-blue-800 mb-2">Identified Person</h4>
+                        {detectionResult.detections.summary?.identified_persons?.length > 0 ? (
+                          <p className="text-blue-700 font-semibold">
+                            {detectionResult.detections.summary.identified_persons.join(', ')}
+                          </p>
+                        ) : (
+                          <p className="text-blue-600 text-sm">No registered worker identified</p>
+                        )}
+                        <p className="text-xs text-blue-500 mt-1">
+                          Faces detected: {detectionResult.detections.faces?.length || 0}
+                        </p>
+                      </div>
+
+                      {/* PPE Detected */}
+                      <div className="p-3 bg-green-50 rounded-lg">
+                        <h4 className="text-sm font-medium text-green-800 mb-2">PPE Detected</h4>
+                        <div className="flex flex-wrap gap-1">
+                          {detectionResult.detections.summary?.ppe_detected &&
+                            Object.entries(detectionResult.detections.summary.ppe_detected).map(([item, count]) => (
+                              <span key={item} className="px-2 py-0.5 bg-green-200 text-green-800 rounded text-xs">
+                                {item} ({count})
+                              </span>
+                            ))
+                          }
+                          {(!detectionResult.detections.summary?.ppe_detected ||
+                            Object.keys(detectionResult.detections.summary.ppe_detected).length === 0) && (
+                            <span className="text-green-600 text-sm">No PPE items detected</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Violations */}
+                      <div className="p-3 bg-red-50 rounded-lg">
+                        <h4 className="text-sm font-medium text-red-800 mb-2">Violations</h4>
+                        <div className="flex flex-wrap gap-1">
+                          {detectionResult.detections.summary?.violations &&
+                            Object.entries(detectionResult.detections.summary.violations).map(([item, count]) => (
+                              <span key={item} className="px-2 py-0.5 bg-red-200 text-red-800 rounded text-xs">
+                                {item} ({count})
+                              </span>
+                            ))
+                          }
+                          {(!detectionResult.detections.summary?.violations ||
+                            Object.keys(detectionResult.detections.summary.violations).length === 0) && (
+                            <span className="text-green-600 text-sm">No violations</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -339,7 +428,7 @@ export default function GateMonitoringPage() {
           title="Live Gate Entries"
           description={`${liveData?.shift_name || 'Current Shift'} (${liveData?.shift_start || ''} - ${liveData?.shift_end || ''})`}
           action={
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-stone-500">
               <Clock className="w-4 h-4" />
               <span>Updated: {new Date().toLocaleTimeString()}</span>
             </div>
@@ -352,34 +441,34 @@ export default function GateMonitoringPage() {
           ) : error ? (
             <div className="text-center py-12 text-red-500">{error}</div>
           ) : !liveData?.entries?.length ? (
-            <div className="text-center py-12 text-gray-500">
-              <DoorOpen className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <div className="text-center py-12 text-stone-500">
+              <DoorOpen className="w-12 h-12 mx-auto mb-4 text-stone-400" />
               <p>No entries recorded this shift</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Worker</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Gate</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">PPE Status</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Time</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <tr className="border-b border-stone-100">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Worker</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Gate</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Type</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Status</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">PPE Status</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Time</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {liveData.entries.map((entry) => (
-                    <tr key={entry.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <tr key={entry.id} className="border-b border-stone-50 hover:bg-stone-50">
                       <td className="py-3 px-4">
                         <div>
-                          <p className="font-medium text-gray-900">{entry.worker_name || 'Unknown'}</p>
-                          <p className="text-xs text-gray-500">{entry.employee_id || '-'}</p>
+                          <p className="font-medium text-stone-800">{entry.worker_name || 'Unknown'}</p>
+                          <p className="text-xs text-stone-500">{entry.employee_id || '-'}</p>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
+                      <td className="py-3 px-4 text-sm text-stone-600">
                         {entry.gate_name || '-'}
                       </td>
                       <td className="py-3 px-4">
@@ -409,7 +498,7 @@ export default function GateMonitoringPage() {
                             ? 'bg-yellow-100 text-yellow-700'
                             : entry.status === 'denied'
                             ? 'bg-red-100 text-red-700'
-                            : 'bg-gray-100 text-gray-700'
+                            : 'bg-stone-100 text-stone-700'
                         }`}>
                           {entry.status === 'approved' && <CheckCircle size={12} />}
                           {entry.status === 'denied' && <XCircle size={12} />}
@@ -432,7 +521,7 @@ export default function GateMonitoringPage() {
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-500">
+                      <td className="py-3 px-4 text-sm text-stone-500">
                         {formatTime(entry.timestamp)}
                       </td>
                       <td className="py-3 px-4">

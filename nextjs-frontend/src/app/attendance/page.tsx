@@ -84,8 +84,8 @@ export default function AttendancePage() {
       <div className="space-y-6">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
-          <p className="text-gray-500 mt-1">Mark attendance using face recognition</p>
+          <h1 className="text-2xl font-bold text-stone-800">Attendance</h1>
+          <p className="text-stone-500 mt-1">Mark attendance using face recognition</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -99,7 +99,7 @@ export default function AttendancePage() {
                   className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
                     mode === 'check_in'
                       ? 'bg-green-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                   }`}
                 >
                   <LogIn size={20} />
@@ -110,7 +110,7 @@ export default function AttendancePage() {
                   className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
                     mode === 'check_out'
                       ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                   }`}
                 >
                   <LogOut size={20} />
@@ -171,7 +171,7 @@ export default function AttendancePage() {
 
                 {result.image && (
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Detection Result:</p>
+                    <p className="text-sm font-medium text-stone-700 mb-2">Detection Result:</p>
                     <img
                       src={result.image}
                       alt="Detection result"
@@ -182,7 +182,7 @@ export default function AttendancePage() {
 
                 <button
                   onClick={resetForm}
-                  className="w-full mt-4 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+                  className="w-full mt-4 py-2 px-4 bg-stone-100 text-stone-700 rounded-lg font-medium hover:bg-stone-200 transition-colors flex items-center justify-center gap-2"
                 >
                   <RefreshCw size={18} />
                   Take Another Photo
@@ -200,9 +200,9 @@ export default function AttendancePage() {
                   <p className="text-2xl font-bold text-green-600">{todayAttendance.present}</p>
                   <p className="text-sm text-green-700">Present</p>
                 </div>
-                <div className="p-4 bg-gray-100 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-gray-600">{todayAttendance.absent}</p>
-                  <p className="text-sm text-gray-700">Absent</p>
+                <div className="p-4 bg-stone-100 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-stone-600">{todayAttendance.absent}</p>
+                  <p className="text-sm text-stone-700">Absent</p>
                 </div>
               </div>
             )}
@@ -214,18 +214,18 @@ export default function AttendancePage() {
                   <Spinner size="md" />
                 </div>
               ) : todayAttendance.attendance.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No attendance recorded today</p>
+                <p className="text-center text-stone-500 py-8">No attendance recorded today</p>
               ) : (
                 todayAttendance.attendance.map((record) => (
                   <div
                     key={record.employee_id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-stone-50 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${record.is_present ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      <div className={`w-2 h-2 rounded-full ${record.is_present ? 'bg-green-500' : 'bg-stone-400'}`} />
                       <div>
-                        <p className="font-medium text-gray-900">{record.employee_name}</p>
-                        <p className="text-xs text-gray-500">ID: {record.employee_id}</p>
+                        <p className="font-medium text-stone-800">{record.employee_name}</p>
+                        <p className="text-xs text-stone-500">ID: {record.employee_id}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -249,7 +249,7 @@ export default function AttendancePage() {
 
             <button
               onClick={loadTodayAttendance}
-              className="w-full mt-4 py-2 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+              className="w-full mt-4 py-2 px-4 bg-stone-100 text-stone-700 rounded-lg font-medium hover:bg-stone-200 transition-colors flex items-center justify-center gap-2"
             >
               <RefreshCw size={18} />
               Refresh

@@ -86,8 +86,8 @@ export default function ShiftInchargeDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Shift Dashboard</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-stone-800">Shift Dashboard</h1>
+          <p className="text-stone-500 mt-1">
             {data.mine_name} • {data.shift_name} ({data.shift_start} - {data.shift_end})
           </p>
         </div>
@@ -151,7 +151,7 @@ export default function ShiftInchargeDashboard() {
             title="Recent Gate Entries"
             description="Real-time worker entries and exits"
             action={
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-stone-500">
                 Last updated: {new Date().toLocaleTimeString()}
               </span>
             }
@@ -159,28 +159,28 @@ export default function ShiftInchargeDashboard() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Worker</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">PPE</th>
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Time</th>
+                  <tr className="border-b border-stone-100">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Worker</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Type</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Status</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">PPE</th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Time</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.recent_entries.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center text-gray-500 py-8">
+                      <td colSpan={5} className="text-center text-stone-500 py-8">
                         No entries this shift yet
                       </td>
                     </tr>
                   ) : (
                     data.recent_entries.map((entry) => (
-                      <tr key={entry.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <tr key={entry.id} className="border-b border-stone-50 hover:bg-stone-50">
                         <td className="py-3 px-4">
                           <div>
-                            <p className="font-medium text-gray-900">{entry.worker_name || 'Unknown'}</p>
-                            <p className="text-xs text-gray-500">{entry.employee_id}</p>
+                            <p className="font-medium text-stone-800">{entry.worker_name || 'Unknown'}</p>
+                            <p className="text-xs text-stone-500">{entry.employee_id}</p>
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -229,7 +229,7 @@ export default function ShiftInchargeDashboard() {
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-500">
+                        <td className="py-3 px-4 text-sm text-stone-500">
                           {formatTime(entry.timestamp)}
                         </td>
                       </tr>
@@ -249,7 +249,7 @@ export default function ShiftInchargeDashboard() {
           >
             <div className="space-y-3">
               {data.active_alerts.length === 0 ? (
-                <div className="text-center py-6 text-gray-500">
+                <div className="text-center py-6 text-stone-500">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
                   <p>No active alerts</p>
                 </div>
@@ -269,16 +269,16 @@ export default function ShiftInchargeDashboard() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-stone-800 truncate">
                           {alert.message}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-stone-500 mt-1">
                           {formatTime(alert.created_at)}
                         </p>
                       </div>
                       <button
                         onClick={() => handleAcknowledgeAlert(alert.id)}
-                        className="text-xs px-2 py-1 bg-white border border-gray-200 rounded hover:bg-gray-50"
+                        className="text-xs px-2 py-1 bg-white border border-stone-200 rounded hover:bg-stone-50"
                       >
                         Acknowledge
                       </button>
@@ -293,10 +293,10 @@ export default function ShiftInchargeDashboard() {
           <Card title="PPE Compliance" className="mt-4">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Compliant</span>
+                <span className="text-sm text-stone-600">Compliant</span>
                 <span className="font-semibold text-green-600">{stats.ppe_compliant}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-stone-200 rounded-full h-2">
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all"
                   style={{
@@ -305,10 +305,10 @@ export default function ShiftInchargeDashboard() {
                 />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Non-Compliant</span>
+                <span className="text-sm text-stone-600">Non-Compliant</span>
                 <span className="font-semibold text-red-600">{stats.ppe_non_compliant}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-stone-200 rounded-full h-2">
                 <div
                   className="bg-red-500 h-2 rounded-full transition-all"
                   style={{

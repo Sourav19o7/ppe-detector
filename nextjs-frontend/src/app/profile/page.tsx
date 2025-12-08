@@ -163,7 +163,7 @@ export default function ProfilePage() {
     return (
       <AppLayout>
         <div className="max-w-2xl mx-auto space-y-6">
-          <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
+          <h1 className="text-2xl font-bold text-stone-800">My Profile</h1>
 
           <Card>
             <div className="flex items-center gap-4 mb-6">
@@ -171,8 +171,8 @@ export default function ProfilePage() {
                 <User className="w-10 h-10 text-blue-600" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{user.full_name}</h2>
-                <p className="text-gray-500">@{user.username}</p>
+                <h2 className="text-xl font-bold text-stone-800">{user.full_name}</h2>
+                <p className="text-stone-500">@{user.username}</p>
                 <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
                   {user.role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </span>
@@ -181,12 +181,12 @@ export default function ProfilePage() {
 
             <div className="space-y-4 border-t pt-4">
               <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-700">{user.email || 'No email set'}</span>
+                <Mail className="w-5 h-5 text-stone-400" />
+                <span className="text-stone-700">{user.email || 'No email set'}</span>
               </div>
               <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-gray-400" />
-                <span className="text-gray-700">{user.phone || 'No phone set'}</span>
+                <Phone className="w-5 h-5 text-stone-400" />
+                <span className="text-stone-700">{user.phone || 'No phone set'}</span>
               </div>
             </div>
 
@@ -207,30 +207,30 @@ export default function ProfilePage() {
                 <h3 className="text-lg font-bold mb-4">Change Password</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Current Password</label>
                     <input
                       type="password"
                       value={passwordForm.currentPassword}
                       onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">New Password</label>
                     <input
                       type="password"
                       value={passwordForm.newPassword}
                       onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Confirm New Password</label>
                     <input
                       type="password"
                       value={passwordForm.confirmPassword}
                       onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   {passwordError && (
@@ -302,7 +302,7 @@ export default function ProfilePage() {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Compliance Score</p>
+              <p className="text-sm text-stone-500">Compliance Score</p>
               <p className={`text-4xl font-bold ${
                 workerData.compliance_score >= 90 ? 'text-green-600' :
                 workerData.compliance_score >= 70 ? 'text-yellow-600' : 'text-red-600'
@@ -321,7 +321,7 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            <div className="w-full bg-stone-200 rounded-full h-3">
               <div
                 className={`h-3 rounded-full ${
                   workerData.compliance_score >= 90 ? 'bg-green-500' :
@@ -332,8 +332,8 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="flex items-center justify-between mt-4 text-sm">
-            <span className="text-gray-500">Total Violations: {workerData.total_violations}</span>
-            <span className="text-gray-500">Member since: {new Date(workerData.created_at).toLocaleDateString()}</span>
+            <span className="text-stone-500">Total Violations: {workerData.total_violations}</span>
+            <span className="text-stone-500">Member since: {new Date(workerData.created_at).toLocaleDateString()}</span>
           </div>
         </Card>
 
@@ -341,30 +341,30 @@ export default function ProfilePage() {
         <Card title="Work Information">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <Building2 className="w-5 h-5 text-gray-400" />
+              <Building2 className="w-5 h-5 text-stone-400" />
               <div>
-                <p className="text-sm text-gray-500">Mine</p>
+                <p className="text-sm text-stone-500">Mine</p>
                 <p className="font-medium">{workerData.mine_name || 'Not Assigned'}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <MapPin className="w-5 h-5 text-gray-400" />
+              <MapPin className="w-5 h-5 text-stone-400" />
               <div>
-                <p className="text-sm text-gray-500">Zone</p>
+                <p className="text-sm text-stone-500">Zone</p>
                 <p className="font-medium">{workerData.zone_name || 'Not Assigned'}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Clock className="w-5 h-5 text-gray-400" />
+              <Clock className="w-5 h-5 text-stone-400" />
               <div>
-                <p className="text-sm text-gray-500">Assigned Shift</p>
+                <p className="text-sm text-stone-500">Assigned Shift</p>
                 <p className="font-medium">{shiftLabels[workerData.assigned_shift] || workerData.assigned_shift}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Camera className="w-5 h-5 text-gray-400" />
+              <Camera className="w-5 h-5 text-stone-400" />
               <div>
-                <p className="text-sm text-gray-500">Face Registration</p>
+                <p className="text-sm text-stone-500">Face Registration</p>
                 <p className={`font-medium ${workerData.face_registered ? 'text-green-600' : 'text-yellow-600'}`}>
                   {workerData.face_registered ? 'Registered' : 'Not Registered'}
                 </p>
@@ -378,22 +378,22 @@ export default function ProfilePage() {
           {isEditing ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Phone Number</label>
                 <input
                   type="tel"
                   value={editForm.phone}
                   onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   placeholder="Enter phone number"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">Emergency Contact</label>
                 <input
                   type="tel"
                   value={editForm.emergency_contact}
                   onChange={(e) => setEditForm({ ...editForm, emergency_contact: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   placeholder="Enter emergency contact"
                 />
               </div>
@@ -408,7 +408,7 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  className="px-4 py-2 bg-stone-200 text-stone-700 rounded-lg hover:bg-stone-300"
                 >
                   Cancel
                 </button>
@@ -417,16 +417,16 @@ export default function ProfilePage() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-gray-400" />
+                <Phone className="w-5 h-5 text-stone-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Phone</p>
+                  <p className="text-sm text-stone-500">Phone</p>
                   <p className="font-medium">{workerData.phone || 'Not set'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-gray-400" />
+                <AlertTriangle className="w-5 h-5 text-stone-400" />
                 <div>
-                  <p className="text-sm text-gray-500">Emergency Contact</p>
+                  <p className="text-sm text-stone-500">Emergency Contact</p>
                   <p className="font-medium">{workerData.emergency_contact || 'Not set'}</p>
                 </div>
               </div>
@@ -441,7 +441,7 @@ export default function ProfilePage() {
               {workerData.badges.map((badge) => {
                 const config = badgeConfig[badge] || {
                   icon: <Award className="w-5 h-5" />,
-                  color: 'bg-gray-100 text-gray-700 border-gray-200',
+                  color: 'bg-stone-100 text-stone-700 border-stone-200',
                   label: badge,
                   description: 'Achievement unlocked'
                 };
@@ -479,30 +479,30 @@ export default function ProfilePage() {
               <h3 className="text-lg font-bold mb-4">Change Password</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Current Password</label>
                   <input
                     type="password"
                     value={passwordForm.currentPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">New Password</label>
                   <input
                     type="password"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Confirm New Password</label>
                   <input
                     type="password"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
                 {passwordError && (

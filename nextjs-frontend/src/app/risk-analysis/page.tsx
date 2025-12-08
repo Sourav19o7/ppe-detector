@@ -82,8 +82,8 @@ export default function RiskAnalysisPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Risk Analysis</h1>
-            <p className="text-gray-500 mt-1">Zone-level risk assessment across all mines</p>
+            <h1 className="text-2xl font-bold text-stone-900">Risk Analysis</h1>
+            <p className="text-stone-500 mt-1">Zone-level risk assessment across all mines</p>
           </div>
           <button
             onClick={loadData}
@@ -191,8 +191,8 @@ export default function RiskAnalysisPage() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <Mountain className="w-5 h-5 text-gray-500" />
-                      <span className="font-medium text-gray-900">{mine.mine_name}</span>
+                      <Mountain className="w-5 h-5 text-stone-500" />
+                      <span className="font-medium text-stone-900">{mine.mine_name}</span>
                     </div>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                       riskLevel === 'high'
@@ -206,15 +206,15 @@ export default function RiskAnalysisPage() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Compliance Rate</span>
+                      <span className="text-stone-500">Compliance Rate</span>
                       <span className="font-medium">{mine.compliance_rate}%</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Violations (Week)</span>
+                      <span className="text-stone-500">Violations (Week)</span>
                       <span className="font-medium">{mine.violations_this_week}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500">Active Alerts</span>
+                      <span className="text-stone-500">Active Alerts</span>
                       <span className={`font-medium ${mine.active_alerts > 0 ? 'text-red-600' : 'text-green-600'}`}>
                         {mine.active_alerts}
                       </span>
@@ -232,11 +232,11 @@ export default function RiskAnalysisPage() {
           description="Detailed risk assessment by zone"
           action={
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
+              <Filter className="w-4 h-4 text-stone-400" />
               <select
                 value={riskFilter}
                 onChange={(e) => setRiskFilter(e.target.value as any)}
-                className="text-sm border border-gray-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-cyan-500"
+                className="text-sm border border-stone-300 rounded-lg px-3 py-1 focus:ring-2 focus:ring-cyan-500"
               >
                 <option value="all">All Risks</option>
                 <option value="high">High Risk</option>
@@ -247,7 +247,7 @@ export default function RiskAnalysisPage() {
           }
         >
           {filteredRiskZones.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-stone-500">
               <Shield className="w-12 h-12 mx-auto mb-4 text-green-500" />
               <p>No zones match the selected risk level</p>
             </div>
@@ -277,9 +277,9 @@ export default function RiskAnalysisPage() {
                             zone.risk_level === 'high' ? 'text-red-500' :
                             zone.risk_level === 'medium' ? 'text-yellow-500' : 'text-green-500'
                           }`} />
-                          <span className="font-medium text-gray-900">{zone.zone_name}</span>
+                          <span className="font-medium text-stone-900">{zone.zone_name}</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{zone.mine_name}</p>
+                        <p className="text-xs text-stone-500 mt-1">{zone.mine_name}</p>
                       </div>
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         zone.risk_level === 'high' ? 'bg-red-100' :
@@ -295,7 +295,7 @@ export default function RiskAnalysisPage() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Violations</span>
+                      <span className="text-stone-500">Violations</span>
                       <span className={`font-bold ${
                         zone.violations > 10 ? 'text-red-600' :
                         zone.violations > 5 ? 'text-yellow-600' : 'text-green-600'
@@ -304,7 +304,7 @@ export default function RiskAnalysisPage() {
                       </span>
                     </div>
                     <div className="mt-2">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-stone-200 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full ${
                             zone.risk_level === 'high' ? 'bg-red-500' :
@@ -334,8 +334,8 @@ export default function RiskAnalysisPage() {
                       <AlertTriangle className="w-5 h-5 text-red-600" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{alert.message}</p>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                      <p className="font-medium text-stone-900">{alert.message}</p>
+                      <div className="flex items-center gap-2 mt-1 text-sm text-stone-500">
                         <span>{alert.mine_name}</span>
                         <span>•</span>
                         <span>{new Date(alert.created_at).toLocaleString()}</span>

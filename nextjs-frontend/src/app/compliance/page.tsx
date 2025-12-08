@@ -107,13 +107,13 @@ export default function CompliancePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Compliance Overview</h1>
-            <p className="text-gray-500 mt-1">{data.mine_name} • Worker compliance analysis</p>
+            <h1 className="text-2xl font-bold text-stone-800">Compliance Overview</h1>
+            <p className="text-stone-500 mt-1">{data.mine_name} • Worker compliance analysis</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={loadData}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200"
             >
               <RefreshCw className="w-4 h-4" />
               Refresh
@@ -188,17 +188,17 @@ export default function CompliancePage() {
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <div className="w-4 h-4 bg-green-500 rounded-full mx-auto mb-2"></div>
               <p className="text-2xl font-bold text-green-600">{highCompliance}</p>
-              <p className="text-sm text-gray-600">High (&gt;90%)</p>
+              <p className="text-sm text-stone-600">High (&gt;90%)</p>
             </div>
             <div className="text-center p-4 bg-yellow-50 rounded-lg">
               <div className="w-4 h-4 bg-yellow-500 rounded-full mx-auto mb-2"></div>
               <p className="text-2xl font-bold text-yellow-600">{mediumCompliance}</p>
-              <p className="text-sm text-gray-600">Medium (70-90%)</p>
+              <p className="text-sm text-stone-600">Medium (70-90%)</p>
             </div>
             <div className="text-center p-4 bg-red-50 rounded-lg">
               <div className="w-4 h-4 bg-red-500 rounded-full mx-auto mb-2"></div>
               <p className="text-2xl font-bold text-red-600">{lowCompliance}</p>
-              <p className="text-sm text-gray-600">Low (&lt;70%)</p>
+              <p className="text-sm text-stone-600">Low (&lt;70%)</p>
             </div>
           </div>
         </Card>
@@ -207,7 +207,7 @@ export default function CompliancePage() {
         <Card title="Violation Types" description="Breakdown of violation categories this week">
           <div className="space-y-4">
             {Object.entries(data.violation_trends).length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-stone-500">
                 <Shield className="w-12 h-12 mx-auto mb-4 text-green-500" />
                 <p>No violations recorded this week!</p>
               </div>
@@ -219,12 +219,12 @@ export default function CompliancePage() {
                   return (
                     <div key={type}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="text-sm font-medium text-stone-700">
                           {type.replace('NO-', 'Missing ')}
                         </span>
-                        <span className="text-sm font-bold text-gray-900">{count}</span>
+                        <span className="text-sm font-bold text-stone-800">{count}</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div className="w-full bg-stone-200 rounded-full h-3">
                         <div
                           className="bg-red-500 h-3 rounded-full"
                           style={{ width: `${(count / maxCount) * 100}%` }}
@@ -246,7 +246,7 @@ export default function CompliancePage() {
               <select
                 value={complianceFilter}
                 onChange={(e) => setComplianceFilter(e.target.value as any)}
-                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5"
+                className="text-sm border border-stone-300 rounded-lg px-3 py-1.5"
               >
                 <option value="all">All Workers</option>
                 <option value="high">High Compliance</option>
@@ -258,13 +258,13 @@ export default function CompliancePage() {
         >
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search workers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -272,31 +272,31 @@ export default function CompliancePage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Worker</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Department</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Shift</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Compliance</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Violations</th>
+                <tr className="border-b border-stone-100">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Worker</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Department</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Shift</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Compliance</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Violations</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredWorkers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-8 text-gray-500">
+                    <td colSpan={5} className="text-center py-8 text-stone-500">
                       No workers found
                     </td>
                   </tr>
                 ) : (
                   filteredWorkers.map((worker) => (
-                    <tr key={worker.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <tr key={worker.id} className="border-b border-stone-50 hover:bg-stone-50">
                       <td className="py-3 px-4">
                         <div>
-                          <p className="font-medium text-gray-900">{worker.name}</p>
-                          <p className="text-xs text-gray-500">{worker.employee_id}</p>
+                          <p className="font-medium text-stone-800">{worker.name}</p>
+                          <p className="text-xs text-stone-500">{worker.employee_id}</p>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
+                      <td className="py-3 px-4 text-sm text-stone-600">
                         {worker.department || '-'}
                       </td>
                       <td className="py-3 px-4">
@@ -304,7 +304,7 @@ export default function CompliancePage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
+                          <div className="w-16 bg-stone-200 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full ${
                                 worker.compliance_score >= 90 ? 'bg-green-500' :
@@ -355,8 +355,8 @@ export default function CompliancePage() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-gray-500" />
-                    <span className="font-medium text-gray-900">{zone.zone_name}</span>
+                    <MapPin className="w-4 h-4 text-stone-500" />
+                    <span className="font-medium text-stone-800">{zone.zone_name}</span>
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
                     zone.risk_level === 'critical' ? 'bg-red-100 text-red-700' :
@@ -367,7 +367,7 @@ export default function CompliancePage() {
                     {zone.risk_level.toUpperCase()}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-sm text-gray-600">
+                <div className="flex items-center justify-between text-sm text-stone-600">
                   <span className="flex items-center gap-1">
                     <Users className="w-4 h-4" />
                     {zone.worker_count} workers

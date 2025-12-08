@@ -115,7 +115,7 @@ export default function MyViolationsPage() {
     if (type.includes('VEST') || type.includes('vest')) return 'bg-orange-100 text-orange-700';
     if (type.includes('GLOVES') || type.includes('gloves')) return 'bg-yellow-100 text-yellow-700';
     if (type.includes('BOOTS') || type.includes('boots')) return 'bg-blue-100 text-blue-700';
-    return 'bg-gray-100 text-gray-700';
+    return 'bg-stone-100 text-stone-700';
   };
 
   return (
@@ -123,8 +123,8 @@ export default function MyViolationsPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Violations</h1>
-          <p className="text-gray-500 mt-1">Track and learn from your PPE compliance history</p>
+          <h1 className="text-2xl font-bold text-stone-800">My Violations</h1>
+          <p className="text-stone-500 mt-1">Track and learn from your PPE compliance history</p>
         </div>
 
         {/* Stats */}
@@ -198,7 +198,7 @@ export default function MyViolationsPage() {
                   {violations.map((violation) => (
                     <div
                       key={violation.id}
-                      className="p-4 bg-gray-50 rounded-xl border border-gray-100"
+                      className="p-4 bg-stone-50 rounded-xl border border-stone-100"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
@@ -216,7 +216,7 @@ export default function MyViolationsPage() {
                                 </span>
                               ))}
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-500">
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-4 h-4" />
                                 {new Date(violation.timestamp).toLocaleDateString()}
@@ -234,7 +234,7 @@ export default function MyViolationsPage() {
                             </div>
                           </div>
                         </div>
-                        <span className="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded-full capitalize">
+                        <span className="text-xs px-2 py-1 bg-stone-200 text-stone-600 rounded-full capitalize">
                           {violation.shift}
                         </span>
                       </div>
@@ -248,18 +248,18 @@ export default function MyViolationsPage() {
                     <button
                       onClick={() => setPage(p => Math.max(0, p - 1))}
                       disabled={page === 0}
-                      className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ChevronLeft className="w-4 h-4" />
                       Previous
                     </button>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-stone-500">
                       Page {page + 1} of {totalPages}
                     </span>
                     <button
                       onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                       disabled={page >= totalPages - 1}
-                      className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-300 rounded-lg hover:bg-stone-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                       <ChevronRight className="w-4 h-4" />
@@ -279,8 +279,8 @@ export default function MyViolationsPage() {
                 <span className="text-2xl">🪖</span>
               </div>
               <div>
-                <p className="font-medium text-gray-900">Safety Helmet</p>
-                <p className="text-xs text-gray-500">Must be worn at all times</p>
+                <p className="font-medium text-stone-800">Safety Helmet</p>
+                <p className="text-xs text-stone-500">Must be worn at all times</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
@@ -288,8 +288,8 @@ export default function MyViolationsPage() {
                 <span className="text-2xl">🦺</span>
               </div>
               <div>
-                <p className="font-medium text-gray-900">High-Vis Vest</p>
-                <p className="text-xs text-gray-500">Required in all work areas</p>
+                <p className="font-medium text-stone-800">High-Vis Vest</p>
+                <p className="text-xs text-stone-500">Required in all work areas</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg">
@@ -297,8 +297,8 @@ export default function MyViolationsPage() {
                 <span className="text-2xl">🧤</span>
               </div>
               <div>
-                <p className="font-medium text-gray-900">Safety Gloves</p>
-                <p className="text-xs text-gray-500">For handling equipment</p>
+                <p className="font-medium text-stone-800">Safety Gloves</p>
+                <p className="text-xs text-stone-500">For handling equipment</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
@@ -306,8 +306,8 @@ export default function MyViolationsPage() {
                 <span className="text-2xl">👢</span>
               </div>
               <div>
-                <p className="font-medium text-gray-900">Safety Boots</p>
-                <p className="text-xs text-gray-500">Steel-toe boots required</p>
+                <p className="font-medium text-stone-800">Safety Boots</p>
+                <p className="text-xs text-stone-500">Steel-toe boots required</p>
               </div>
             </div>
           </div>

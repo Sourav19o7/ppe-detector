@@ -62,7 +62,14 @@ class PersonDetector:
 
         if FACE_RECOGNITION_AVAILABLE:
             print("Loading face recognition model...")
-            self.mtcnn = MTCNN(keep_all=True, device=self.device)
+            # MTCNN with lower thresholds for better detection
+            self.mtcnn = MTCNN(
+                keep_all=True,
+                device=self.device,
+                thresholds=[0.5, 0.6, 0.6],  # Lower thresholds (default: [0.6, 0.7, 0.7])
+                min_face_size=20,  # Detect smaller faces
+                post_process=True  # Apply post-processing
+            )
             self.facenet = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
             self.known_faces = self._load_known_faces()
         else:
@@ -112,33 +119,81 @@ class PersonDetector:
             pickle.dump(self.known_faces, f)
 
     def get_face_embedding(self, image: Image.Image) -> np.ndarray | None:
-        """Extract face embedding from image."""
+        """Extract face embedding from image using MTCNN."""
         if not FACE_RECOGNITION_AVAILABLE:
             return None
 
-        faces = self.mtcnn(image)
-        if faces is None or len(faces) == 0:
-            return None
+        try:
+            # Try with lower threshold
+            faces = self.mtcnn(image)
+            if faces is not None and len(faces) > 0:
+                face = faces[0].unsqueeze(0).to(self.device)
+                with torch.no_grad():
+                    embedding = self.facenet(face)
+                return embedding.cpu().numpy()[0]
+        except Exception as e:
+            print(f"MTCNN face detection error: {e}")
 
-        face = faces[0].unsqueeze(0).to(self.device)
-        with torch.no_grad():
-            embedding = self.facenet(face)
-        return embedding.cpu().numpy()[0]
+        return None
 
     def register_face(self, name: str, image_bytes: bytes) -> bool:
-        """Register a new face for recognition."""
+        """Register a new face for recognition with fallback detection."""
         if not FACE_RECOGNITION_AVAILABLE:
             return False
 
-        image = Image.open(BytesIO(image_bytes)).convert("RGB")
-        embedding = self.get_face_embedding(image)
+        try:
+            image = Image.open(BytesIO(image_bytes)).convert("RGB")
 
-        if embedding is None:
+            # Preprocess image - ensure good size and quality
+            width, height = image.size
+            max_size = 1024
+            if width > max_size or height > max_size:
+                ratio = min(max_size / width, max_size / height)
+                new_size = (int(width * ratio), int(height * ratio))
+                image = image.resize(new_size, Image.Resampling.LANCZOS)
+
+            # Try MTCNN first
+            embedding = self.get_face_embedding(image)
+
+            # If MTCNN fails, try using YOLO face detector to crop face
+            if embedding is None:
+                print("MTCNN failed, trying YOLO face detection...")
+                face_results = self.face_model(image, conf=0.3, verbose=False)[0]
+
+                if len(face_results.boxes) > 0:
+                    # Get the first detected face
+                    box = face_results.boxes[0]
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+
+                    # Add padding around face
+                    padding = 30
+                    x1 = max(0, x1 - padding)
+                    y1 = max(0, y1 - padding)
+                    x2 = min(image.width, x2 + padding)
+                    y2 = min(image.height, y2 + padding)
+
+                    face_crop = image.crop((x1, y1, x2, y2))
+
+                    # Try MTCNN on cropped face
+                    embedding = self.get_face_embedding(face_crop)
+
+                    if embedding is not None:
+                        print(f"Successfully extracted embedding using YOLO + MTCNN")
+
+            if embedding is None:
+                print(f"Failed to detect face in image for {name}")
+                return False
+
+            self.known_faces[name] = embedding
+            self._save_known_faces()
+            print(f"Successfully registered face for {name}")
+            return True
+
+        except Exception as e:
+            print(f"Error registering face: {e}")
+            import traceback
+            traceback.print_exc()
             return False
-
-        self.known_faces[name] = embedding
-        self._save_known_faces()
-        return True
 
     def get_known_faces(self) -> list:
         """Return list of registered face names."""

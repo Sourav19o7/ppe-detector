@@ -68,8 +68,8 @@ export default function ManagerDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Manager Dashboard</h1>
-        <p className="text-gray-500 mt-1">{data.mine_name} • Operations Overview</p>
+        <h1 className="text-2xl font-bold text-stone-800">Manager Dashboard</h1>
+        <p className="text-stone-500 mt-1">{data.mine_name} • Operations Overview</p>
       </div>
 
       {/* Stats Grid */}
@@ -116,7 +116,7 @@ export default function ManagerDashboard() {
             >
               <div className="flex items-center gap-3 mb-3">
                 {shiftIcons[shift]}
-                <span className="font-semibold text-gray-900 capitalize">
+                <span className="font-semibold text-stone-800 capitalize">
                   {shift} Shift
                 </span>
               </div>
@@ -126,9 +126,9 @@ export default function ManagerDashboard() {
                 }`}>
                   {rate}%
                 </span>
-                <span className="text-gray-500 text-sm mb-1">compliance</span>
+                <span className="text-stone-500 text-sm mb-1">compliance</span>
               </div>
-              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+              <div className="mt-3 w-full bg-stone-200 rounded-full h-2">
                 <div
                   className={`h-2 rounded-full ${
                     rate >= 95 ? 'bg-green-500' : rate >= 85 ? 'bg-yellow-500' : 'bg-red-500'
@@ -147,28 +147,28 @@ export default function ManagerDashboard() {
         <Card title="Top Compliant Workers" description="Best performing workers">
           <div className="space-y-3">
             {data.top_compliant_workers.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No data available</p>
+              <p className="text-stone-500 text-center py-4">No data available</p>
             ) : (
               data.top_compliant_workers.map((worker, index) => (
                 <div
                   key={worker.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-stone-50 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
                       index === 0
                         ? 'bg-yellow-500'
                         : index === 1
-                        ? 'bg-gray-400'
+                        ? 'bg-stone-400'
                         : index === 2
                         ? 'bg-orange-400'
-                        : 'bg-gray-300'
+                        : 'bg-stone-300'
                     }`}>
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{worker.name}</p>
-                      <p className="text-xs text-gray-500">ID: {worker.employee_id}</p>
+                      <p className="font-medium text-stone-800">{worker.name}</p>
+                      <p className="text-xs text-stone-500">ID: {worker.employee_id}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -194,8 +194,8 @@ export default function ManagerDashboard() {
                   <Users className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Active Today</p>
-                  <p className="font-semibold text-gray-900">{data.overview.active_workers_today} workers</p>
+                  <p className="text-sm text-stone-600">Active Today</p>
+                  <p className="font-semibold text-stone-800">{data.overview.active_workers_today} workers</p>
                 </div>
               </div>
               <span className="text-2xl font-bold text-green-600">
@@ -205,14 +205,14 @@ export default function ManagerDashboard() {
               </span>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-stone-50 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <Users className="w-5 h-5 text-gray-600" />
+                <div className="w-10 h-10 bg-stone-200 rounded-lg flex items-center justify-center">
+                  <Users className="w-5 h-5 text-stone-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Absent Today</p>
-                  <p className="font-semibold text-gray-900">
+                  <p className="text-sm text-stone-600">Absent Today</p>
+                  <p className="font-semibold text-stone-800">
                     {data.overview.total_workers - data.overview.active_workers_today} workers
                   </p>
                 </div>

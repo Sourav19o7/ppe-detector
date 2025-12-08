@@ -142,7 +142,7 @@ export default function TrainingPage() {
         );
       case 'locked':
         return (
-          <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">
+          <span className="flex items-center gap-1 px-2 py-1 bg-stone-100 text-stone-500 rounded-full text-xs font-medium">
             <Lock className="w-3 h-3" />
             Locked
           </span>
@@ -155,8 +155,8 @@ export default function TrainingPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Training Center</h1>
-          <p className="text-gray-500 mt-1">Complete training modules to improve your safety knowledge</p>
+          <h1 className="text-2xl font-bold text-stone-800">Training Center</h1>
+          <p className="text-stone-500 mt-1">Complete training modules to improve your safety knowledge</p>
         </div>
 
         {/* Progress Overview */}
@@ -207,7 +207,7 @@ export default function TrainingPage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               selectedCategory === 'all'
                 ? 'bg-orange-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
             }`}
           >
             All Modules
@@ -219,7 +219,7 @@ export default function TrainingPage() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedCategory === key
                   ? 'bg-orange-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
               }`}
             >
               {config.icon}
@@ -236,7 +236,7 @@ export default function TrainingPage() {
               <div
                 key={module.id}
                 onClick={() => module.status !== 'locked' && setSelectedModule(module)}
-                className={`p-4 bg-white rounded-xl border border-gray-200 transition-all ${
+                className={`p-4 bg-white rounded-xl border border-stone-200 transition-all ${
                   module.status === 'locked'
                     ? 'opacity-60 cursor-not-allowed'
                     : 'hover:shadow-md cursor-pointer hover:border-orange-300'
@@ -249,8 +249,8 @@ export default function TrainingPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <h3 className="font-semibold text-gray-900">{module.title}</h3>
-                        <p className="text-sm text-gray-500 mt-1">{module.description}</p>
+                        <h3 className="font-semibold text-stone-800">{module.title}</h3>
+                        <p className="text-sm text-stone-500 mt-1">{module.description}</p>
                       </div>
                       {getStatusBadge(module.status, module.progress)}
                     </div>
@@ -259,19 +259,19 @@ export default function TrainingPage() {
                         {category.icon}
                         {category.label}
                       </span>
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <span className="flex items-center gap-1 text-xs text-stone-500">
                         <Clock className="w-3 h-3" />
                         {module.duration}
                       </span>
                       {module.completedDate && (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-stone-400">
                           Completed: {new Date(module.completedDate).toLocaleDateString()}
                         </span>
                       )}
                     </div>
                     {module.status === 'in_progress' && module.progress && (
                       <div className="mt-3">
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div className="w-full bg-stone-200 rounded-full h-1.5">
                           <div
                             className="bg-blue-500 h-1.5 rounded-full"
                             style={{ width: `${module.progress}%` }}
@@ -281,7 +281,7 @@ export default function TrainingPage() {
                     )}
                   </div>
                   {module.status !== 'locked' && (
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <ChevronRight className="w-5 h-5 text-stone-400" />
                   )}
                 </div>
               </div>
@@ -296,37 +296,37 @@ export default function TrainingPage() {
               <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Star className="w-6 h-6 text-yellow-600" />
               </div>
-              <p className="text-sm font-medium text-gray-900">Quick Learner</p>
-              <p className="text-xs text-gray-500">Complete 3 modules</p>
+              <p className="text-sm font-medium text-stone-800">Quick Learner</p>
+              <p className="text-xs text-stone-500">Complete 3 modules</p>
               <p className="text-xs text-yellow-600 mt-1">{completedCount >= 3 ? 'Unlocked!' : `${completedCount}/3`}</p>
             </div>
-            <div className={`text-center p-4 rounded-xl border ${completedCount >= 5 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${completedCount >= 5 ? 'bg-green-100' : 'bg-gray-200'}`}>
-                <Shield className={`w-6 h-6 ${completedCount >= 5 ? 'text-green-600' : 'text-gray-400'}`} />
+            <div className={`text-center p-4 rounded-xl border ${completedCount >= 5 ? 'bg-green-50 border-green-200' : 'bg-stone-50 border-stone-200'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${completedCount >= 5 ? 'bg-green-100' : 'bg-stone-200'}`}>
+                <Shield className={`w-6 h-6 ${completedCount >= 5 ? 'text-green-600' : 'text-stone-400'}`} />
               </div>
-              <p className="text-sm font-medium text-gray-900">Safety Expert</p>
-              <p className="text-xs text-gray-500">Complete 5 modules</p>
-              <p className={`text-xs mt-1 ${completedCount >= 5 ? 'text-green-600' : 'text-gray-500'}`}>
+              <p className="text-sm font-medium text-stone-800">Safety Expert</p>
+              <p className="text-xs text-stone-500">Complete 5 modules</p>
+              <p className={`text-xs mt-1 ${completedCount >= 5 ? 'text-green-600' : 'text-stone-500'}`}>
                 {completedCount >= 5 ? 'Unlocked!' : `${completedCount}/5`}
               </p>
             </div>
-            <div className={`text-center p-4 rounded-xl border ${completedCount >= totalCount ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${completedCount >= totalCount ? 'bg-purple-100' : 'bg-gray-200'}`}>
-                <Award className={`w-6 h-6 ${completedCount >= totalCount ? 'text-purple-600' : 'text-gray-400'}`} />
+            <div className={`text-center p-4 rounded-xl border ${completedCount >= totalCount ? 'bg-purple-50 border-purple-200' : 'bg-stone-50 border-stone-200'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${completedCount >= totalCount ? 'bg-purple-100' : 'bg-stone-200'}`}>
+                <Award className={`w-6 h-6 ${completedCount >= totalCount ? 'text-purple-600' : 'text-stone-400'}`} />
               </div>
-              <p className="text-sm font-medium text-gray-900">Training Champion</p>
-              <p className="text-xs text-gray-500">Complete all modules</p>
-              <p className={`text-xs mt-1 ${completedCount >= totalCount ? 'text-purple-600' : 'text-gray-500'}`}>
+              <p className="text-sm font-medium text-stone-800">Training Champion</p>
+              <p className="text-xs text-stone-500">Complete all modules</p>
+              <p className={`text-xs mt-1 ${completedCount >= totalCount ? 'text-purple-600' : 'text-stone-500'}`}>
                 {completedCount >= totalCount ? 'Unlocked!' : `${completedCount}/${totalCount}`}
               </p>
             </div>
-            <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-200">
-              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
-                <GraduationCap className="w-6 h-6 text-gray-400" />
+            <div className="text-center p-4 bg-stone-50 rounded-xl border border-stone-200">
+              <div className="w-12 h-12 bg-stone-200 rounded-full flex items-center justify-center mx-auto mb-2">
+                <GraduationCap className="w-6 h-6 text-stone-400" />
               </div>
-              <p className="text-sm font-medium text-gray-900">Perfect Score</p>
-              <p className="text-xs text-gray-500">Pass all quizzes</p>
-              <p className="text-xs text-gray-500 mt-1">Coming Soon</p>
+              <p className="text-sm font-medium text-stone-800">Perfect Score</p>
+              <p className="text-xs text-stone-500">Pass all quizzes</p>
+              <p className="text-xs text-stone-500 mt-1">Coming Soon</p>
             </div>
           </div>
         </Card>
@@ -342,20 +342,20 @@ export default function TrainingPage() {
                   </div>
                   <button
                     onClick={() => setSelectedModule(null)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-stone-400 hover:text-stone-600"
                   >
                     ✕
                   </button>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">{selectedModule.title}</h2>
-                <p className="text-gray-500 mt-2">{selectedModule.description}</p>
+                <h2 className="text-xl font-bold text-stone-800">{selectedModule.title}</h2>
+                <p className="text-stone-500 mt-2">{selectedModule.description}</p>
 
                 <div className="flex items-center gap-4 mt-4">
                   <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm ${categoryConfig[selectedModule.category].color}`}>
                     {categoryConfig[selectedModule.category].icon}
                     {categoryConfig[selectedModule.category].label}
                   </span>
-                  <span className="flex items-center gap-1 text-sm text-gray-500">
+                  <span className="flex items-center gap-1 text-sm text-stone-500">
                     <Clock className="w-4 h-4" />
                     {selectedModule.duration}
                   </span>
@@ -374,10 +374,10 @@ export default function TrainingPage() {
                 ) : selectedModule.status === 'in_progress' ? (
                   <div className="mt-6">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-600">Progress</span>
+                      <span className="text-sm text-stone-600">Progress</span>
                       <span className="text-sm font-medium">{selectedModule.progress}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-stone-200 rounded-full h-2">
                       <div
                         className="bg-blue-500 h-2 rounded-full"
                         style={{ width: `${selectedModule.progress}%` }}
@@ -388,7 +388,7 @@ export default function TrainingPage() {
 
                 <div className="mt-6 flex gap-3">
                   {selectedModule.status === 'completed' ? (
-                    <button className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200">
+                    <button className="flex-1 py-3 bg-stone-100 text-stone-700 rounded-xl font-medium hover:bg-stone-200">
                       Review Module
                     </button>
                   ) : (
@@ -398,7 +398,7 @@ export default function TrainingPage() {
                   )}
                   <button
                     onClick={() => setSelectedModule(null)}
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200"
+                    className="px-6 py-3 bg-stone-100 text-stone-700 rounded-xl font-medium hover:bg-stone-200"
                   >
                     Close
                   </button>

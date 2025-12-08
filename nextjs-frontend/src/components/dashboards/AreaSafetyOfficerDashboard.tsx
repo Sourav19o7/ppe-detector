@@ -60,8 +60,8 @@ export default function AreaSafetyOfficerDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Area Safety Overview</h1>
-        <p className="text-gray-500 mt-1">Multi-Mine Comparison & Risk Analysis</p>
+        <h1 className="text-2xl font-bold text-stone-800">Area Safety Overview</h1>
+        <p className="text-stone-500 mt-1">Multi-Mine Comparison & Risk Analysis</p>
       </div>
 
       {/* Overall Stats */}
@@ -94,34 +94,34 @@ export default function AreaSafetyOfficerDashboard() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Mine</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Location</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Workers</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Compliance</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Violations</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Alerts</th>
+              <tr className="border-b border-stone-100">
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Mine</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Location</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Workers</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Compliance</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Violations</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Alerts</th>
               </tr>
             </thead>
             <tbody>
               {data.mines_overview.map((mine) => (
-                <tr key={mine.mine_id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={mine.mine_id} className="border-b border-stone-50 hover:bg-stone-50">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
-                      <Mountain className="w-4 h-4 text-gray-400" />
-                      <span className="font-medium text-gray-900">{mine.mine_name}</span>
+                      <Mountain className="w-4 h-4 text-stone-400" />
+                      <span className="font-medium text-stone-800">{mine.mine_name}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-sm text-gray-500">{mine.location || '-'}</td>
+                  <td className="py-3 px-4 text-sm text-stone-500">{mine.location || '-'}</td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4 text-gray-400" />
+                      <Users className="w-4 h-4 text-stone-400" />
                       <span>{mine.worker_count}</span>
                     </div>
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-20 bg-gray-200 rounded-full h-2">
+                      <div className="w-20 bg-stone-200 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full ${
                             mine.compliance_rate >= 90 ? 'bg-green-500' :
@@ -172,7 +172,7 @@ export default function AreaSafetyOfficerDashboard() {
         <Card title="Risk Heatmap" description="Zones with highest violations">
           <div className="space-y-3">
             {data.risk_heatmap.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
+              <div className="text-center py-6 text-stone-500">
                 <Shield className="w-8 h-8 mx-auto mb-2 text-green-500" />
                 <p>No high-risk zones detected</p>
               </div>
@@ -191,10 +191,10 @@ export default function AreaSafetyOfficerDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-gray-500" />
+                        <MapPin className="w-4 h-4 text-stone-500" />
                         <span className="font-medium">{zone.zone_name}</span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{zone.mine_name}</p>
+                      <p className="text-xs text-stone-500 mt-1">{zone.mine_name}</p>
                     </div>
                     <div className="text-right">
                       <span className={`text-lg font-bold ${
@@ -202,7 +202,7 @@ export default function AreaSafetyOfficerDashboard() {
                       }`}>
                         {zone.violations}
                       </span>
-                      <p className="text-xs text-gray-500">violations</p>
+                      <p className="text-xs text-stone-500">violations</p>
                     </div>
                   </div>
                 </div>
@@ -215,7 +215,7 @@ export default function AreaSafetyOfficerDashboard() {
         <Card title="Critical Alerts" description="High priority alerts across mines">
           <div className="space-y-3">
             {data.critical_alerts.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
+              <div className="text-center py-6 text-stone-500">
                 <Shield className="w-8 h-8 mx-auto mb-2 text-green-500" />
                 <p>No critical alerts</p>
               </div>
@@ -230,11 +230,11 @@ export default function AreaSafetyOfficerDashboard() {
                       <AlertTriangle className="w-4 h-4 text-red-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">{alert.message}</p>
+                      <p className="text-sm font-medium text-stone-800">{alert.message}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500">{alert.mine_name}</span>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-500">{formatTime(alert.created_at)}</span>
+                        <span className="text-xs text-stone-500">{alert.mine_name}</span>
+                        <span className="text-xs text-stone-400">•</span>
+                        <span className="text-xs text-stone-500">{formatTime(alert.created_at)}</span>
                       </div>
                     </div>
                   </div>
