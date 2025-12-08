@@ -1,3 +1,6 @@
 .venv
 */.venv
 backend/venv/*
+
+dataset/*
+downloaded_dataset/*
