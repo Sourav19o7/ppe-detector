@@ -9,3 +9,9 @@ numpy
 opencv-python
 huggingface-hub
 facenet-pytorch
+motor
+pymongo
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+pydantic[email]
