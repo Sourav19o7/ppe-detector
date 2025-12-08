@@ -360,9 +360,15 @@ export default function GateMonitoringPage() {
                       <div className="p-3 bg-blue-50 rounded-lg">
                         <h4 className="text-sm font-medium text-blue-800 mb-2">Identified Person</h4>
                         {detectionResult.detections.summary?.identified_persons?.length > 0 ? (
-                          <p className="text-blue-700 font-semibold">
-                            {detectionResult.detections.summary.identified_persons.join(', ')}
-                          </p>
+                          <div>
+                            <p className="text-blue-700 font-semibold">
+                              {(detectionResult.detections.summary as any)?.identified_names?.[0] ||
+                               detectionResult.detections.summary.identified_persons[0]}
+                            </p>
+                            <p className="text-xs text-blue-500 mt-1">
+                              ID: {detectionResult.detections.summary.identified_persons[0]}
+                            </p>
+                          </div>
                         ) : (
                           <p className="text-blue-600 text-sm">No registered worker identified</p>
                         )}

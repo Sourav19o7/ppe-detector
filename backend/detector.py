@@ -136,8 +136,14 @@ class PersonDetector:
 
         return None
 
-    def register_face(self, name: str, image_bytes: bytes) -> bool:
-        """Register a new face for recognition with fallback detection."""
+    def register_face(self, name: str, image_bytes: bytes, display_name: str = None) -> bool:
+        """Register a new face for recognition with fallback detection.
+
+        Args:
+            name: Unique identifier (employee_id)
+            image_bytes: Face image bytes
+            display_name: Optional display name (worker's actual name)
+        """
         if not FACE_RECOGNITION_AVAILABLE:
             return False
 
@@ -184,9 +190,13 @@ class PersonDetector:
                 print(f"Failed to detect face in image for {name}")
                 return False
 
-            self.known_faces[name] = embedding
+            # Store embedding with optional display name
+            self.known_faces[name] = {
+                "embedding": embedding,
+                "display_name": display_name or name
+            }
             self._save_known_faces()
-            print(f"Successfully registered face for {name}")
+            print(f"Successfully registered face for {name} ({display_name or name})")
             return True
 
         except Exception as e:
@@ -199,26 +209,62 @@ class PersonDetector:
         """Return list of registered face names."""
         return list(self.known_faces.keys())
 
-    def identify_face(self, face_image: Image.Image, threshold: float = 0.7) -> str | None:
-        """Identify a face from known faces."""
+    def identify_face(self, face_image: Image.Image, threshold: float = 0.8) -> tuple[str, str] | None:
+        """Identify a face from known faces with fallback detection.
+
+        Returns:
+            Tuple of (employee_id, display_name) if match found, None otherwise
+        """
         if not FACE_RECOGNITION_AVAILABLE or not self.known_faces:
             return None
 
+        # Try to get embedding directly first
         embedding = self.get_face_embedding(face_image)
+
+        # If direct embedding fails, try YOLO detection on the face crop
+        if embedding is None:
+            try:
+                face_results = self.face_model(face_image, conf=0.2, verbose=False)[0]
+                if len(face_results.boxes) > 0:
+                    box = face_results.boxes[0]
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                    padding = 20
+                    x1 = max(0, x1 - padding)
+                    y1 = max(0, y1 - padding)
+                    x2 = min(face_image.width, x2 + padding)
+                    y2 = min(face_image.height, y2 + padding)
+                    face_crop = face_image.crop((x1, y1, x2, y2))
+                    embedding = self.get_face_embedding(face_crop)
+            except Exception as e:
+                print(f"Fallback face detection error: {e}")
+
         if embedding is None:
             return None
 
         best_match = None
+        best_match_id = None
         best_distance = float('inf')
 
-        for name, known_embedding in self.known_faces.items():
+        for employee_id, face_data in self.known_faces.items():
+            # Handle both old format (just embedding) and new format (dict with embedding and name)
+            if isinstance(face_data, dict):
+                known_embedding = face_data["embedding"]
+                display_name = face_data.get("display_name", employee_id)
+            else:
+                # Old format compatibility
+                known_embedding = face_data
+                display_name = employee_id
+
             distance = np.linalg.norm(embedding - known_embedding)
             if distance < best_distance:
                 best_distance = distance
-                best_match = name
+                best_match_id = employee_id
+                best_match = display_name
+
+        print(f"Best match: {best_match} ({best_match_id}), distance: {best_distance:.3f}, threshold: {threshold}")
 
         if best_distance < threshold:
-            return best_match
+            return (best_match_id, best_match)
         return None
 
     def _normalize_label(self, label: str) -> str:
@@ -335,29 +381,46 @@ class PersonDetector:
                 if is_violation:
                     detections["violations"].append(detection_info)
 
-        # Run face detection
-        face_results = self.face_model(image, conf=0.5, verbose=False)[0]
+        # Run face detection with lower confidence for better recall
+        face_results = self.face_model(image, conf=0.3, verbose=False)[0]
 
         for box in face_results.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
             conf = float(box.conf[0])
 
-            face_crop = image.crop((x1, y1, x2, y2))
-            person_name = self.identify_face(face_crop)
+            # Add generous padding for better face crop
+            padding = 40
+            x1_crop = max(0, x1 - padding)
+            y1_crop = max(0, y1 - padding)
+            x2_crop = min(image.width, x2 + padding)
+            y2_crop = min(image.height, y2 + padding)
+
+            face_crop = image.crop((x1_crop, y1_crop, x2_crop, y2_crop))
+
+            # Try to identify the person with more lenient threshold
+            identification = self.identify_face(face_crop, threshold=0.85)
 
             color = self.colors["face"]
             draw.rectangle([x1, y1, x2, y2], outline=color, width=2)
 
-            if person_name:
-                text = person_name
+            person_id = None
+            person_name = None
+
+            if identification:
+                person_id, person_name = identification
+                # Show name and ID on the image
+                text = f"{person_name} ({person_id}) ✓"
+                print(f"Identified person: {person_name} ({person_id})")
             else:
-                text = f"Person {conf:.2f}"
+                text = f"Unknown {conf:.2f}"
+                print(f"Unknown face detected (conf: {conf:.2f})")
 
             text_bbox = draw.textbbox((x1, y1 - 20), text, font=font)
             draw.rectangle([text_bbox[0] - 2, text_bbox[1] - 2, text_bbox[2] + 2, text_bbox[3] + 2], fill=color)
             draw.text((x1, y1 - 20), text, fill=(0, 0, 0), font=font)
 
             detections["faces"].append({
+                "employee_id": person_id,
                 "name": person_name,
                 "confidence": conf,
                 "bbox": [x1, y1, x2, y2]
@@ -387,7 +450,8 @@ class PersonDetector:
             label = item["label"]
             violation_counts[label] = violation_counts.get(label, 0) + 1
 
-        identified = [f["name"] for f in faces if f["name"]]
+        # Extract employee IDs of identified persons
+        identified = [f["employee_id"] for f in faces if f.get("employee_id")]
 
         return {
             "ppe_detected": ppe_counts,
@@ -396,5 +460,6 @@ class PersonDetector:
             "total_violations": len(violations),
             "faces_detected": len(faces),
             "identified_persons": identified,
+            "identified_names": [f["name"] for f in faces if f.get("name")],
             "safety_compliant": len(violations) == 0
         }

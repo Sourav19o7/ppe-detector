@@ -235,8 +235,8 @@ export default function AlertsPage() {
 
   const filteredAlerts = alerts.filter(alert => {
     const matchesSearch =
-      alert.title.toLowerCase().includes(search.toLowerCase()) ||
-      alert.message.toLowerCase().includes(search.toLowerCase()) ||
+      (alert.title?.toLowerCase().includes(search.toLowerCase()) || false) ||
+      (alert.message?.toLowerCase().includes(search.toLowerCase()) || false) ||
       (alert.worker_name?.toLowerCase().includes(search.toLowerCase()) || false) ||
       (alert.mine_name?.toLowerCase().includes(search.toLowerCase()) || false);
     const matchesType = filterType === 'all' || alert.type === filterType;

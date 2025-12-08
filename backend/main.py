@@ -34,6 +34,7 @@ from routes.mines import router as mines_router
 from routes.gate_entries import router as gate_entries_router
 from routes.alerts import router as alerts_router
 from routes.dashboards import router as dashboards_router
+from routes.gas_sensors import router as gas_sensors_router
 
 load_dotenv()
 
@@ -123,6 +124,7 @@ app.include_router(mines_router)
 app.include_router(gate_entries_router)
 app.include_router(alerts_router)
 app.include_router(dashboards_router)
+app.include_router(gas_sensors_router)
 
 
 # ==================== Health Check ====================

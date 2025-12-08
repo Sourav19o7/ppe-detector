@@ -95,3 +95,5 @@ next-env.d.ts
 dataset/*
 
 downloaded_dataset/*
+SYSTEM_ARCHITECTURE.md
+GAS_SENSOR_INTEGRATION_GUIDE.md
