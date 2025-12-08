@@ -1,33 +1,208 @@
 """
-Main FastAPI application for PPE detection and face recognition.
+Main FastAPI application for PPE detection, face recognition, and attendance system.
+With Role-Based Access Control (RBAC) for mine safety management.
 """
-from fastapi import FastAPI, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+import os
 import base64
 from io import BytesIO
+from datetime import datetime, timedelta
+from typing import Optional, List
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from bson import ObjectId
+from dotenv import load_dotenv
 
 from detector import PersonDetector
+from database import connect_to_mongodb, close_mongodb_connection, get_database
+from auth import (
+    get_password_hash, verify_password, create_access_token,
+    get_current_user, get_current_admin, verify_token, UserRole
+)
+from schemas import (
+    EmployeeCreate, EmployeeResponse, AttendanceRecord,
+    PPEViolation, AdminLogin, DashboardStats, ShiftType
+)
 
-app = FastAPI(title="PPE & Person Detection API")
+# Import route modules
+from routes.auth import router as auth_router
+from routes.users import router as users_router
+from routes.workers import router as workers_router
+from routes.mines import router as mines_router
+from routes.gate_entries import router as gate_entries_router
+from routes.alerts import router as alerts_router
+from routes.dashboards import router as dashboards_router
+
+load_dotenv()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown events."""
+    await connect_to_mongodb()
+    await initialize_default_superadmin()
+    yield
+    await close_mongodb_connection()
+
+
+app = FastAPI(
+    title="Mine Safety PPE & Attendance System API",
+    description="Role-based access control system for mine safety management with PPE detection",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
 # Enable CORS for frontend
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Initialize detector
 detector = PersonDetector()
 
 
+async def initialize_default_superadmin():
+    """Create default super admin if none exists."""
+    db = get_database()
+
+    # Check if any super admin exists
+    admin = await db.users.find_one({"role": UserRole.SUPER_ADMIN.value})
+    if not admin:
+        default_password = os.getenv("ADMIN_PASSWORD", "admin123")
+        await db.users.insert_one({
+            "username": "superadmin",
+            "password_hash": get_password_hash(default_password),
+            "full_name": "System Administrator",
+            "email": "admin@system.local",
+            "role": UserRole.SUPER_ADMIN.value,
+            "is_active": True,
+            "created_at": datetime.utcnow()
+        })
+        print("Default super admin created (username: superadmin)")
+
+
+# ==================== Include Route Modules ====================
+
+app.include_router(auth_router)
+app.include_router(users_router)
+app.include_router(workers_router)
+app.include_router(mines_router)
+app.include_router(gate_entries_router)
+app.include_router(alerts_router)
+app.include_router(dashboards_router)
+
+
+# ==================== Health Check ====================
+
 @app.get("/")
 def root():
-    return {"message": "PPE & Person Detection API", "status": "running"}
+    return {
+        "message": "Mine Safety PPE & Attendance System API",
+        "version": "2.0.0",
+        "status": "running",
+        "features": [
+            "Role-based access control (6 roles)",
+            "Mine/Zone/Gate management",
+            "PPE detection at gates",
+            "Real-time compliance monitoring",
+            "Worker management with compliance scores",
+            "Alert and warning system",
+            "Role-specific dashboards"
+        ]
+    }
 
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+
+@app.get("/api/roles")
+def get_roles():
+    """Get available roles and their descriptions."""
+    return {
+        "roles": [
+            {
+                "value": UserRole.SUPER_ADMIN.value,
+                "label": "Super Admin",
+                "description": "Full system access, manages all configurations"
+            },
+            {
+                "value": UserRole.GENERAL_MANAGER.value,
+                "label": "General Manager",
+                "description": "Organization-wide view, KPIs, regulatory compliance"
+            },
+            {
+                "value": UserRole.AREA_SAFETY_OFFICER.value,
+                "label": "Area Safety Officer",
+                "description": "Oversees multiple mines, comparison analytics"
+            },
+            {
+                "value": UserRole.MANAGER.value,
+                "label": "Manager",
+                "description": "Mine-level management, shift performance, approvals"
+            },
+            {
+                "value": UserRole.SAFETY_OFFICER.value,
+                "label": "Safety Officer",
+                "description": "Safety enforcement, compliance analytics, PPE rules"
+            },
+            {
+                "value": UserRole.SHIFT_INCHARGE.value,
+                "label": "Shift Incharge",
+                "description": "Live gate monitoring, entry overrides, shift reports"
+            },
+            {
+                "value": UserRole.WORKER.value,
+                "label": "Worker",
+                "description": "Personal compliance, violations, shift timing"
+            },
+        ]
+    }
+
+
+@app.get("/api/shifts")
+def get_shifts():
+    """Get shift definitions."""
+    return {
+        "shifts": [
+            {
+                "value": ShiftType.DAY.value,
+                "label": "Day Shift",
+                "start_time": "06:00",
+                "end_time": "14:00"
+            },
+            {
+                "value": ShiftType.AFTERNOON.value,
+                "label": "Afternoon Shift",
+                "start_time": "14:00",
+                "end_time": "22:00"
+            },
+            {
+                "value": ShiftType.NIGHT.value,
+                "label": "Night Shift",
+                "start_time": "22:00",
+                "end_time": "06:00"
+            },
+        ]
+    }
+
+
+# ==================== Legacy Endpoints (for backward compatibility) ====================
 
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
@@ -37,13 +212,9 @@ async def detect(file: UploadFile = File(...)):
     - Faces and identify known persons
     """
     try:
-        # Read image
         contents = await file.read()
-
-        # Run detection
         result_image, detections = detector.process_image(contents)
 
-        # Convert result image to base64
         buffered = BytesIO()
         result_image.save(buffered, format="PNG")
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
@@ -60,11 +231,262 @@ async def detect(file: UploadFile = File(...)):
         }, status_code=500)
 
 
+@app.post("/detect-and-log")
+async def detect_and_log(
+    file: UploadFile = File(...),
+    log_violations: bool = Form(True),
+    location: Optional[str] = Form(None)
+):
+    """
+    Detect PPE and faces, automatically log violations to database.
+    """
+    try:
+        contents = await file.read()
+        result_image, detections = detector.process_image(contents)
+
+        buffered = BytesIO()
+        result_image.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
+
+        violations_logged = False
+        db = get_database()
+
+        # Log violations if any exist and logging is enabled
+        if log_violations and detections.get("violations"):
+            # Try to identify the person
+            identified_persons = detections.get("summary", {}).get("identified_persons", [])
+            employee_id = identified_persons[0] if identified_persons else None
+            employee_name = None
+
+            if employee_id:
+                # Try workers collection first
+                worker = await db.workers.find_one({"employee_id": employee_id})
+                if worker:
+                    employee_name = worker["name"]
+                else:
+                    # Fall back to employees collection
+                    emp = await db.employees.find_one({"employee_id": employee_id})
+                    if emp:
+                        employee_name = emp["name"]
+
+            violation_record = {
+                "employee_id": employee_id,
+                "employee_name": employee_name,
+                "violations": detections["violations"],
+                "timestamp": datetime.utcnow(),
+                "location": location,
+                "image": f"data:image/png;base64,{img_base64}"
+            }
+
+            await db.ppe_violations.insert_one(violation_record)
+            violations_logged = True
+
+        return JSONResponse({
+            "success": True,
+            "image": f"data:image/png;base64,{img_base64}",
+            "detections": detections,
+            "violations_logged": violations_logged
+        })
+    except Exception as e:
+        return JSONResponse({
+            "success": False,
+            "error": str(e)
+        }, status_code=500)
+
+
+# ==================== Legacy Employee Management ====================
+
+@app.post("/employees")
+async def create_employee(
+    name: str = Form(...),
+    employee_id: str = Form(...),
+    department: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(default=None),
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Create a new employee (legacy endpoint)."""
+    db = get_database()
+
+    existing = await db.employees.find_one({"employee_id": employee_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Worker ID already exists.")
+
+    employee_data = {
+        "name": name,
+        "employee_id": employee_id,
+        "department": department,
+        "created_at": datetime.utcnow(),
+        "face_registered": False
+    }
+
+    if file and file.filename:
+        contents = await file.read()
+        if contents:
+            success = detector.register_face(employee_id, contents)
+            if success:
+                employee_data["face_registered"] = True
+            else:
+                raise HTTPException(status_code=400, detail="No face detected in the uploaded image.")
+
+    result = await db.employees.insert_one(employee_data)
+
+    return {
+        "success": True,
+        "employee": {
+            "id": str(result.inserted_id),
+            "name": name,
+            "employee_id": employee_id,
+            "department": department,
+            "created_at": employee_data["created_at"].isoformat(),
+            "face_registered": employee_data["face_registered"]
+        },
+        "message": f"Worker {name} registered successfully"
+    }
+
+
+@app.get("/employees")
+async def list_employees(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    search: Optional[str] = None
+):
+    """List all employees (legacy endpoint)."""
+    db = get_database()
+
+    query = {}
+    if search:
+        query = {
+            "$or": [
+                {"name": {"$regex": search, "$options": "i"}},
+                {"employee_id": {"$regex": search, "$options": "i"}},
+                {"department": {"$regex": search, "$options": "i"}}
+            ]
+        }
+
+    cursor = db.employees.find(query).skip(skip).limit(limit).sort("name", 1)
+    employees = []
+    async for emp in cursor:
+        employees.append({
+            "id": str(emp["_id"]),
+            "name": emp["name"],
+            "employee_id": emp["employee_id"],
+            "department": emp.get("department"),
+            "created_at": emp["created_at"],
+            "face_registered": emp.get("face_registered", False)
+        })
+
+    total = await db.employees.count_documents(query)
+
+    return {"employees": employees, "total": total}
+
+
+@app.get("/employees/{employee_id}")
+async def get_employee(employee_id: str):
+    """Get employee details (legacy endpoint)."""
+    db = get_database()
+    emp = await db.employees.find_one({"employee_id": employee_id})
+
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    return {
+        "id": str(emp["_id"]),
+        "name": emp["name"],
+        "employee_id": emp["employee_id"],
+        "department": emp.get("department"),
+        "created_at": emp["created_at"],
+        "face_registered": emp.get("face_registered", False)
+    }
+
+
+@app.delete("/employees/{employee_id}")
+async def delete_employee(
+    employee_id: str,
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Delete an employee (legacy endpoint)."""
+    db = get_database()
+
+    result = await db.employees.delete_one({"employee_id": employee_id})
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    if employee_id in detector.known_faces:
+        del detector.known_faces[employee_id]
+        detector._save_known_faces()
+
+    return {"success": True, "message": "Employee deleted successfully"}
+
+
+# ==================== Legacy Dashboard ====================
+
+@app.get("/dashboard/stats")
+async def get_dashboard_stats():
+    """Get dashboard statistics (legacy endpoint)."""
+    db = get_database()
+
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    week_ago = today - timedelta(days=7)
+
+    # Total employees (from both collections)
+    total_employees = await db.employees.count_documents({})
+    total_workers = await db.workers.count_documents({"is_active": True})
+    total_all = total_employees + total_workers
+
+    # Present today
+    today_str = today.strftime("%Y-%m-%d")
+    present_pipeline = [
+        {"$match": {"date": today_str, "type": "check_in"}},
+        {"$group": {"_id": "$employee_id"}}
+    ]
+    present_cursor = db.attendance.aggregate(present_pipeline)
+    present_today = len([x async for x in present_cursor])
+
+    # Gate entries today
+    gate_entries_today = await db.gate_entries.count_documents({
+        "timestamp": {"$gte": today, "$lt": tomorrow},
+        "entry_type": "entry"
+    })
+
+    # Violations today
+    violations_today = await db.ppe_violations.count_documents({
+        "timestamp": {"$gte": today, "$lt": tomorrow}
+    })
+    gate_violations_today = await db.gate_entries.count_documents({
+        "timestamp": {"$gte": today, "$lt": tomorrow},
+        "violations": {"$ne": []}
+    })
+
+    # Violations this week
+    violations_week = await db.ppe_violations.count_documents({
+        "timestamp": {"$gte": week_ago}
+    })
+
+    # Compliance rate
+    total_checks_week = gate_entries_today + await db.attendance.count_documents({
+        "timestamp": {"$gte": week_ago}
+    })
+    compliance_rate = 100.0
+    if total_checks_week > 0:
+        compliance_rate = max(0, 100 - ((violations_week + gate_violations_today) / total_checks_week * 100))
+
+    return {
+        "total_employees": total_all,
+        "present_today": present_today + gate_entries_today,
+        "absent_today": max(0, total_all - present_today - gate_entries_today),
+        "violations_today": violations_today + gate_violations_today,
+        "violations_this_week": violations_week,
+        "compliance_rate": round(compliance_rate, 1),
+    }
+
+
+# ==================== Legacy Face Registration ====================
+
 @app.post("/register-face")
 async def register_face(name: str, file: UploadFile = File(...)):
-    """
-    Register a new face for recognition.
-    """
+    """Register a new face for recognition (legacy endpoint)."""
     try:
         contents = await file.read()
         success = detector.register_face(name, contents)

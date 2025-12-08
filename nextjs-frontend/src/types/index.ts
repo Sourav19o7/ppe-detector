@@ -1,0 +1,553 @@
+// ==================== Enums ====================
+
+export type UserRole =
+  | 'super_admin'
+  | 'general_manager'
+  | 'area_safety_officer'
+  | 'manager'
+  | 'safety_officer'
+  | 'shift_incharge'
+  | 'worker';
+
+export type ShiftType = 'day' | 'afternoon' | 'night';
+
+export type GateType = 'entry' | 'exit' | 'both';
+
+export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export type AlertStatus = 'active' | 'acknowledged' | 'resolved';
+
+export type EntryStatus = 'pending' | 'approved' | 'denied' | 'override';
+
+// ==================== User Types ====================
+
+export interface User {
+  id: string;
+  username: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  role: UserRole;
+  mine_id?: string;
+  mine_ids?: string[];
+  assigned_shift?: ShiftType;
+  assigned_gate_id?: string;
+  is_active: boolean;
+  created_at: string;
+  last_login?: string;
+}
+
+export interface UserCreate {
+  username: string;
+  password: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  role: UserRole;
+  mine_id?: string;
+  mine_ids?: string[];
+  assigned_shift?: ShiftType;
+  assigned_gate_id?: string;
+}
+
+// ==================== Worker Types ====================
+
+export interface Worker {
+  id: string;
+  employee_id: string;
+  name: string;
+  department?: string;
+  mine_id: string;
+  mine_name?: string;
+  zone_id?: string;
+  zone_name?: string;
+  assigned_shift: ShiftType;
+  phone?: string;
+  emergency_contact?: string;
+  face_registered: boolean;
+  is_active: boolean;
+  created_at: string;
+  compliance_score: number;
+  total_violations: number;
+  badges: string[];
+}
+
+export interface WorkerCreate {
+  employee_id: string;
+  name: string;
+  password: string;
+  department?: string;
+  mine_id: string;
+  zone_id?: string;
+  assigned_shift: ShiftType;
+  phone?: string;
+  emergency_contact?: string;
+}
+
+// ==================== Mine Types ====================
+
+export interface Zone {
+  id: string;
+  name: string;
+  description?: string;
+  risk_level: string;
+  coordinates?: { x: number; y: number; width: number; height: number };
+  worker_count: number;
+}
+
+export interface Gate {
+  id: string;
+  name: string;
+  gate_type: GateType;
+  zone_id?: string;
+  location?: string;
+  has_camera: boolean;
+  is_active: boolean;
+}
+
+export interface Mine {
+  id: string;
+  name: string;
+  location: string;
+  description?: string;
+  zones: Zone[];
+  gates: Gate[];
+  created_at: string;
+  is_active: boolean;
+}
+
+// ==================== Gate Entry Types ====================
+
+export interface GateEntry {
+  id: string;
+  gate_id: string;
+  gate_name?: string;
+  worker_id?: string;
+  worker_name?: string;
+  employee_id?: string;
+  entry_type: 'entry' | 'exit';
+  status: EntryStatus;
+  ppe_status: Record<string, boolean>;
+  violations: string[];
+  timestamp: string;
+  shift: ShiftType;
+  override_by?: string;
+  override_reason?: string;
+}
+
+export interface LiveEntriesResponse {
+  current_shift: ShiftType;
+  shift_name: string;
+  shift_start: string;
+  shift_end: string;
+  entries: GateEntry[];
+  summary: {
+    total_entries: number;
+    total_exits: number;
+    currently_inside: number;
+    total_violations: number;
+    compliance_rate: number;
+  };
+}
+
+// ==================== Alert Types ====================
+
+export interface Alert {
+  id: string;
+  alert_type: string;
+  severity: AlertSeverity;
+  status: AlertStatus;
+  message: string;
+  mine_id: string;
+  mine_name?: string;
+  zone_id?: string;
+  gate_id?: string;
+  worker_id?: string;
+  worker_name?: string;
+  created_at: string;
+  acknowledged_by?: string;
+  acknowledged_at?: string;
+  resolved_by?: string;
+  resolved_at?: string;
+  resolution_notes?: string;
+}
+
+export interface Warning {
+  id: string;
+  worker_id: string;
+  worker_name: string;
+  employee_id: string;
+  warning_type: string;
+  description: string;
+  severity: string;
+  issued_by: string;
+  issued_by_name: string;
+  issued_at: string;
+  acknowledged: boolean;
+  acknowledged_at?: string;
+}
+
+// ==================== Dashboard Types ====================
+
+export interface ShiftInchargeDashboard {
+  mine_id: string;
+  mine_name: string;
+  current_shift: ShiftType;
+  shift_name: string;
+  shift_start: string;
+  shift_end: string;
+  statistics: {
+    expected_workers: number;
+    workers_entered: number;
+    workers_exited: number;
+    currently_inside: number;
+    ppe_compliant: number;
+    ppe_non_compliant: number;
+    violations_this_shift: number;
+    compliance_rate: number;
+    pending_alerts: number;
+  };
+  recent_entries: GateEntry[];
+  active_alerts: Alert[];
+}
+
+export interface SafetyOfficerDashboard {
+  mine_id: string;
+  mine_name: string;
+  compliance_rates: {
+    today: number;
+    this_week: number;
+    this_month: number;
+  };
+  violations: {
+    today: number;
+    this_week: number;
+  };
+  violation_trends: Record<string, number>;
+  high_risk_workers: Worker[];
+  zone_risk_analysis: {
+    zone_id: string;
+    zone_name: string;
+    risk_level: string;
+    violations_this_week: number;
+    worker_count: number;
+  }[];
+  recent_alerts: Alert[];
+}
+
+export interface ManagerDashboard {
+  mine_id: string;
+  mine_name: string;
+  overview: {
+    total_workers: number;
+    active_workers_today: number;
+    compliance_rate: number;
+    pending_escalations: number;
+    avg_entry_delay_minutes: number;
+  };
+  shift_performance: Record<ShiftType, number>;
+  top_compliant_workers: Worker[];
+}
+
+export interface AreaSafetyOfficerDashboard {
+  overall_compliance_rate: number;
+  total_mines: number;
+  mines_overview: {
+    mine_id: string;
+    mine_name: string;
+    location?: string;
+    compliance_rate: number;
+    worker_count: number;
+    violations_this_week: number;
+    active_alerts: number;
+  }[];
+  critical_alerts: Alert[];
+  risk_heatmap: {
+    mine_id: string;
+    mine_name: string;
+    zone_id: string;
+    zone_name: string;
+    violations: number;
+    risk_level: string;
+  }[];
+}
+
+export interface GeneralManagerDashboard {
+  organization_overview: {
+    total_mines: number;
+    total_workers: number;
+    compliance_rate: number;
+  };
+  kpi_summary: {
+    monthly_entries: number;
+    monthly_violations: number;
+    monthly_compliance_rate: number;
+  };
+  mine_performance: {
+    mine_id: string;
+    mine_name: string;
+    compliance_rate: number;
+    total_entries: number;
+    violations: number;
+  }[];
+  strategic_alerts: Alert[];
+  financial_insights: {
+    estimated_cost_savings: number;
+    violations_prevented_this_week: number;
+  };
+  regulatory_status: {
+    compliance_threshold: number;
+    current_compliance: number;
+    status: string;
+  };
+}
+
+export interface WorkerDashboard {
+  worker: {
+    id: string;
+    employee_id: string;
+    name: string;
+    department?: string;
+    mine_name?: string;
+    zone_name?: string;
+  };
+  compliance: {
+    score: number;
+    total_violations: number;
+    current_streak_days: number;
+  };
+  badges: string[];
+  statistics: {
+    total_entries: number;
+  };
+  recent_violations: {
+    date: string;
+    time: string;
+    violations: string[];
+  }[];
+  shift_info: {
+    assigned_shift: ShiftType;
+    shift_name: string;
+    start_time: string;
+    end_time: string;
+    is_current_shift: boolean;
+  };
+  notifications: {
+    type: string;
+    id: string;
+    message: string;
+    date: string;
+    severity: string;
+  }[];
+}
+
+// ==================== Mine Visualization Types ====================
+
+export interface MineVisualization {
+  mine_id: string;
+  mine_name: string;
+  zones: {
+    id: string;
+    name: string;
+    description?: string;
+    risk_level: string;
+    coordinates: { x: number; y: number; width: number; height: number };
+    worker_count: number;
+    violations_today: number;
+  }[];
+  gates: {
+    id: string;
+    name: string;
+    gate_type: string;
+    zone_id?: string;
+    location?: string;
+    has_camera: boolean;
+    position: { x: number; y: number };
+  }[];
+  workers_positions: {
+    id: string;
+    employee_id: string;
+    name: string;
+    zone_id?: string;
+    zone_name?: string;
+    last_entry_time: string;
+    ppe_compliant: boolean;
+  }[];
+  risk_zones: {
+    zone_id: string;
+    zone_name: string;
+    risk_level: string;
+    violations_today: number;
+  }[];
+  statistics: {
+    total_workers: number;
+    workers_inside: number;
+    total_zones: number;
+    total_gates: number;
+    violations_today: number;
+    compliance_rate: number;
+  };
+}
+
+// ==================== Auth Types ====================
+
+export interface AuthState {
+  isAuthenticated: boolean;
+  token: string | null;
+  user: User | null;
+  worker: Worker | null;
+  userType: 'staff' | 'worker' | null;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface WorkerLoginResponse {
+  access_token: string;
+  token_type: string;
+  worker: Worker;
+}
+
+// ==================== Legacy Types (for backward compatibility) ====================
+
+export interface Employee {
+  id: string;
+  name: string;
+  employee_id: string;
+  department?: string;
+  created_at: string;
+  face_registered: boolean;
+}
+
+export interface AttendanceRecord {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  type: 'check_in' | 'check_out';
+  timestamp: string;
+  date: string;
+  image?: string;
+}
+
+export interface TodayAttendance {
+  date: string;
+  total_employees: number;
+  present: number;
+  absent: number;
+  attendance: {
+    employee_id: string;
+    employee_name: string;
+    check_ins: string[];
+    check_outs: string[];
+    is_present: boolean;
+  }[];
+}
+
+export interface Violation {
+  label: string;
+  confidence: number;
+  bbox: number[];
+  is_violation: boolean;
+}
+
+export interface PPEViolationRecord {
+  id: string;
+  employee_id?: string;
+  employee_name?: string;
+  violations: Violation[];
+  timestamp: string;
+  location?: string;
+  image?: string;
+}
+
+export interface DetectionSummary {
+  ppe_detected: Record<string, number>;
+  violations: Record<string, number>;
+  total_ppe_items: number;
+  total_violations: number;
+  faces_detected: number;
+  identified_persons: string[];
+  safety_compliant: boolean;
+}
+
+export interface DetectionResult {
+  success: boolean;
+  image: string;
+  detections: {
+    ppe: Violation[];
+    faces: {
+      name: string | null;
+      confidence: number;
+      bbox: number[];
+    }[];
+    violations: Violation[];
+    summary: DetectionSummary;
+  };
+  violations_logged?: boolean;
+}
+
+export interface DashboardStats {
+  total_employees: number;
+  present_today: number;
+  absent_today: number;
+  violations_today: number;
+  violations_this_week: number;
+  compliance_rate: number;
+  recent_attendance?: AttendanceRecord[];
+  recent_violations?: PPEViolationRecord[];
+}
+
+export interface AttendanceReportRecord {
+  employee_id: string;
+  employee_name: string;
+  date: string;
+  check_ins: string[];
+  check_outs: string[];
+  total_hours?: number;
+}
+
+export interface AttendanceReport {
+  start_date: string;
+  end_date: string;
+  records: AttendanceReportRecord[];
+  summary: {
+    unique_employees: number;
+    total_days: number;
+    total_records: number;
+    total_hours_worked: number;
+  };
+}
+
+export interface ViolationReport {
+  start_date: string;
+  end_date: string;
+  violations: PPEViolationRecord[];
+  summary: {
+    total_violations: number;
+    violation_breakdown: Record<string, number>;
+    employees_with_violations: number;
+  };
+}
+
+// ==================== Utility Types ====================
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+}
+
+export interface ShiftInfo {
+  value: ShiftType;
+  label: string;
+  start_time: string;
+  end_time: string;
+}
+
+export interface RoleInfo {
+  value: UserRole;
+  label: string;
+  description: string;
+}
