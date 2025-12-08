@@ -2,4 +2,4 @@
 */.venv
 backend/venv/*
 dataset/*
-dowmloaded_dataset/*
+downloaded_dataset/*
