@@ -1,10 +1,11 @@
 """
 Detection module combining PPE detection, face detection, and face recognition.
-Uses two PPE models for better coverage:
-1. keremberke/yolov8m-protective-equipment-detection - detects helmet, no_helmet, goggles, etc.
-2. Tanishjain9/yolov8n-ppe-detection-6classes - detects Helmet, Vest, Gloves, Goggles, Mask, Safety Shoe
+Uses Roboflow workflow for PPE detection with SAHI (Slicing Aided Hyper Inference).
 """
 import pickle
+import base64
+import tempfile
+import os
 from io import BytesIO
 from pathlib import Path
 
@@ -13,6 +14,7 @@ import torch
 from PIL import Image, ImageDraw, ImageFont
 from ultralytics import YOLO
 from huggingface_hub import hf_hub_download
+from inference_sdk import InferenceHTTPClient
 
 # Try to import face recognition components
 try:
@@ -23,29 +25,21 @@ except ImportError:
 
 
 class PersonDetector:
-    """Combined PPE and face detection/recognition."""
+    """Combined PPE and face detection/recognition using Roboflow."""
 
     def __init__(self, known_faces_dir: str = "../known_faces"):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"Using device: {self.device}")
 
-        # PPE Detection Model 1: keremberke (detects missing PPE too)
-        # Classes: glove, goggles, helmet, mask, no_glove, no_goggles, no_helmet, no_mask, no_shoes, shoes
-        print("Loading PPE detection model 1 (keremberke)...")
-        ppe_model1_path = hf_hub_download(
-            repo_id="keremberke/yolov8m-protective-equipment-detection",
-            filename="best.pt"
+        # Initialize Roboflow client for PPE detection
+        print("Connecting to Roboflow PPE detection workflow...")
+        self.roboflow_client = InferenceHTTPClient(
+            api_url="https://serverless.roboflow.com",
+            api_key="e96XmSjaw1rrek7TBBxu"
         )
-        self.ppe_model1 = YOLO(ppe_model1_path)
-
-        # PPE Detection Model 2: Tanishjain9 (6 classes, good accuracy)
-        # Classes: Gloves, Vest, Goggles, Helmet, Mask, Safety Shoe
-        print("Loading PPE detection model 2 (Tanishjain9)...")
-        ppe_model2_path = hf_hub_download(
-            repo_id="Tanishjain9/yolov8n-ppe-detection-6classes",
-            filename="best.pt"
-        )
-        self.ppe_model2 = YOLO(ppe_model2_path)
+        self.roboflow_workspace = "smart-india-hackathon-dgm5d"
+        self.roboflow_workflow_id = "small-object-detection-sahi"
+        print("Roboflow PPE detection workflow connected!")
 
         # Face Detection Model (arnabdhar/YOLOv8-Face-Detection)
         print("Loading face detection model...")
@@ -66,9 +60,9 @@ class PersonDetector:
             self.mtcnn = MTCNN(
                 keep_all=True,
                 device=self.device,
-                thresholds=[0.5, 0.6, 0.6],  # Lower thresholds (default: [0.6, 0.7, 0.7])
-                min_face_size=20,  # Detect smaller faces
-                post_process=True  # Apply post-processing
+                thresholds=[0.5, 0.6, 0.6],
+                min_face_size=20,
+                post_process=True
             )
             self.facenet = InceptionResnetV1(pretrained='vggface2').eval().to(self.device)
             self.known_faces = self._load_known_faces()
@@ -91,14 +85,16 @@ class PersonDetector:
             "Mask": (0, 140, 100),
             "shoes": (0, 120, 80),
             "Safety Shoe": (0, 120, 80),
+            "Safety Shoes": (0, 120, 80),
             "Vest": (0, 255, 0),
             "vest": (0, 255, 0),
             # Missing PPE - Red shades
-            "no_helmet": (255, 0, 0),
-            "no_goggles": (255, 50, 50),
-            "no_glove": (255, 80, 80),
-            "no_mask": (255, 100, 100),
-            "no_shoes": (255, 120, 120),
+            "NO Helmet": (255, 0, 0),
+            "NO Goggles": (255, 50, 50),
+            "NO Gloves": (255, 80, 80),
+            "NO Mask": (255, 100, 100),
+            "NO Safety Shoes": (255, 120, 120),
+            "NO Vest": (255, 60, 60),
             # Face
             "face": (255, 255, 0),
             "default": (128, 128, 128)
@@ -124,7 +120,6 @@ class PersonDetector:
             return None
 
         try:
-            # Try with lower threshold
             faces = self.mtcnn(image)
             if faces is not None and len(faces) > 0:
                 face = faces[0].unsqueeze(0).to(self.device)
@@ -137,20 +132,14 @@ class PersonDetector:
         return None
 
     def register_face(self, name: str, image_bytes: bytes, display_name: str = None) -> bool:
-        """Register a new face for recognition with fallback detection.
-
-        Args:
-            name: Unique identifier (employee_id)
-            image_bytes: Face image bytes
-            display_name: Optional display name (worker's actual name)
-        """
+        """Register a new face for recognition with fallback detection."""
         if not FACE_RECOGNITION_AVAILABLE:
             return False
 
         try:
             image = Image.open(BytesIO(image_bytes)).convert("RGB")
 
-            # Preprocess image - ensure good size and quality
+            # Preprocess image
             width, height = image.size
             max_size = 1024
             if width > max_size or height > max_size:
@@ -161,36 +150,26 @@ class PersonDetector:
             # Try MTCNN first
             embedding = self.get_face_embedding(image)
 
-            # If MTCNN fails, try using YOLO face detector to crop face
+            # If MTCNN fails, try using YOLO face detector
             if embedding is None:
                 print("MTCNN failed, trying YOLO face detection...")
                 face_results = self.face_model(image, conf=0.3, verbose=False)[0]
 
                 if len(face_results.boxes) > 0:
-                    # Get the first detected face
                     box = face_results.boxes[0]
                     x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-
-                    # Add padding around face
                     padding = 30
                     x1 = max(0, x1 - padding)
                     y1 = max(0, y1 - padding)
                     x2 = min(image.width, x2 + padding)
                     y2 = min(image.height, y2 + padding)
-
                     face_crop = image.crop((x1, y1, x2, y2))
-
-                    # Try MTCNN on cropped face
                     embedding = self.get_face_embedding(face_crop)
-
-                    if embedding is not None:
-                        print(f"Successfully extracted embedding using YOLO + MTCNN")
 
             if embedding is None:
                 print(f"Failed to detect face in image for {name}")
                 return False
 
-            # Store embedding with optional display name
             self.known_faces[name] = {
                 "embedding": embedding,
                 "display_name": display_name or name
@@ -210,18 +189,12 @@ class PersonDetector:
         return list(self.known_faces.keys())
 
     def identify_face(self, face_image: Image.Image, threshold: float = 0.8) -> tuple[str, str] | None:
-        """Identify a face from known faces with fallback detection.
-
-        Returns:
-            Tuple of (employee_id, display_name) if match found, None otherwise
-        """
+        """Identify a face from known faces."""
         if not FACE_RECOGNITION_AVAILABLE or not self.known_faces:
             return None
 
-        # Try to get embedding directly first
         embedding = self.get_face_embedding(face_image)
 
-        # If direct embedding fails, try YOLO detection on the face crop
         if embedding is None:
             try:
                 face_results = self.face_model(face_image, conf=0.2, verbose=False)[0]
@@ -246,12 +219,10 @@ class PersonDetector:
         best_distance = float('inf')
 
         for employee_id, face_data in self.known_faces.items():
-            # Handle both old format (just embedding) and new format (dict with embedding and name)
             if isinstance(face_data, dict):
                 known_embedding = face_data["embedding"]
                 display_name = face_data.get("display_name", employee_id)
             else:
-                # Old format compatibility
                 known_embedding = face_data
                 display_name = employee_id
 
@@ -268,31 +239,125 @@ class PersonDetector:
         return None
 
     def _normalize_label(self, label: str) -> str:
-        """Normalize label names across different models."""
-        label_map = {
-            "Helmet": "Helmet",
-            "helmet": "Helmet",
-            "Vest": "Vest",
-            "vest": "Vest",
-            "Goggles": "Goggles",
-            "goggles": "Goggles",
-            "Gloves": "Gloves",
-            "glove": "Gloves",
-            "Mask": "Mask",
-            "mask": "Mask",
-            "Safety Shoe": "Safety Shoes",
-            "shoes": "Safety Shoes",
-            "no_helmet": "NO Helmet",
-            "no_goggles": "NO Goggles",
-            "no_glove": "NO Gloves",
-            "no_mask": "NO Mask",
-            "no_shoes": "NO Safety Shoes",
-        }
-        return label_map.get(label, label)
+        """Normalize label names from Roboflow model."""
+        # Map Roboflow labels to standardized format
+        label_lower = label.lower().strip()
+
+        # Positive PPE detections
+        if label_lower in ["helmet", "hardhat", "hard hat", "hard-hat"]:
+            return "Helmet"
+        if label_lower in ["vest", "safety vest", "safety-vest", "hi-vis", "high-vis"]:
+            return "Vest"
+        if label_lower in ["goggles", "safety goggles", "glasses", "safety glasses"]:
+            return "Goggles"
+        if label_lower in ["gloves", "glove", "safety gloves"]:
+            return "Gloves"
+        if label_lower in ["mask", "face mask", "dust mask", "respirator"]:
+            return "Mask"
+        if label_lower in ["shoes", "safety shoes", "safety shoe", "boots", "safety boots"]:
+            return "Safety Shoes"
+
+        # Missing PPE violations
+        if label_lower in ["no helmet", "no-helmet", "no_helmet", "missing helmet", "no hardhat", "no-hardhat"]:
+            return "NO Helmet"
+        if label_lower in ["no vest", "no-vest", "no_vest", "missing vest", "no safety vest"]:
+            return "NO Vest"
+        if label_lower in ["no goggles", "no-goggles", "no_goggles", "missing goggles"]:
+            return "NO Goggles"
+        if label_lower in ["no gloves", "no-gloves", "no_gloves", "no glove", "no-glove", "missing gloves"]:
+            return "NO Gloves"
+        if label_lower in ["no mask", "no-mask", "no_mask", "missing mask"]:
+            return "NO Mask"
+        if label_lower in ["no shoes", "no-shoes", "no_shoes", "no safety shoes", "missing shoes"]:
+            return "NO Safety Shoes"
+
+        # Person detection (not a PPE item)
+        if label_lower in ["person", "human", "worker"]:
+            return "Person"
+
+        return label
 
     def _is_violation(self, label: str) -> bool:
         """Check if label indicates missing PPE."""
-        return label.lower().startswith("no_") or label.startswith("NO ")
+        return label.startswith("Without ")
+
+    def _run_roboflow_detection(self, image: Image.Image) -> list:
+        """Run PPE detection using Roboflow workflow."""
+        detections = []
+
+        try:
+            # Save image to temporary file for Roboflow
+            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+                image.save(tmp_file.name, format='JPEG', quality=95)
+                tmp_path = tmp_file.name
+
+            # Run Roboflow workflow
+            result = self.roboflow_client.run_workflow(
+                workspace_name=self.roboflow_workspace,
+                workflow_id=self.roboflow_workflow_id,
+                images={"image": tmp_path},
+                use_cache=True
+            )
+
+            # Clean up temp file
+            os.unlink(tmp_path)
+
+            # Parse Roboflow results
+            if result and len(result) > 0:
+                workflow_result = result[0]
+
+                # Handle different result structures from Roboflow
+                predictions = None
+
+                # Check for predictions in various locations
+                if isinstance(workflow_result, dict):
+                    # Try different keys where predictions might be stored
+                    for key in ['predictions', 'output', 'detections', 'results']:
+                        if key in workflow_result:
+                            predictions = workflow_result[key]
+                            break
+
+                    # If predictions is still None, the result itself might be the predictions
+                    if predictions is None and 'class' in str(workflow_result):
+                        predictions = [workflow_result]
+
+                if predictions:
+                    # Handle if predictions is wrapped in another structure
+                    if isinstance(predictions, dict) and 'predictions' in predictions:
+                        predictions = predictions['predictions']
+
+                    for pred in predictions if isinstance(predictions, list) else [predictions]:
+                        if isinstance(pred, dict):
+                            # Extract bounding box coordinates
+                            # Roboflow can return different formats
+                            x = pred.get('x', 0)
+                            y = pred.get('y', 0)
+                            width = pred.get('width', 0)
+                            height = pred.get('height', 0)
+
+                            # Convert center coordinates to corner coordinates
+                            x1 = int(x - width / 2)
+                            y1 = int(y - height / 2)
+                            x2 = int(x + width / 2)
+                            y2 = int(y + height / 2)
+
+                            label = pred.get('class', pred.get('label', 'unknown'))
+                            confidence = pred.get('confidence', 0.0)
+
+                            detections.append({
+                                'bbox': [x1, y1, x2, y2],
+                                'label': label,
+                                'confidence': confidence
+                            })
+
+                print(f"Roboflow detected {len(detections)} objects")
+
+        except Exception as e:
+            print(f"Roboflow detection error: {e}")
+            import traceback
+            traceback.print_exc()
+
+        return detections
 
     def process_image(self, image_bytes: bytes) -> tuple[Image.Image, dict]:
         """Process image and return annotated image with detections."""
@@ -312,83 +377,51 @@ class PersonDetector:
             "violations": []
         }
 
-        # Track detected boxes to avoid duplicates
-        detected_boxes = []
+        # Run Roboflow PPE detection
+        roboflow_detections = self._run_roboflow_detection(image)
 
-        def box_overlap(box1, box2, threshold=0.5):
-            """Check if two boxes overlap significantly."""
-            x1 = max(box1[0], box2[0])
-            y1 = max(box1[1], box2[1])
-            x2 = min(box1[2], box2[2])
-            y2 = min(box1[3], box2[3])
+        for det in roboflow_detections:
+            x1, y1, x2, y2 = det['bbox']
+            raw_label = det['label']
+            conf = det['confidence']
 
-            if x2 <= x1 or y2 <= y1:
-                return False
+            label = self._normalize_label(raw_label)
 
-            intersection = (x2 - x1) * (y2 - y1)
-            area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
-            area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
+            # Skip person detections (not PPE)
+            if label == "Person":
+                continue
 
-            iou = intersection / min(area1, area2)
-            return iou > threshold
+            is_violation = self._is_violation(label)
+            color = self.colors.get(label, (0, 255, 0) if not is_violation else (255, 0, 0))
 
-        # Run both PPE models
-        for model, model_name in [(self.ppe_model1, "model1"), (self.ppe_model2, "model2")]:
-            results = model(image, conf=0.25, verbose=False)[0]
+            # Draw bounding box
+            draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
 
-            for box in results.boxes:
-                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-                conf = float(box.conf[0])
-                cls_id = int(box.cls[0])
-                raw_label = results.names[cls_id]
-                label = self._normalize_label(raw_label)
+            # Draw label
+            text = f"{label} {conf:.2f}"
+            text_bbox = draw.textbbox((x1, y1 - 2), text, font=font_small)
+            draw.rectangle([text_bbox[0] - 2, text_bbox[1] - 2, text_bbox[2] + 2, text_bbox[3] + 2], fill=color)
+            text_color = (255, 255, 255) if is_violation else (0, 0, 0)
+            draw.text((x1, y1 - 2), text, fill=text_color, font=font_small)
 
-                # Skip if similar box already detected
-                current_box = [x1, y1, x2, y2]
-                is_duplicate = False
-                for existing in detected_boxes:
-                    if box_overlap(current_box, existing["bbox"]) and existing["label"] == label:
-                        is_duplicate = True
-                        break
+            detection_info = {
+                "label": label,
+                "confidence": conf,
+                "bbox": [x1, y1, x2, y2],
+                "is_violation": is_violation
+            }
 
-                if is_duplicate:
-                    continue
+            detections["ppe"].append(detection_info)
+            if is_violation:
+                detections["violations"].append(detection_info)
 
-                detected_boxes.append({"bbox": current_box, "label": label})
-
-                # Determine color
-                is_violation = self._is_violation(label)
-                color = self.colors.get(raw_label, (0, 255, 0) if not is_violation else (255, 0, 0))
-
-                # Draw bounding box
-                draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
-
-                # Draw label background and text
-                text = f"{label} {conf:.2f}"
-                text_bbox = draw.textbbox((x1, y1 - 2), text, font=font_small)
-                draw.rectangle([text_bbox[0] - 2, text_bbox[1] - 2, text_bbox[2] + 2, text_bbox[3] + 2], fill=color)
-                text_color = (255, 255, 255) if is_violation else (0, 0, 0)
-                draw.text((x1, y1 - 2), text, fill=text_color, font=font_small)
-
-                detection_info = {
-                    "label": label,
-                    "confidence": conf,
-                    "bbox": [x1, y1, x2, y2],
-                    "is_violation": is_violation
-                }
-
-                detections["ppe"].append(detection_info)
-                if is_violation:
-                    detections["violations"].append(detection_info)
-
-        # Run face detection with lower confidence for better recall
+        # Run face detection
         face_results = self.face_model(image, conf=0.3, verbose=False)[0]
 
         for box in face_results.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
             conf = float(box.conf[0])
 
-            # Add generous padding for better face crop
             padding = 40
             x1_crop = max(0, x1 - padding)
             y1_crop = max(0, y1 - padding)
@@ -396,8 +429,6 @@ class PersonDetector:
             y2_crop = min(image.height, y2 + padding)
 
             face_crop = image.crop((x1_crop, y1_crop, x2_crop, y2_crop))
-
-            # Try to identify the person with more lenient threshold
             identification = self.identify_face(face_crop, threshold=0.85)
 
             color = self.colors["face"]
@@ -408,8 +439,7 @@ class PersonDetector:
 
             if identification:
                 person_id, person_name = identification
-                # Show name and ID on the image
-                text = f"{person_name} ({person_id}) ✓"
+                text = f"{person_name} ({person_id})"
                 print(f"Identified person: {person_name} ({person_id})")
             else:
                 text = f"Unknown {conf:.2f}"
@@ -450,7 +480,6 @@ class PersonDetector:
             label = item["label"]
             violation_counts[label] = violation_counts.get(label, 0) + 1
 
-        # Extract employee IDs of identified persons
         identified = [f["employee_id"] for f in faces if f.get("employee_id")]
 
         return {
