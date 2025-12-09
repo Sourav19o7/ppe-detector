@@ -650,3 +650,92 @@ class ViolationReport(BaseModel):
     end_date: str
     violations: List[PPEViolation]
     summary: Dict[str, Any]
+
+
+# ==================== Prediction Schemas ====================
+
+class RiskCategory(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class AttendancePattern(str, Enum):
+    REGULAR = "regular"
+    IRREGULAR = "irregular"
+    DECLINING = "declining"
+
+
+class RiskFactor(BaseModel):
+    factor: str
+    impact: float
+    description: str
+
+
+class WorkerPredictionResponse(BaseModel):
+    worker_id: str
+    employee_id: str
+    worker_name: Optional[str] = None
+    prediction_date: datetime
+
+    # Risk Scores (0-100)
+    overall_risk_score: float
+    risk_category: RiskCategory
+    violation_risk_score: float
+    attendance_risk_score: float
+    compliance_trend_score: float
+
+    # Predictions
+    predicted_violations_count: int
+    predicted_absent_days: int
+    high_risk_ppe_items: List[str]
+
+    # Classification
+    requires_intervention: bool
+    attendance_pattern: AttendancePattern
+    consecutive_absence_risk: float
+    attendance_rate_30d: float
+
+    # Explainability
+    risk_factors: List[RiskFactor]
+    confidence: float
+
+    # Metadata
+    model_version: str
+    created_at: datetime
+    expires_at: datetime
+
+
+class AtRiskWorkerSummary(BaseModel):
+    worker_id: str
+    employee_id: str
+    worker_name: str
+    risk_score: float
+    risk_category: RiskCategory
+    main_issue: str
+    requires_intervention: bool
+
+
+class AtRiskWorkersSummary(BaseModel):
+    total_at_risk: int
+    by_category: Dict[str, int]
+    workers: List[AtRiskWorkerSummary]
+
+
+class PredictionTrends(BaseModel):
+    trends: Dict[str, Dict[str, Dict[str, Any]]]  # date -> category -> {count, avg_score}
+
+
+class BatchPredictionResult(BaseModel):
+    worker_id: str
+    status: str  # "success" or "error"
+    risk_category: Optional[str] = None
+    error: Optional[str] = None
+
+
+class BatchPredictionResponse(BaseModel):
+    total_workers: int
+    successful: int
+    failed: int
+    results: List[BatchPredictionResult]
