@@ -68,8 +68,8 @@ export default function SafetyOfficerDashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Safety Analytics</h1>
-        <p className="text-gray-500 mt-1">{data.mine_name} • Compliance & Risk Analysis</p>
+        <h1 className="text-2xl font-bold text-stone-800">Safety Analytics</h1>
+        <p className="text-stone-500 mt-1">{data.mine_name} • Compliance & Risk Analysis</p>
       </div>
 
       {/* Compliance Rate Cards */}
@@ -125,19 +125,19 @@ export default function SafetyOfficerDashboard() {
         <Card title="Violation Breakdown" description="Types of violations this week">
           <div className="space-y-4">
             {Object.entries(data.violation_trends).length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No violations recorded</p>
+              <p className="text-stone-500 text-center py-4">No violations recorded</p>
             ) : (
               Object.entries(data.violation_trends)
                 .sort(([, a], [, b]) => b - a)
                 .map(([type, count]) => (
                   <div key={type}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm font-medium text-stone-700">
                         {type.replace('NO-', 'Missing ')}
                       </span>
-                      <span className="text-sm font-semibold text-gray-900">{count}</span>
+                      <span className="text-sm font-semibold text-stone-800">{count}</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-stone-200 rounded-full h-2">
                       <div
                         className="bg-red-500 h-2 rounded-full"
                         style={{
@@ -155,7 +155,7 @@ export default function SafetyOfficerDashboard() {
         <Card title="Zone Risk Analysis" description="Safety status by zone">
           <div className="space-y-3">
             {data.zone_risk_analysis.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No zones configured</p>
+              <p className="text-stone-500 text-center py-4">No zones configured</p>
             ) : (
               data.zone_risk_analysis.map((zone) => (
                 <div
@@ -172,7 +172,7 @@ export default function SafetyOfficerDashboard() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-500" />
+                      <MapPin className="w-4 h-4 text-stone-500" />
                       <span className="font-medium">{zone.zone_name}</span>
                     </div>
                     <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -187,7 +187,7 @@ export default function SafetyOfficerDashboard() {
                       {zone.risk_level.toUpperCase()}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-4 mt-2 text-sm text-stone-500">
                     <span className="flex items-center gap-1">
                       <Users className="w-3 h-3" />
                       {zone.worker_count} workers
@@ -210,7 +210,7 @@ export default function SafetyOfficerDashboard() {
         <Card title="High Risk Workers" description="Workers with low compliance scores">
           <div className="space-y-3">
             {data.high_risk_workers.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
+              <div className="text-center py-6 text-stone-500">
                 <Shield className="w-8 h-8 mx-auto mb-2 text-green-500" />
                 <p>All workers are compliant!</p>
               </div>
@@ -218,14 +218,14 @@ export default function SafetyOfficerDashboard() {
               data.high_risk_workers.map((worker) => (
                 <div key={worker.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                   <div>
-                    <p className="font-medium text-gray-900">{worker.name}</p>
-                    <p className="text-xs text-gray-500">ID: {worker.employee_id}</p>
+                    <p className="font-medium text-stone-800">{worker.name}</p>
+                    <p className="text-xs text-stone-500">ID: {worker.employee_id}</p>
                   </div>
                   <div className="text-right">
                     <p className={`font-bold ${worker.compliance_score < 50 ? 'text-red-600' : 'text-yellow-600'}`}>
                       {worker.compliance_score}%
                     </p>
-                    <p className="text-xs text-gray-500">{worker.total_violations} violations</p>
+                    <p className="text-xs text-stone-500">{worker.total_violations} violations</p>
                   </div>
                 </div>
               ))
@@ -237,7 +237,7 @@ export default function SafetyOfficerDashboard() {
         <Card title="Recent Alerts" description="Latest safety alerts">
           <div className="space-y-3">
             {data.recent_alerts.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No recent alerts</p>
+              <p className="text-stone-500 text-center py-4">No recent alerts</p>
             ) : (
               data.recent_alerts.slice(0, 5).map((alert) => (
                 <div
@@ -252,7 +252,7 @@ export default function SafetyOfficerDashboard() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{alert.message}</p>
+                      <p className="text-sm font-medium text-stone-800">{alert.message}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`text-xs px-1.5 py-0.5 rounded ${
                           alert.status === 'active'
@@ -263,7 +263,7 @@ export default function SafetyOfficerDashboard() {
                         }`}>
                           {alert.status}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-stone-500">
                           {formatTime(alert.created_at)}
                         </span>
                       </div>

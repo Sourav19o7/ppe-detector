@@ -187,8 +187,8 @@ export default function WorkersPage() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Workers</h1>
-            <p className="text-gray-500 mt-1">Register workers and manage their face recognition</p>
+            <h1 className="text-2xl font-bold text-stone-800">Workers</h1>
+            <p className="text-stone-500 mt-1">Register workers and manage their face recognition</p>
           </div>
           <button
             onClick={openAddModal}
@@ -225,12 +225,12 @@ export default function WorkersPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-[#1a237e]/10 rounded-lg">
-                <UserPlus className="text-[#1a237e]" size={24} />
+              <div className="p-3 bg-orange-100 rounded-lg">
+                <UserPlus className="text-orange-600" size={24} />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">Register New Worker</h3>
-                <p className="text-sm text-gray-500">Add a new worker with face recognition</p>
+                <h3 className="font-semibold text-stone-800">Register New Worker</h3>
+                <p className="text-sm text-stone-500">Add a new worker with face recognition</p>
               </div>
               <button
                 onClick={openAddModal}
@@ -246,10 +246,10 @@ export default function WorkersPage() {
                 <Users className="text-green-600" size={24} />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">Total Workers</h3>
-                <p className="text-sm text-gray-500">{total} registered workers</p>
+                <h3 className="font-semibold text-stone-800">Total Workers</h3>
+                <p className="text-sm text-stone-500">{total} registered workers</p>
               </div>
-              <div className="text-2xl font-bold text-[#1a237e]">{total}</div>
+              <div className="text-2xl font-bold text-orange-600">{total}</div>
             </div>
           </Card>
         </div>
@@ -258,7 +258,7 @@ export default function WorkersPage() {
         <Card>
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={20} />
               <input
                 type="text"
                 value={search}
@@ -300,9 +300,9 @@ export default function WorkersPage() {
                   </tr>
                 ) : workers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center text-gray-500 py-12">
+                    <td colSpan={6} className="text-center text-stone-500 py-12">
                       <div className="flex flex-col items-center gap-3">
-                        <Users className="text-gray-300" size={48} />
+                        <Users className="text-stone-300" size={48} />
                         <p>{search ? 'No workers found matching your search' : 'No workers registered yet'}</p>
                         {!search && (
                           <button onClick={openAddModal} className="btn btn-primary mt-2">
@@ -326,19 +326,19 @@ export default function WorkersPage() {
                           <span className="badge badge-warning">Not Registered</span>
                         )}
                       </td>
-                      <td className="text-gray-500">{formatDate(worker.created_at)}</td>
+                      <td className="text-stone-500">{formatDate(worker.created_at)}</td>
                       <td>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => openFaceModal(worker)}
-                            className="p-2 text-[#1a237e] hover:bg-[#1a237e]/10 rounded-lg transition-colors"
+                            className="p-2 text-orange-600 hover:bg-orange-100 rounded-lg transition-colors"
                             title="Register/Update Face"
                           >
                             <CameraIcon size={18} />
                           </button>
                           <button
                             onClick={() => openEditModal(worker)}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
                             title="Edit"
                           >
                             <Edit2 size={18} />
@@ -360,7 +360,7 @@ export default function WorkersPage() {
           </div>
 
           {workers.length > 0 && (
-            <div className="mt-4 text-sm text-gray-500">
+            <div className="mt-4 text-sm text-stone-500">
               Showing {workers.length} of {total} workers
             </div>
           )}
@@ -371,13 +371,13 @@ export default function WorkersPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md my-8 max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+            <div className="p-6 border-b border-stone-100 flex items-center justify-between flex-shrink-0">
               <h2 className="text-lg font-semibold">
                 {editingWorker ? 'Edit Worker' : 'Register New Worker'}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-stone-100 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
@@ -390,7 +390,7 @@ export default function WorkersPage() {
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-stone-700 mb-1">
                   Full Name *
                 </label>
                 <input
@@ -403,7 +403,7 @@ export default function WorkersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-stone-700 mb-1">
                   Worker ID *
                 </label>
                 <input
@@ -415,12 +415,12 @@ export default function WorkersPage() {
                   required
                 />
                 {!editingWorker && (
-                  <p className="text-xs text-gray-500 mt-1">Unique identifier for the worker</p>
+                  <p className="text-xs text-stone-500 mt-1">Unique identifier for the worker</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-stone-700 mb-1">
                   Department
                 </label>
                 <input
@@ -433,12 +433,12 @@ export default function WorkersPage() {
 
               {!editingWorker && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-stone-700 mb-1">
                     Face Photo
                   </label>
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-[#1a237e]/30 rounded-lg p-6 text-center cursor-pointer hover:border-[#1a237e]/50 hover:bg-[#1a237e]/5 transition-colors"
+                    className="border-2 border-dashed border-orange-300 rounded-lg p-6 text-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-colors"
                   >
                     {facePreview ? (
                       <img
@@ -448,9 +448,9 @@ export default function WorkersPage() {
                       />
                     ) : (
                       <>
-                        <CameraIcon className="mx-auto text-[#1a237e]/50 mb-2" size={40} />
-                        <p className="text-sm text-gray-600">Click to upload face photo</p>
-                        <p className="text-xs text-gray-400 mt-1">Required for attendance recognition</p>
+                        <CameraIcon className="mx-auto text-orange-600/50 mb-2" size={40} />
+                        <p className="text-sm text-stone-600">Click to upload face photo</p>
+                        <p className="text-xs text-stone-400 mt-1">Required for attendance recognition</p>
                       </>
                     )}
                   </div>
@@ -490,27 +490,27 @@ export default function WorkersPage() {
       {showFaceModal && selectedWorker && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md my-8 max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+            <div className="p-6 border-b border-stone-100 flex items-center justify-between flex-shrink-0">
               <div>
                 <h2 className="text-lg font-semibold">Register Face</h2>
-                <p className="text-sm text-gray-500">{selectedWorker.name}</p>
+                <p className="text-sm text-stone-500">{selectedWorker.name}</p>
               </div>
               <button
                 onClick={() => setShowFaceModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-stone-100 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
-              <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-stone-600 bg-blue-50 p-3 rounded-lg">
                 Upload a clear photo of the worker's face. This will be used for attendance recognition.
               </p>
 
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-[#1a237e]/30 rounded-lg p-8 text-center cursor-pointer hover:border-[#1a237e]/50 hover:bg-[#1a237e]/5 transition-colors"
+                className="border-2 border-dashed border-orange-300 rounded-lg p-8 text-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-colors"
               >
                 {facePreview ? (
                   <img
@@ -520,9 +520,9 @@ export default function WorkersPage() {
                   />
                 ) : (
                   <>
-                    <CameraIcon className="mx-auto text-[#1a237e]/50 mb-2" size={48} />
-                    <p className="text-gray-600">Click to upload face photo</p>
-                    <p className="text-sm text-gray-400 mt-1">Make sure face is clearly visible</p>
+                    <CameraIcon className="mx-auto text-orange-600/50 mb-2" size={48} />
+                    <p className="text-stone-600">Click to upload face photo</p>
+                    <p className="text-sm text-stone-400 mt-1">Make sure face is clearly visible</p>
                   </>
                 )}
               </div>

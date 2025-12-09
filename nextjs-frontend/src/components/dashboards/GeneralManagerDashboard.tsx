@@ -79,8 +79,8 @@ export default function GeneralManagerDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Executive Dashboard</h1>
-          <p className="text-gray-500 mt-1">Organization-wide KPIs & Strategic Overview</p>
+          <h1 className="text-2xl font-bold text-stone-800">Executive Dashboard</h1>
+          <p className="text-stone-500 mt-1">Organization-wide KPIs & Strategic Overview</p>
         </div>
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
@@ -144,26 +144,26 @@ export default function GeneralManagerDashboard() {
       {/* Monthly KPIs */}
       <Card title="Monthly Performance Summary" description="Current month metrics">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-4 bg-gray-50 rounded-xl">
+          <div className="text-center p-4 bg-stone-50 rounded-xl">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
               <BarChart3 className="w-8 h-8 text-blue-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{data.kpi_summary.monthly_entries.toLocaleString()}</p>
-            <p className="text-sm text-gray-500 mt-1">Total Entries</p>
+            <p className="text-3xl font-bold text-stone-800">{data.kpi_summary.monthly_entries.toLocaleString()}</p>
+            <p className="text-sm text-stone-500 mt-1">Total Entries</p>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-xl">
+          <div className="text-center p-4 bg-stone-50 rounded-xl">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
               <AlertTriangle className="w-8 h-8 text-red-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{data.kpi_summary.monthly_violations}</p>
-            <p className="text-sm text-gray-500 mt-1">Total Violations</p>
+            <p className="text-3xl font-bold text-stone-800">{data.kpi_summary.monthly_violations}</p>
+            <p className="text-sm text-stone-500 mt-1">Total Violations</p>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-xl">
+          <div className="text-center p-4 bg-stone-50 rounded-xl">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
               <Target className="w-8 h-8 text-green-600" />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{data.kpi_summary.monthly_compliance_rate}%</p>
-            <p className="text-sm text-gray-500 mt-1">Compliance Rate</p>
+            <p className="text-3xl font-bold text-stone-800">{data.kpi_summary.monthly_compliance_rate}%</p>
+            <p className="text-sm text-stone-500 mt-1">Compliance Rate</p>
           </div>
         </div>
       </Card>
@@ -173,12 +173,12 @@ export default function GeneralManagerDashboard() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Mine</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Entries</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Violations</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Compliance</th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Trend</th>
+              <tr className="border-b border-stone-100">
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Mine</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Entries</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Violations</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Compliance</th>
+                <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Trend</th>
               </tr>
             </thead>
             <tbody>
@@ -186,15 +186,15 @@ export default function GeneralManagerDashboard() {
                 const avgCompliance = data.organization_overview.compliance_rate;
                 const trend = mine.compliance_rate >= avgCompliance ? 'up' : 'down';
                 return (
-                  <tr key={mine.mine_id} className="border-b border-gray-50 hover:bg-gray-50">
+                  <tr key={mine.mine_id} className="border-b border-stone-50 hover:bg-stone-50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <Mountain className="w-4 h-4 text-gray-400" />
-                        <span className="font-medium text-gray-900">{mine.mine_name}</span>
+                        <Mountain className="w-4 h-4 text-stone-400" />
+                        <span className="font-medium text-stone-800">{mine.mine_name}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-gray-700">{mine.total_entries.toLocaleString()}</span>
+                      <span className="text-stone-700">{mine.total_entries.toLocaleString()}</span>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
@@ -209,7 +209,7 @@ export default function GeneralManagerDashboard() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                        <div className="w-24 bg-stone-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
                               mine.compliance_rate >= 95 ? 'bg-green-500' :
@@ -251,13 +251,13 @@ export default function GeneralManagerDashboard() {
         {/* Regulatory Compliance Status */}
         <Card title="Regulatory Compliance" description="Current compliance status vs threshold">
           <div className="space-y-6">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-stone-50">
               <div>
-                <p className="text-sm text-gray-500">Regulatory Threshold</p>
-                <p className="text-2xl font-bold text-gray-900">{data.regulatory_status.compliance_threshold}%</p>
+                <p className="text-sm text-stone-500">Regulatory Threshold</p>
+                <p className="text-2xl font-bold text-stone-800">{data.regulatory_status.compliance_threshold}%</p>
               </div>
-              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                <Target className="w-6 h-6 text-gray-600" />
+              <div className="w-12 h-12 bg-stone-200 rounded-full flex items-center justify-center">
+                <Target className="w-6 h-6 text-stone-600" />
               </div>
             </div>
 
@@ -269,7 +269,7 @@ export default function GeneralManagerDashboard() {
                 : 'bg-red-50'
             }`}>
               <div>
-                <p className="text-sm text-gray-500">Current Compliance</p>
+                <p className="text-sm text-stone-500">Current Compliance</p>
                 <p className={`text-2xl font-bold ${
                   complianceStatus.color === 'green'
                     ? 'text-green-700'
@@ -299,12 +299,12 @@ export default function GeneralManagerDashboard() {
 
             <div className="relative pt-2">
               <div className="flex mb-2 items-center justify-between">
-                <span className="text-xs font-semibold text-gray-600">Progress to Target</span>
-                <span className="text-xs font-semibold text-gray-600">
+                <span className="text-xs font-semibold text-stone-600">Progress to Target</span>
+                <span className="text-xs font-semibold text-stone-600">
                   {Math.min(100, Math.round((data.regulatory_status.current_compliance / data.regulatory_status.compliance_threshold) * 100))}%
                 </span>
               </div>
-              <div className="overflow-hidden h-3 text-xs flex rounded-full bg-gray-200">
+              <div className="overflow-hidden h-3 text-xs flex rounded-full bg-stone-200">
                 <div
                   style={{ width: `${Math.min(100, (data.regulatory_status.current_compliance / data.regulatory_status.compliance_threshold) * 100)}%` }}
                   className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${
@@ -324,7 +324,7 @@ export default function GeneralManagerDashboard() {
         <Card title="Strategic Alerts" description="High-priority alerts requiring executive attention">
           <div className="space-y-3">
             {data.strategic_alerts.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-stone-500">
                 <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500" />
                 <p className="font-medium">All Clear</p>
                 <p className="text-sm">No strategic alerts at this time</p>
@@ -361,8 +361,8 @@ export default function GeneralManagerDashboard() {
                           {alert.severity.toUpperCase()}
                         </span>
                       </div>
-                      <p className="text-sm font-medium text-gray-900">{alert.message}</p>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                      <p className="text-sm font-medium text-stone-800">{alert.message}</p>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-stone-500">
                         <span>{alert.mine_name}</span>
                         <span>•</span>
                         <span>{formatTime(alert.created_at)}</span>

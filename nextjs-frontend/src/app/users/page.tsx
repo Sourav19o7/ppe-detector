@@ -30,7 +30,7 @@ const roleLabels: Record<UserRole, { label: string; color: string }> = {
   manager: { label: 'Manager', color: 'bg-green-100 text-green-700' },
   safety_officer: { label: 'Safety Officer', color: 'bg-yellow-100 text-yellow-700' },
   shift_incharge: { label: 'Shift Incharge', color: 'bg-orange-100 text-orange-700' },
-  worker: { label: 'Worker', color: 'bg-gray-100 text-gray-700' },
+  worker: { label: 'Worker', color: 'bg-stone-100 text-stone-700' },
 };
 
 const shiftOptions: { value: ShiftType; label: string }[] = [
@@ -208,13 +208,13 @@ export default function UsersPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-            <p className="text-gray-500 mt-1">Manage staff users and their roles</p>
+            <h1 className="text-2xl font-bold text-stone-800">User Management</h1>
+            <p className="text-stone-500 mt-1">Manage staff users and their roles</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={loadData}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200"
             >
               <RefreshCw className="w-4 h-4" />
               Refresh
@@ -237,22 +237,22 @@ export default function UsersPage() {
         <div className="flex flex-wrap gap-4">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
+            <Filter className="w-5 h-5 text-stone-400" />
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Roles</option>
               {Object.entries(roleLabels).map(([value, { label }]) => (
@@ -267,28 +267,28 @@ export default function UsersPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">User</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Role</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Contact</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <tr className="border-b border-stone-100">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">User</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Role</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Contact</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Status</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-stone-500 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-8 text-gray-500">
+                    <td colSpan={5} className="text-center py-8 text-stone-500">
                       No users found
                     </td>
                   </tr>
                 ) : (
                   filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <tr key={user.id} className="border-b border-stone-50 hover:bg-stone-50">
                       <td className="py-3 px-4">
                         <div>
-                          <p className="font-medium text-gray-900">{user.full_name}</p>
-                          <p className="text-xs text-gray-500">@{user.username}</p>
+                          <p className="font-medium text-stone-800">{user.full_name}</p>
+                          <p className="text-xs text-stone-500">@{user.username}</p>
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -299,8 +299,8 @@ export default function UsersPage() {
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-sm">
-                          <p className="text-gray-600">{user.email || '-'}</p>
-                          <p className="text-gray-400">{user.phone || '-'}</p>
+                          <p className="text-stone-600">{user.email || '-'}</p>
+                          <p className="text-stone-400">{user.phone || '-'}</p>
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -351,7 +351,7 @@ export default function UsersPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold">{editingUser ? 'Edit User' : 'Create User'}</h2>
-                  <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <button onClick={() => setShowModal(false)} className="text-stone-400 hover:text-stone-600">
                     <X className="w-6 h-6" />
                   </button>
                 </div>
@@ -359,65 +359,65 @@ export default function UsersPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Username *</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Username *</label>
                       <input
                         type="text"
                         value={formData.username}
                         onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                         disabled={!!editingUser}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-stone-100"
                       />
                     </div>
                     {!editingUser && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                        <label className="block text-sm font-medium text-stone-700 mb-1">Password *</label>
                         <input
                           type="password"
                           value={formData.password}
                           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Full Name *</label>
                     <input
                       type="text"
                       value={formData.full_name}
                       onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Email</label>
                       <input
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Phone</label>
                       <input
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">Role *</label>
                     <select
                       value={formData.role}
                       onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     >
                       {Object.entries(roleLabels).filter(([k]) => k !== 'worker').map(([value, { label }]) => (
                         <option key={value} value={value}>{label}</option>
@@ -427,11 +427,11 @@ export default function UsersPage() {
 
                   {(formData.role === 'manager' || formData.role === 'safety_officer' || formData.role === 'shift_incharge') && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Mine</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Assigned Mine</label>
                       <select
                         value={formData.mine_id}
                         onChange={(e) => setFormData({ ...formData, mine_id: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select Mine</option>
                         {mines.map((mine) => (
@@ -443,11 +443,11 @@ export default function UsersPage() {
 
                   {formData.role === 'shift_incharge' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Shift</label>
+                      <label className="block text-sm font-medium text-stone-700 mb-1">Assigned Shift</label>
                       <select
                         value={formData.assigned_shift || ''}
                         onChange={(e) => setFormData({ ...formData, assigned_shift: e.target.value as ShiftType })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select Shift</option>
                         {shiftOptions.map((shift) => (
@@ -461,7 +461,7 @@ export default function UsersPage() {
                 <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
                   <button
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200"
                   >
                     Cancel
                   </button>
@@ -485,12 +485,12 @@ export default function UsersPage() {
             <div className="bg-white rounded-xl max-w-sm w-full p-6">
               <h3 className="text-lg font-bold mb-4">Reset Password</h3>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <label className="block text-sm font-medium text-stone-700 mb-1">New Password</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Min 6 characters"
                 />
               </div>
@@ -500,7 +500,7 @@ export default function UsersPage() {
                     setShowResetPassword(null);
                     setNewPassword('');
                   }}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                  className="px-4 py-2 bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200"
                 >
                   Cancel
                 </button>

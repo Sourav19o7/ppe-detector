@@ -103,6 +103,18 @@ async def update_worker_compliance(db, worker_id: str, has_violation: bool):
     )
 
 
+# Global detector instance (loaded once at module import)
+_detector = None
+
+def get_detector():
+    """Get or create the singleton detector instance."""
+    global _detector
+    if _detector is None:
+        from detector import PersonDetector
+        _detector = PersonDetector()
+    return _detector
+
+
 @router.post("/detect")
 async def detect_and_record_entry(
     gate_id: str = Form(...),
@@ -114,8 +126,6 @@ async def detect_and_record_entry(
     Process gate camera feed - detect PPE and faces, record entry.
     This is the main endpoint for gate cameras.
     """
-    from detector import PersonDetector
-
     db = get_database()
 
     # Verify gate exists
@@ -133,9 +143,9 @@ async def detect_and_record_entry(
     if not check_mine_access(current_user, mine_id):
         raise HTTPException(status_code=403, detail="No access to this mine")
 
-    # Process image
+    # Process image using singleton detector
     contents = await file.read()
-    detector = PersonDetector()
+    detector = get_detector()
     result_image, detections = detector.process_image(contents)
 
     # Convert result image to base64
@@ -176,9 +186,12 @@ async def detect_and_record_entry(
         "entry_type": entry_type,
         "status": entry_status.value,
         "ppe_status": {
-            "helmet": "NO-Hardhat" not in violation_labels,
-            "vest": "NO-Safety Vest" not in violation_labels,
-            "mask": "NO-Mask" not in violation_labels,
+            "helmet": "NO Helmet" not in violation_labels,
+            "vest": "NO Vest" not in violation_labels,
+            "goggles": "NO Goggles" not in violation_labels,
+            "gloves": "NO Gloves" not in violation_labels,
+            "mask": "NO Mask" not in violation_labels,
+            "safety_shoes": "NO Safety Shoes" not in violation_labels,
         },
         "violations": violation_labels,
         "timestamp": datetime.utcnow(),
@@ -219,9 +232,10 @@ async def detect_and_record_entry(
 
     return JSONResponse({
         "success": True,
-        "entry": response_entry.model_dump(),
+        "entry": response_entry.model_dump(mode="json"),
         "image": f"data:image/png;base64,{img_base64}",
         "detections": detections,
+        "violations": violation_labels,
         "message": f"Entry {'approved' if entry_status == EntryStatus.APPROVED else 'denied'} - {len(violation_labels)} violation(s) detected"
     })
 

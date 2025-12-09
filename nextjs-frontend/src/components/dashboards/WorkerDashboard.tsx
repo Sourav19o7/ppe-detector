@@ -138,18 +138,18 @@ export default function WorkerDashboard() {
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-xl p-4 text-center shadow-sm">
           <Calendar className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{data.statistics.total_entries}</p>
-          <p className="text-xs text-gray-500">Total Entries</p>
+          <p className="text-2xl font-bold text-stone-800">{data.statistics.total_entries}</p>
+          <p className="text-xs text-stone-500">Total Entries</p>
         </div>
         <div className="bg-white rounded-xl p-4 text-center shadow-sm">
           <AlertTriangle className="w-6 h-6 text-red-500 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{data.compliance.total_violations}</p>
-          <p className="text-xs text-gray-500">Violations</p>
+          <p className="text-2xl font-bold text-stone-800">{data.compliance.total_violations}</p>
+          <p className="text-xs text-stone-500">Violations</p>
         </div>
         <div className="bg-white rounded-xl p-4 text-center shadow-sm">
           <Flame className="w-6 h-6 text-orange-500 mx-auto mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{data.compliance.current_streak_days}</p>
-          <p className="text-xs text-gray-500">Day Streak</p>
+          <p className="text-2xl font-bold text-stone-800">{data.compliance.current_streak_days}</p>
+          <p className="text-xs text-stone-500">Day Streak</p>
         </div>
       </div>
 
@@ -158,13 +158,13 @@ export default function WorkerDashboard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              data.shift_info.is_current_shift ? 'bg-green-100' : 'bg-gray-100'
+              data.shift_info.is_current_shift ? 'bg-green-100' : 'bg-stone-100'
             }`}>
-              <Clock className={`w-6 h-6 ${data.shift_info.is_current_shift ? 'text-green-600' : 'text-gray-600'}`} />
+              <Clock className={`w-6 h-6 ${data.shift_info.is_current_shift ? 'text-green-600' : 'text-stone-600'}`} />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">{data.shift_info.shift_name}</p>
-              <p className="text-sm text-gray-500">
+              <p className="font-semibold text-stone-800">{data.shift_info.shift_name}</p>
+              <p className="text-sm text-stone-500">
                 {data.shift_info.start_time} - {data.shift_info.end_time}
               </p>
             </div>
@@ -184,7 +184,7 @@ export default function WorkerDashboard() {
             {data.badges.map((badge) => {
               const config = badgeConfig[badge] || {
                 icon: <Award className="w-4 h-4" />,
-                color: 'bg-gray-100 text-gray-700',
+                color: 'bg-stone-100 text-stone-700',
                 label: badge
               };
               return (
@@ -218,14 +218,14 @@ export default function WorkerDashboard() {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{notif.message}</p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-sm font-medium text-stone-800">{notif.message}</p>
+                    <p className="text-xs text-stone-500 mt-1">
                       {new Date(notif.date).toLocaleDateString()}
                     </p>
                   </div>
                   <button
                     onClick={() => handleAcknowledgeNotification(notif.id)}
-                    className="text-xs px-2 py-1 bg-white border rounded hover:bg-gray-50"
+                    className="text-xs px-2 py-1 bg-white border rounded hover:bg-stone-50"
                   >
                     OK
                   </button>
@@ -254,7 +254,7 @@ export default function WorkerDashboard() {
                       </span>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-stone-500">
                     {violation.date} at {violation.time}
                   </p>
                 </div>

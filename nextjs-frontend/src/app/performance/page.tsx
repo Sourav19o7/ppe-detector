@@ -98,14 +98,14 @@ export default function PerformancePage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Performance Analytics</h1>
-            <p className="text-gray-500 mt-1">Detailed performance metrics across all operations</p>
+            <h1 className="text-2xl font-bold text-stone-900">Performance Analytics</h1>
+            <p className="text-stone-500 mt-1">Detailed performance metrics across all operations</p>
           </div>
           <div className="flex items-center gap-3">
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="week">This Week</option>
               <option value="month">This Month</option>
@@ -198,12 +198,12 @@ export default function PerformancePage() {
               .sort((a, b) => b.compliance_rate - a.compliance_rate)
               .map((mine, index) => (
                 <div key={mine.mine_id} className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600">
+                  <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-sm font-bold text-stone-600">
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-gray-900">{mine.mine_name}</span>
+                      <span className="font-medium text-stone-900">{mine.mine_name}</span>
                       <span className={`font-bold ${
                         mine.compliance_rate >= 90 ? 'text-green-600' :
                         mine.compliance_rate >= 80 ? 'text-yellow-600' : 'text-red-600'
@@ -211,7 +211,7 @@ export default function PerformancePage() {
                         {mine.compliance_rate}%
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="w-full bg-stone-200 rounded-full h-3">
                       <div
                         className={`h-3 rounded-full transition-all ${
                           mine.compliance_rate >= 90 ? 'bg-green-500' :
@@ -220,7 +220,7 @@ export default function PerformancePage() {
                         style={{ width: `${mine.compliance_rate}%` }}
                       />
                     </div>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                    <div className="flex items-center gap-4 mt-1 text-xs text-stone-500">
                       <span>{mine.total_entries.toLocaleString()} entries</span>
                       <span>{mine.violations} violations</span>
                     </div>
@@ -236,8 +236,8 @@ export default function PerformancePage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-sm text-gray-500">Current Compliance</p>
-                  <p className="text-4xl font-bold text-gray-900">{data.regulatory_status.current_compliance}%</p>
+                  <p className="text-sm text-stone-500">Current Compliance</p>
+                  <p className="text-4xl font-bold text-stone-900">{data.regulatory_status.current_compliance}%</p>
                 </div>
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
                   data.regulatory_status.status === 'compliant' ? 'bg-green-100' : 'bg-red-100'
@@ -247,7 +247,7 @@ export default function PerformancePage() {
                   }`} />
                 </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-4">
+              <div className="w-full bg-stone-200 rounded-full h-4">
                 <div
                   className={`h-4 rounded-full ${
                     data.regulatory_status.current_compliance >= data.regulatory_status.compliance_threshold
@@ -258,16 +258,16 @@ export default function PerformancePage() {
                 />
               </div>
               <div className="flex items-center justify-between mt-2 text-sm">
-                <span className="text-gray-500">0%</span>
-                <span className="text-gray-500">Target: {data.regulatory_status.compliance_threshold}%</span>
-                <span className="text-gray-500">100%</span>
+                <span className="text-stone-500">0%</span>
+                <span className="text-stone-500">Target: {data.regulatory_status.compliance_threshold}%</span>
+                <span className="text-stone-500">100%</span>
               </div>
             </div>
             <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="p-4 bg-stone-50 rounded-lg">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Regulatory Threshold</span>
-                  <span className="font-bold text-gray-900">{data.regulatory_status.compliance_threshold}%</span>
+                  <span className="text-sm text-stone-600">Regulatory Threshold</span>
+                  <span className="font-bold text-stone-900">{data.regulatory_status.compliance_threshold}%</span>
                 </div>
               </div>
               <div className={`p-4 rounded-lg ${
@@ -305,7 +305,7 @@ export default function PerformancePage() {
               <p className="text-5xl font-bold text-green-600">
                 ${data.financial_insights.estimated_cost_savings.toLocaleString()}
               </p>
-              <p className="text-gray-500 mt-2">Estimated savings from prevented incidents</p>
+              <p className="text-stone-500 mt-2">Estimated savings from prevented incidents</p>
             </div>
           </Card>
           <Card title="Violations Prevented">
@@ -313,7 +313,7 @@ export default function PerformancePage() {
               <p className="text-5xl font-bold text-blue-600">
                 {data.financial_insights.violations_prevented_this_week}
               </p>
-              <p className="text-gray-500 mt-2">Violations prevented through early intervention this week</p>
+              <p className="text-stone-500 mt-2">Violations prevented through early intervention this week</p>
             </div>
           </Card>
         </div>

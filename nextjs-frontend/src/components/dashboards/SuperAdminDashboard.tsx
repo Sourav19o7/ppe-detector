@@ -122,8 +122,8 @@ export default function SuperAdminDashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">System Administration</h1>
-          <p className="text-gray-500 mt-1">Complete system overview and management</p>
+          <h1 className="text-2xl font-bold text-stone-800">System Administration</h1>
+          <p className="text-stone-400 mt-1">Complete system overview and management</p>
         </div>
         <div className="flex items-center gap-3">
           <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
@@ -192,42 +192,42 @@ export default function SuperAdminDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Link
             href="/users"
-            className="flex flex-col items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors"
+            className="flex flex-col items-center gap-3 p-4 bg-purple-50/50 hover:bg-purple-50 rounded-xl transition-colors"
           >
-            <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-purple-400 rounded-xl flex items-center justify-center">
               <UserPlus className="w-6 h-6 text-white" />
             </div>
-            <span className="text-sm font-medium text-purple-700">Manage Users</span>
+            <span className="text-sm font-medium text-purple-600">Manage Users</span>
           </Link>
 
           <Link
             href="/workers"
-            className="flex flex-col items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors"
+            className="flex flex-col items-center gap-3 p-4 bg-green-50/50 hover:bg-green-50 rounded-xl transition-colors"
           >
-            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-green-400 rounded-xl flex items-center justify-center">
               <HardHat className="w-6 h-6 text-white" />
             </div>
-            <span className="text-sm font-medium text-green-700">Manage Workers</span>
+            <span className="text-sm font-medium text-green-600">Manage Workers</span>
           </Link>
 
           <Link
             href="/mines"
-            className="flex flex-col items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
+            className="flex flex-col items-center gap-3 p-4 bg-blue-50/50 hover:bg-blue-50 rounded-xl transition-colors"
           >
-            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-blue-400 rounded-xl flex items-center justify-center">
               <Mountain className="w-6 h-6 text-white" />
             </div>
-            <span className="text-sm font-medium text-blue-700">Manage Mines</span>
+            <span className="text-sm font-medium text-blue-600">Manage Mines</span>
           </Link>
 
           <Link
             href="/alerts"
-            className="flex flex-col items-center gap-3 p-4 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+            className="flex flex-col items-center gap-3 p-4 bg-red-50/50 hover:bg-red-50 rounded-xl transition-colors"
           >
-            <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-red-400 rounded-xl flex items-center justify-center">
               <Bell className="w-6 h-6 text-white" />
             </div>
-            <span className="text-sm font-medium text-red-700">View Alerts</span>
+            <span className="text-sm font-medium text-red-600">View Alerts</span>
           </Link>
         </div>
       </Card>
@@ -246,8 +246,8 @@ export default function SuperAdminDashboard() {
         >
           <div className="space-y-3">
             {recentAlerts.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500" />
+              <div className="text-center py-8 text-stone-400">
+                <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
                 <p className="font-medium">All Clear</p>
                 <p className="text-sm">No active alerts</p>
               </div>
@@ -257,12 +257,12 @@ export default function SuperAdminDashboard() {
                   key={alert.id}
                   className={`p-3 rounded-lg border-l-4 ${
                     alert.severity === 'critical'
-                      ? 'bg-red-50 border-red-500'
+                      ? 'bg-red-50/50 border-red-400'
                       : alert.severity === 'high'
-                      ? 'bg-orange-50 border-orange-500'
+                      ? 'bg-orange-50/50 border-orange-400'
                       : alert.severity === 'medium'
-                      ? 'bg-yellow-50 border-yellow-500'
-                      : 'bg-blue-50 border-blue-500'
+                      ? 'bg-yellow-50/50 border-yellow-400'
+                      : 'bg-blue-50/50 border-blue-400'
                   }`}
                 >
                   <div className="flex items-start justify-between">
@@ -270,19 +270,19 @@ export default function SuperAdminDashboard() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`text-xs font-medium px-2 py-0.5 rounded ${
                           alert.severity === 'critical'
-                            ? 'bg-red-100 text-red-700'
+                            ? 'bg-red-50 text-red-600'
                             : alert.severity === 'high'
-                            ? 'bg-orange-100 text-orange-700'
+                            ? 'bg-orange-50 text-orange-600'
                             : alert.severity === 'medium'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-blue-100 text-blue-700'
+                            ? 'bg-yellow-50 text-yellow-600'
+                            : 'bg-blue-50 text-blue-600'
                         }`}>
                           {alert.severity.toUpperCase()}
                         </span>
-                        <span className="text-xs text-gray-500">{alert.mine_name}</span>
+                        <span className="text-xs text-stone-400">{alert.mine_name}</span>
                       </div>
-                      <p className="text-sm text-gray-900">{alert.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">{formatTime(alert.created_at)}</p>
+                      <p className="text-sm text-stone-700">{alert.message}</p>
+                      <p className="text-xs text-stone-400 mt-1">{formatTime(alert.created_at)}</p>
                     </div>
                   </div>
                 </div>
@@ -303,8 +303,8 @@ export default function SuperAdminDashboard() {
         >
           <div className="space-y-3">
             {recentMines.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+              <div className="text-center py-8 text-stone-400">
+                <Building2 className="w-12 h-12 mx-auto mb-3 text-stone-300" />
                 <p className="font-medium">No Mines</p>
                 <p className="text-sm">Create your first mine to get started</p>
                 <Link href="/mines" className="btn btn-primary mt-4 inline-block">
@@ -315,30 +315,30 @@ export default function SuperAdminDashboard() {
               recentMines.map((mine) => (
                 <div
                   key={mine.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="flex items-center justify-between p-3 bg-white hover:bg-gray-50/50 rounded-lg transition-colors border border-gray-100"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Mountain className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <Mountain className="w-5 h-5 text-blue-500" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{mine.name}</p>
-                      <p className="text-xs text-gray-500">{mine.location}</p>
+                      <p className="font-medium text-stone-700">{mine.name}</p>
+                      <p className="text-xs text-stone-400">{mine.location}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <div className="text-center">
-                      <p className="font-semibold text-gray-900">{mine.zones.length}</p>
-                      <p className="text-xs text-gray-500">Zones</p>
+                      <p className="font-semibold text-stone-700">{mine.zones.length}</p>
+                      <p className="text-xs text-stone-400">Zones</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-semibold text-gray-900">{mine.gates.length}</p>
-                      <p className="text-xs text-gray-500">Gates</p>
+                      <p className="font-semibold text-stone-700">{mine.gates.length}</p>
+                      <p className="text-xs text-stone-400">Gates</p>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       mine.is_active
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
+                        ? 'bg-green-50 text-green-600'
+                        : 'bg-gray-50 text-gray-600'
                     }`}>
                       {mine.is_active ? 'Active' : 'Inactive'}
                     </span>
@@ -353,33 +353,33 @@ export default function SuperAdminDashboard() {
       {/* System Information */}
       <Card title="System Information" description="Technical details and configuration">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Server className="w-6 h-6 text-green-600" />
+          <div className="flex items-center gap-4 p-4 bg-green-50/30 rounded-lg border border-green-100">
+            <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+              <Server className="w-6 h-6 text-green-500" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">API Status</p>
-              <p className="font-semibold text-green-600">Operational</p>
+              <p className="text-sm text-stone-400">API Status</p>
+              <p className="font-semibold text-green-500">Operational</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Database className="w-6 h-6 text-blue-600" />
+          <div className="flex items-center gap-4 p-4 bg-blue-50/30 rounded-lg border border-blue-100">
+            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+              <Database className="w-6 h-6 text-blue-500" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Database</p>
-              <p className="font-semibold text-blue-600">MongoDB</p>
+              <p className="text-sm text-stone-400">Database</p>
+              <p className="font-semibold text-blue-500">MongoDB</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-purple-600" />
+          <div className="flex items-center gap-4 p-4 bg-purple-50/30 rounded-lg border border-purple-100">
+            <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+              <Clock className="w-6 h-6 text-purple-500" />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Last Sync</p>
-              <p className="font-semibold text-purple-600">{new Date().toLocaleTimeString()}</p>
+              <p className="text-sm text-stone-400">Last Sync</p>
+              <p className="font-semibold text-purple-500">{new Date().toLocaleTimeString()}</p>
             </div>
           </div>
         </div>
@@ -387,18 +387,18 @@ export default function SuperAdminDashboard() {
 
       {/* Violations Today */}
       {stats.todayViolations > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+        <div className="bg-red-50/30 border border-red-200/50 rounded-xl p-4">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+            <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-red-800">Violations Today: {stats.todayViolations}</h3>
-              <p className="text-sm text-red-700 mt-1">
+              <h3 className="font-semibold text-red-700">Violations Today: {stats.todayViolations}</h3>
+              <p className="text-sm text-red-600 mt-1">
                 There have been {stats.todayViolations} PPE violations recorded today.
                 Review the alerts section for details and take appropriate action.
               </p>
-              <Link href="/alerts" className="inline-flex items-center gap-2 text-sm text-red-700 hover:text-red-800 font-medium mt-2">
+              <Link href="/alerts" className="inline-flex items-center gap-2 text-sm text-red-600 hover:text-red-700 font-medium mt-2">
                 View Details
                 <TrendingUp className="w-4 h-4" />
               </Link>

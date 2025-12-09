@@ -69,8 +69,8 @@ export default function Camera({ onCapture, disabled = false }: CameraProps) {
           }}
           className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
             useCamera
-              ? 'bg-[#1a237e] text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-orange-600 text-white'
+              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
           }`}
         >
           <CameraIcon className="inline-block mr-2" size={18} />
@@ -83,8 +83,8 @@ export default function Camera({ onCapture, disabled = false }: CameraProps) {
           }}
           className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
             !useCamera
-              ? 'bg-[#1a237e] text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              ? 'bg-orange-600 text-white'
+              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
           }`}
         >
           <Upload className="inline-block mr-2" size={18} />
@@ -93,7 +93,7 @@ export default function Camera({ onCapture, disabled = false }: CameraProps) {
       </div>
 
       {/* Camera or Upload area */}
-      <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
+      <div className="relative aspect-video bg-stone-900 rounded-lg overflow-hidden">
         {capturedImage ? (
           <img
             src={capturedImage}
@@ -121,9 +121,9 @@ export default function Camera({ onCapture, disabled = false }: CameraProps) {
             />
           )
         ) : (
-          <label className="flex flex-col items-center justify-center h-full cursor-pointer hover:bg-gray-800 transition-colors">
-            <Upload size={48} className="text-gray-500 mb-2" />
-            <span className="text-gray-400">Click to upload an image</span>
+          <label className="flex flex-col items-center justify-center h-full cursor-pointer hover:bg-stone-800 transition-colors">
+            <Upload size={48} className="text-stone-500 mb-2" />
+            <span className="text-stone-400">Click to upload an image</span>
             <input
               ref={fileInputRef}
               type="file"
@@ -141,7 +141,7 @@ export default function Camera({ onCapture, disabled = false }: CameraProps) {
           <button
             onClick={capture}
             disabled={disabled}
-            className="flex-1 py-3 px-4 bg-[#1a237e] text-white rounded-lg font-medium hover:bg-[#283593] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-3 px-4 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <CameraIcon className="inline-block mr-2" size={18} />
             Capture Photo
@@ -151,7 +151,7 @@ export default function Camera({ onCapture, disabled = false }: CameraProps) {
           <button
             onClick={resetCapture}
             disabled={disabled}
-            className="flex-1 py-3 px-4 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50"
+            className="flex-1 py-3 px-4 bg-stone-200 text-stone-700 rounded-lg font-medium hover:bg-stone-300 transition-colors disabled:opacity-50"
           >
             <RefreshCw className="inline-block mr-2" size={18} />
             Retake / Reset

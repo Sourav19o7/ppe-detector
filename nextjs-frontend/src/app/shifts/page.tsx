@@ -129,17 +129,17 @@ export default function ShiftsPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Shift Performance</h1>
-            <p className="text-gray-500 mt-1">{data.mine_name} • Performance metrics by shift</p>
+            <h1 className="text-2xl font-bold text-stone-800">Shift Performance</h1>
+            <p className="text-stone-500 mt-1">{data.mine_name} • Performance metrics by shift</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-gray-400" />
+              <Calendar className="w-5 h-5 text-stone-400" />
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <button
@@ -243,8 +243,8 @@ export default function ShiftsPage() {
                     <span className={bestShift.config.iconColor}>{bestShift.config.icon}</span>
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900">{bestShift.config.label}</p>
-                    <p className="text-sm text-gray-500">{bestShift.compliance}% compliance</p>
+                    <p className="font-bold text-stone-800">{bestShift.config.label}</p>
+                    <p className="text-sm text-stone-500">{bestShift.compliance}% compliance</p>
                   </div>
                 </div>
               </div>
@@ -259,8 +259,8 @@ export default function ShiftsPage() {
                     <span className={worstShift.config.iconColor}>{worstShift.config.icon}</span>
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900">{worstShift.config.label}</p>
-                    <p className="text-sm text-gray-500">{worstShift.compliance}% compliance</p>
+                    <p className="font-bold text-stone-800">{worstShift.config.label}</p>
+                    <p className="text-sm text-stone-500">{worstShift.compliance}% compliance</p>
                   </div>
                 </div>
               </div>
@@ -275,7 +275,7 @@ export default function ShiftsPage() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-gray-900">{config.label}</span>
+                      <span className="font-medium text-stone-800">{config.label}</span>
                       <span className={`font-bold ${
                         compliance >= 95 ? 'text-green-600' :
                         compliance >= 85 ? 'text-yellow-600' : 'text-red-600'
@@ -283,7 +283,7 @@ export default function ShiftsPage() {
                         {compliance}%
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="w-full bg-stone-200 rounded-full h-3">
                       <div
                         className={`h-3 rounded-full ${
                           compliance >= 95 ? 'bg-green-500' :
@@ -303,27 +303,27 @@ export default function ShiftsPage() {
         <Card title="Top Compliant Workers" description="Best performing workers across all shifts">
           <div className="space-y-3">
             {data.top_compliant_workers.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <div className="text-center py-8 text-stone-500">
+                <Users className="w-12 h-12 mx-auto mb-4 text-stone-400" />
                 <p>No worker data available</p>
               </div>
             ) : (
               data.top_compliant_workers.map((worker, index) => (
                 <div
                   key={worker.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-4 bg-stone-50 rounded-lg"
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
                       index === 0 ? 'bg-yellow-500' :
-                      index === 1 ? 'bg-gray-400' :
-                      index === 2 ? 'bg-orange-400' : 'bg-gray-300'
+                      index === 1 ? 'bg-stone-400' :
+                      index === 2 ? 'bg-orange-400' : 'bg-stone-300'
                     }`}>
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{worker.name}</p>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <p className="font-medium text-stone-800">{worker.name}</p>
+                      <div className="flex items-center gap-2 text-sm text-stone-500">
                         <span>ID: {worker.employee_id}</span>
                         <span>•</span>
                         <span className="capitalize">{worker.assigned_shift} Shift</span>
@@ -332,7 +332,7 @@ export default function ShiftsPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-green-600">{worker.compliance_score}%</p>
-                    <p className="text-xs text-gray-500">{worker.total_violations} violations</p>
+                    <p className="text-xs text-stone-500">{worker.total_violations} violations</p>
                   </div>
                 </div>
               ))
