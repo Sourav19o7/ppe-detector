@@ -75,6 +75,13 @@ async def connect_to_mongodb():
     await db.incidents.create_index("status")
     await db.incidents.create_index("severity")
 
+    # Predictions collection (ML-based worker risk predictions)
+    await db.predictions.create_index([("worker_id", 1), ("prediction_date", -1)])
+    await db.predictions.create_index("overall_risk_score")
+    await db.predictions.create_index("risk_category")
+    await db.predictions.create_index("expires_at")
+    await db.predictions.create_index("requires_intervention")
+
     # Legacy collections (for backward compatibility)
     await db.employees.create_index("employee_id", unique=True)
     await db.employees.create_index("name")
@@ -143,6 +150,10 @@ async def get_warnings_collection():
 
 async def get_incidents_collection():
     return db.incidents
+
+
+async def get_predictions_collection():
+    return db.predictions
 
 
 # Legacy collections

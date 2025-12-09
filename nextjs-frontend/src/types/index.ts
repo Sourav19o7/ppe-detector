@@ -551,3 +551,84 @@ export interface RoleInfo {
   label: string;
   description: string;
 }
+
+// ==================== Prediction Types ====================
+
+export type RiskCategory = 'low' | 'medium' | 'high' | 'critical';
+export type AttendancePattern = 'regular' | 'irregular' | 'declining';
+
+export interface RiskFactor {
+  factor: string;
+  impact: number;
+  description: string;
+}
+
+export interface WorkerPrediction {
+  worker_id: string;
+  employee_id: string;
+  worker_name?: string;
+  prediction_date: string;
+
+  // Risk Scores (0-100)
+  overall_risk_score: number;
+  risk_category: RiskCategory;
+  violation_risk_score: number;
+  attendance_risk_score: number;
+  compliance_trend_score: number;
+
+  // Predictions
+  predicted_violations_count: number;
+  predicted_absent_days: number;
+  high_risk_ppe_items: string[];
+
+  // Classification
+  requires_intervention: boolean;
+  attendance_pattern: AttendancePattern;
+  consecutive_absence_risk: number;
+  attendance_rate_30d: number;
+
+  // Explainability
+  risk_factors: RiskFactor[];
+  confidence: number;
+
+  // Metadata
+  model_version: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface AtRiskWorkerSummary {
+  worker_id: string;
+  employee_id: string;
+  worker_name: string;
+  risk_score: number;
+  risk_category: RiskCategory;
+  main_issue: string;
+  requires_intervention: boolean;
+}
+
+export interface AtRiskWorkersResponse {
+  total_at_risk: number;
+  by_category: Record<string, number>;
+  workers: AtRiskWorkerSummary[];
+}
+
+export interface PredictionTrend {
+  date: string;
+  low?: { count: number; avg_risk_score: number };
+  medium?: { count: number; avg_risk_score: number };
+  high?: { count: number; avg_risk_score: number };
+  critical?: { count: number; avg_risk_score: number };
+}
+
+export interface PredictionTrendsResponse {
+  trends: Record<string, Record<string, { count: number; avg_risk_score: number }>>;
+}
+
+export interface WorkerPredictionDetail {
+  worker_id: string;
+  employee_id: string;
+  name: string;
+  prediction: WorkerPrediction;
+  recommendations: string[];
+}

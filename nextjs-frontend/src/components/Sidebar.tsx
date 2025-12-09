@@ -32,6 +32,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Pickaxe,
+  Brain,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore, getNavigationForRole, useSidebarStore } from '@/lib/store';
@@ -55,6 +56,7 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
   User: User,
   AlertCircle: Siren,
   GraduationCap: BadgeCheck,
+  Brain: Brain,
 };
 
 // Role display names and colors - Brighter pastel theme

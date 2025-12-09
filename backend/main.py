@@ -35,6 +35,7 @@ from routes.gate_entries import router as gate_entries_router
 from routes.alerts import router as alerts_router
 from routes.dashboards import router as dashboards_router
 from routes.gas_sensors import router as gas_sensors_router
+from routes.predictions import router as predictions_router
 
 load_dotenv()
 
@@ -44,6 +45,15 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     await connect_to_mongodb()
     await initialize_default_superadmin()
+
+    # Start ML prediction scheduler
+    try:
+        from ml.scheduler import start_scheduler
+        db = get_database()
+        start_scheduler(db)
+    except Exception as e:
+        print(f"Warning: Failed to start ML scheduler: {e}")
+
     yield
     await close_mongodb_connection()
 
@@ -125,6 +135,7 @@ app.include_router(gate_entries_router)
 app.include_router(alerts_router)
 app.include_router(dashboards_router)
 app.include_router(gas_sensors_router)
+app.include_router(predictions_router)
 
 
 # ==================== Health Check ====================
