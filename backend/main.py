@@ -226,11 +226,16 @@ def get_shifts():
 # ==================== Legacy Endpoints (for backward compatibility) ====================
 
 @app.post("/detect")
-async def detect(file: UploadFile = File(...)):
+async def detect(
+    file: UploadFile = File(...),
+    mark_attendance: bool = Form(True),
+    location: Optional[str] = Form(None)
+):
     """
     Upload an image and detect:
     - PPE equipment (helmet, vest, etc.)
     - Faces and identify known persons
+    - Mark attendance if face is recognized (optional)
     """
     try:
         contents = await file.read()
@@ -240,10 +245,61 @@ async def detect(file: UploadFile = File(...)):
         result_image.save(buffered, format="PNG")
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
 
+        attendance_marked = False
+        attendance_record = None
+        db = get_database()
+
+        # Mark attendance if face is identified and mark_attendance is True
+        if mark_attendance:
+            identified_persons = detections.get("summary", {}).get("identified_persons", [])
+            identified_names = detections.get("summary", {}).get("identified_names", [])
+
+            if identified_persons:
+                employee_id = identified_persons[0]
+                employee_name = identified_names[0] if identified_names else None
+
+                # Try to find worker
+                worker = await db.workers.find_one({"employee_id": employee_id})
+                if not worker:
+                    worker = await db.employees.find_one({"employee_id": employee_id})
+
+                if worker:
+                    employee_name = worker.get("name", employee_name)
+
+                # Get violations from detection
+                violations = detections.get("violations", [])
+                violation_labels = [v.get("label", "Unknown") for v in violations]
+
+                # Create attendance record
+                attendance_doc = {
+                    "employee_id": employee_id,
+                    "employee_name": employee_name,
+                    "worker_id": str(worker["_id"]) if worker and "_id" in worker else None,
+                    "type": "check_in",
+                    "timestamp": datetime.utcnow(),
+                    "date": datetime.utcnow().strftime("%Y-%m-%d"),
+                    "location": location,
+                    "ppe_compliant": len(violations) == 0,
+                    "violations": violation_labels,
+                    "image": f"data:image/png;base64,{img_base64}"
+                }
+
+                await db.attendance.insert_one(attendance_doc)
+                attendance_marked = True
+                attendance_record = {
+                    "employee_id": employee_id,
+                    "employee_name": employee_name,
+                    "timestamp": attendance_doc["timestamp"].isoformat(),
+                    "ppe_compliant": attendance_doc["ppe_compliant"],
+                    "violations": violation_labels
+                }
+
         return JSONResponse({
             "success": True,
             "image": f"data:image/png;base64,{img_base64}",
-            "detections": detections
+            "detections": detections,
+            "attendance_marked": attendance_marked,
+            "attendance": attendance_record
         })
     except Exception as e:
         return JSONResponse({
@@ -256,10 +312,11 @@ async def detect(file: UploadFile = File(...)):
 async def detect_and_log(
     file: UploadFile = File(...),
     log_violations: bool = Form(True),
+    mark_attendance: bool = Form(True),
     location: Optional[str] = Form(None)
 ):
     """
-    Detect PPE and faces, automatically log violations to database.
+    Detect PPE and faces, automatically log violations and mark attendance.
     """
     try:
         contents = await file.read()
@@ -270,30 +327,42 @@ async def detect_and_log(
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
 
         violations_logged = False
+        attendance_marked = False
+        attendance_record = None
         db = get_database()
 
+        # Get identified person info
+        identified_persons = detections.get("summary", {}).get("identified_persons", [])
+        identified_names = detections.get("summary", {}).get("identified_names", [])
+        employee_id = identified_persons[0] if identified_persons else None
+        employee_name = identified_names[0] if identified_names else None
+        worker = None
+        worker_id = None
+
+        if employee_id:
+            # Try workers collection first
+            worker = await db.workers.find_one({"employee_id": employee_id})
+            if worker:
+                employee_name = worker["name"]
+                worker_id = str(worker["_id"])
+            else:
+                # Fall back to employees collection
+                emp = await db.employees.find_one({"employee_id": employee_id})
+                if emp:
+                    employee_name = emp["name"]
+                    worker_id = str(emp["_id"])
+
+        # Get violations
+        violations = detections.get("violations", [])
+        violation_labels = [v.get("label", "Unknown") for v in violations]
+
         # Log violations if any exist and logging is enabled
-        if log_violations and detections.get("violations"):
-            # Try to identify the person
-            identified_persons = detections.get("summary", {}).get("identified_persons", [])
-            employee_id = identified_persons[0] if identified_persons else None
-            employee_name = None
-
-            if employee_id:
-                # Try workers collection first
-                worker = await db.workers.find_one({"employee_id": employee_id})
-                if worker:
-                    employee_name = worker["name"]
-                else:
-                    # Fall back to employees collection
-                    emp = await db.employees.find_one({"employee_id": employee_id})
-                    if emp:
-                        employee_name = emp["name"]
-
+        if log_violations and violations:
             violation_record = {
                 "employee_id": employee_id,
                 "employee_name": employee_name,
-                "violations": detections["violations"],
+                "worker_id": worker_id,
+                "violations": violations,
                 "timestamp": datetime.utcnow(),
                 "location": location,
                 "image": f"data:image/png;base64,{img_base64}"
@@ -302,11 +371,38 @@ async def detect_and_log(
             await db.ppe_violations.insert_one(violation_record)
             violations_logged = True
 
+        # Mark attendance if face is identified
+        if mark_attendance and employee_id:
+            attendance_doc = {
+                "employee_id": employee_id,
+                "employee_name": employee_name,
+                "worker_id": worker_id,
+                "type": "check_in",
+                "timestamp": datetime.utcnow(),
+                "date": datetime.utcnow().strftime("%Y-%m-%d"),
+                "location": location,
+                "ppe_compliant": len(violations) == 0,
+                "violations": violation_labels,
+                "image": f"data:image/png;base64,{img_base64}"
+            }
+
+            await db.attendance.insert_one(attendance_doc)
+            attendance_marked = True
+            attendance_record = {
+                "employee_id": employee_id,
+                "employee_name": employee_name,
+                "timestamp": attendance_doc["timestamp"].isoformat(),
+                "ppe_compliant": attendance_doc["ppe_compliant"],
+                "violations": violation_labels
+            }
+
         return JSONResponse({
             "success": True,
             "image": f"data:image/png;base64,{img_base64}",
             "detections": detections,
-            "violations_logged": violations_logged
+            "violations_logged": violations_logged,
+            "attendance_marked": attendance_marked,
+            "attendance": attendance_record
         })
     except Exception as e:
         return JSONResponse({
