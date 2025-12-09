@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Users, Plus, Search, Edit2, Trash2, Camera as CameraIcon,
-  CheckCircle, XCircle, X, Upload, RefreshCw, UserPlus
+  CheckCircle, XCircle, X, Upload, RefreshCw, UserPlus, Scan
 } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/Card';
 import { Spinner, LoadingOverlay } from '@/components/Loading';
+import FaceScanCapture from '@/components/FaceScanCapture';
 import { employeeApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import type { Employee } from '@/types';
@@ -152,6 +153,39 @@ export default function WorkersPage() {
     try {
       await employeeApi.registerFace(selectedWorker.employee_id, faceImage);
       setMessage({ type: 'success', text: 'Face registered successfully' });
+      setShowFaceModal(false);
+      loadWorkers();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.detail || 'Failed to register face',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFaceScanCapture = async (files: File[]) => {
+    if (!selectedWorker || files.length === 0) return;
+
+    setIsSubmitting(true);
+    setMessage(null);
+
+    try {
+      // Register the primary face image (center view)
+      // and additional angles for better recognition
+      for (let i = 0; i < files.length; i++) {
+        await employeeApi.registerFace(
+          selectedWorker.employee_id,
+          files[i],
+          i === 0 ? undefined : `angle_${i}` // Only first is primary
+        );
+      }
+      setMessage({
+        type: 'success',
+        text: `Face registered successfully with ${files.length} angle(s)`
+      });
       setShowFaceModal(false);
       loadWorkers();
     } catch (err: unknown) {
@@ -486,14 +520,19 @@ export default function WorkersPage() {
         </div>
       )}
 
-      {/* Register Face Modal */}
+      {/* Register Face Modal with 3D Face Scan */}
       {showFaceModal && selectedWorker && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md my-8 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl my-8 max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-stone-100 flex items-center justify-between flex-shrink-0">
               <div>
-                <h2 className="text-lg font-semibold">Register Face</h2>
-                <p className="text-sm text-stone-500">{selectedWorker.name}</p>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Scan className="text-orange-500" size={24} />
+                  3D Face Registration
+                </h2>
+                <p className="text-sm text-stone-500">
+                  Registering face for: <span className="font-medium">{selectedWorker.name}</span>
+                </p>
               </div>
               <button
                 onClick={() => setShowFaceModal(false)}
@@ -503,53 +542,26 @@ export default function WorkersPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-4 overflow-y-auto flex-1">
-              <p className="text-sm text-stone-600 bg-blue-50 p-3 rounded-lg">
-                Upload a clear photo of the worker's face. This will be used for attendance recognition.
-              </p>
-
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-orange-300 rounded-lg p-8 text-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-colors"
-              >
-                {facePreview ? (
-                  <img
-                    src={facePreview}
-                    alt="Preview"
-                    className="w-48 h-48 object-cover rounded-lg mx-auto"
-                  />
-                ) : (
-                  <>
-                    <CameraIcon className="mx-auto text-orange-600/50 mb-2" size={48} />
-                    <p className="text-stone-600">Click to upload face photo</p>
-                    <p className="text-sm text-stone-400 mt-1">Make sure face is clearly visible</p>
-                  </>
-                )}
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="mb-4 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg border border-orange-100">
+                <h3 className="font-medium text-orange-800 mb-2 flex items-center gap-2">
+                  <Scan size={18} />
+                  Face Scan Instructions
+                </h3>
+                <ul className="text-sm text-orange-700 space-y-1">
+                  <li>1. Position your face within the oval guide</li>
+                  <li>2. Look straight at the camera (center view)</li>
+                  <li>3. Turn your head to the left when prompted</li>
+                  <li>4. Turn your head to the right when prompted</li>
+                  <li>5. The camera will auto-capture when position is correct</li>
+                </ul>
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
+
+              <FaceScanCapture
+                onCapture={handleFaceScanCapture}
+                disabled={isSubmitting}
+                onCancel={() => setShowFaceModal(false)}
               />
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowFaceModal(false)}
-                  className="flex-1 btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleRegisterFace}
-                  disabled={!faceImage || isSubmitting}
-                  className="flex-1 btn btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isSubmitting && <Spinner size="sm" className="border-white/30 border-t-white" />}
-                  Register Face
-                </button>
-              </div>
             </div>
           </div>
         </div>
