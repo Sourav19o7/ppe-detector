@@ -13,20 +13,20 @@ interface CardProps {
 export function Card({ children, className, title, description, icon, action }: CardProps) {
   return (
     <div className={cn(
-      'bg-white rounded-2xl border border-gray-100 shadow-sm',
+      'bg-white rounded-2xl border border-slate-200 shadow-sm',
       className
     )}>
       {(title || description || action) && (
-        <div className="px-6 py-5 border-b border-gray-50 flex items-center justify-between gap-4">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             {icon && (
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-amber-400 flex items-center justify-center shadow-md">
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-orange-200 to-amber-200 flex items-center justify-center shadow-sm border border-orange-300">
                 {icon}
               </div>
             )}
             <div>
-              {title && <h3 className="text-lg font-bold text-stone-700">{title}</h3>}
-              {description && <p className="text-sm text-stone-400 mt-0.5">{description}</p>}
+              {title && <h3 className="text-base font-semibold text-slate-700">{title}</h3>}
+              {description && <p className="text-sm text-slate-500 mt-0.5">{description}</p>}
             </div>
           </div>
           {action && <div>{action}</div>}
@@ -50,40 +50,50 @@ interface StatCardProps {
 
 export function StatCard({ title, value, icon, trend, color = 'orange' }: StatCardProps) {
   const colorClasses = {
-    orange: 'from-orange-400 to-amber-400',
-    green: 'from-emerald-400 to-green-400',
-    red: 'from-red-400 to-rose-400',
-    amber: 'from-amber-400 to-yellow-400',
-    blue: 'from-blue-400 to-cyan-400',
-    purple: 'from-purple-400 to-violet-400',
-    cyan: 'from-cyan-400 to-blue-400',
-    yellow: 'from-yellow-400 to-amber-400',
+    orange: 'from-orange-200 to-amber-200 border-orange-300 text-orange-600',
+    green: 'from-emerald-100 to-teal-200 border-emerald-300 text-emerald-600',
+    red: 'from-red-100 to-rose-200 border-red-300 text-red-600',
+    amber: 'from-amber-100 to-yellow-200 border-amber-300 text-amber-600',
+    blue: 'from-blue-100 to-sky-200 border-blue-300 text-blue-600',
+    purple: 'from-purple-100 to-violet-200 border-purple-300 text-purple-600',
+    cyan: 'from-cyan-100 to-teal-200 border-cyan-300 text-cyan-600',
+    yellow: 'from-yellow-100 to-amber-200 border-yellow-300 text-yellow-600',
   };
 
+  const selectedColors = colorClasses[color as keyof typeof colorClasses] || colorClasses.orange;
+  const [bgGradient, borderColor, iconColor] = selectedColors.split(' ');
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm card-hover">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-stone-400 uppercase tracking-wide">{title}</p>
-          <p className="text-4xl font-bold text-stone-700 mt-3">{value}</p>
-          {trend && (
-            <div className={cn(
-              'inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-lg text-sm font-semibold',
-              trend.positive
-                ? 'bg-emerald-50 text-emerald-600'
-                : 'bg-red-50 text-red-600'
-            )}>
-              <span className="text-xs">{trend.positive ? '▲' : '▼'}</span>
-              {Math.abs(trend.value)}%
-            </div>
-          )}
-        </div>
+    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm card-hover transition-all duration-300">
+      <div className="flex flex-col items-center text-center">
+        {/* Icon at top */}
         <div className={cn(
-          'w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-md',
-          colorClasses[color as keyof typeof colorClasses] || colorClasses.orange
+          'w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-sm mb-4 border',
+          bgGradient,
+          borderColor,
+          iconColor
         )}>
           {icon}
         </div>
+
+        {/* Value */}
+        <p className="text-3xl font-bold text-slate-700 mb-2">{value}</p>
+
+        {/* Title - smaller text below */}
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</p>
+
+        {/* Trend indicator */}
+        {trend && (
+          <div className={cn(
+            'inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full text-xs font-semibold',
+            trend.positive
+              ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+              : 'bg-red-100 text-red-700 border border-red-300'
+          )}>
+            <span className="text-[10px]">{trend.positive ? '▲' : '▼'}</span>
+            {Math.abs(trend.value)}%
+          </div>
+        )}
       </div>
     </div>
   );

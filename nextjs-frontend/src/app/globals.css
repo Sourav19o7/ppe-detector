@@ -1,29 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  /* Coal Mine Theme - Ultra Light Mode */
-  --background: #ffffff;
-  --background-light: #fafafa;
+  /* Professional Pastel Theme - Orange Based */
+  --background: #fdfcfb;
+  --background-light: #f8f7f6;
   --background-card: #ffffff;
-  --foreground: #1c1917;
-  --foreground-muted: #a8a29e;
+  --foreground: #3a3a3a;
+  --foreground-muted: #9ca3af;
 
-  /* Primary - Rusty Orange */
-  --primary: #c2410c;
-  --primary-light: #ea580c;
-  --primary-dark: #9a3412;
+  /* Primary - Warm Orange */
+  --primary: #fb923c;
+  --primary-light: #fdba74;
+  --primary-dark: #f97316;
 
-  /* Accent - Deep Amber */
-  --accent: #d97706;
-  --accent-light: #f59e0b;
+  /* Accent - Soft Amber */
+  --accent: #fbbf24;
+  --accent-light: #fcd34d;
 
-  /* Secondary - Very Light */
-  --secondary: #f5f5f5;
-  --secondary-dark: #e7e5e4;
+  /* Secondary - Warm Beige */
+  --secondary: #f5f2f0;
+  --secondary-dark: #e8e3e0;
 
-  /* Borders - Very Light */
-  --border: #f0f0f0;
-  --border-dark: #e7e5e4;
+  /* Borders - Subtle */
+  --border: #ece9e6;
+  --border-dark: #dbd6d1;
+
+  /* Success - Fresh Mint */
+  --success: #6ee7b7;
+  --success-light: #a7f3d0;
+
+  /* Warning - Bright Amber */
+  --warning: #fbbf24;
+  --warning-light: #fde68a;
+
+  /* Error - Warm Coral */
+  --error: #fb7185;
+  --error-light: #fda4af;
+
+  /* Info - Soft Sky */
+  --info: #7dd3fc;
+  --info-light: #bae6fd;
 }
 
 body {
@@ -93,26 +109,33 @@ input[type="tel"],
 select,
 textarea {
   width: 100%;
-  padding: 12px 16px;
-  background: #ffffff;
-  border: 1px solid #f0f0f0;
-  border-radius: 10px;
-  font-size: 15px;
+  padding: 13px 18px;
+  background: var(--background-card);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 14.5px;
   color: var(--foreground);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: all 0.25s ease;
+}
+
+/* Input with icon - increased left padding for proper spacing */
+input.with-icon {
+  padding-left: 48px;
 }
 
 input::placeholder,
 textarea::placeholder {
   color: var(--foreground-muted);
+  font-size: 14px;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: #fbbf24;
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+  border-color: var(--primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.15);
 }
 
 select {
@@ -135,62 +158,66 @@ select option:hover {
   background: #fafafa;
 }
 
-/* Button styles - Coal theme */
+/* Button styles - Professional Pastel Theme */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 24px;
-  border-radius: 10px;
+  padding: 13px 28px;
+  border-radius: 12px;
   font-weight: 600;
-  font-size: 15px;
-  transition: all 0.2s;
+  font-size: 14.5px;
+  transition: all 0.25s ease;
   cursor: pointer;
   border: none;
+  letter-spacing: 0.01em;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: white;
-  box-shadow: 0 4px 12px rgba(194, 65, 12, 0.25);
+  box-shadow: 0 2px 12px rgba(251, 146, 60, 0.3);
 }
 
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(194, 65, 12, 0.35);
+  box-shadow: 0 4px 20px rgba(251, 146, 60, 0.4);
 }
 
 .btn-secondary {
-  background: #fafafa;
+  background: var(--secondary);
   color: var(--foreground);
-  border: 1px solid #f0f0f0;
+  border: 1.5px solid var(--border);
 }
 
 .btn-secondary:hover {
-  background: #f5f5f5;
-  border-color: #e7e5e4;
+  background: var(--secondary-dark);
+  border-color: var(--border-dark);
+  transform: translateY(-1px);
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+  background: linear-gradient(135deg, var(--error) 0%, #d89c9c 100%);
+  color: #6b2626;
+  box-shadow: 0 2px 12px rgba(230, 179, 179, 0.25);
 }
 
 .btn-danger:hover {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  background: linear-gradient(135deg, var(--error-light) 0%, var(--error) 100%);
+  transform: translateY(-1px);
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+  background: linear-gradient(135deg, var(--success) 0%, #91c9a8 100%);
+  color: #2d5a3d;
+  box-shadow: 0 2px 12px rgba(168, 213, 186, 0.25);
 }
 
 .btn-success:hover {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, var(--success-light) 0%, var(--success) 100%);
+  transform: translateY(-1px);
 }
 
 /* Badge styles */
@@ -198,30 +225,36 @@ select option:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border-radius: 9999px;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid;
 }
 
 .badge-success {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--success-light);
+  color: #2d5a3d;
+  border-color: var(--success);
 }
 
 .badge-danger {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--error-light);
+  color: #6b2626;
+  border-color: var(--error);
 }
 
 .badge-warning {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-light);
+  color: #8b6914;
+  border-color: var(--warning);
 }
 
 .badge-info {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--info-light);
+  color: #4a4779;
+  border-color: var(--info);
 }
 
 /* Icon sizes */

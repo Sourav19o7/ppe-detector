@@ -57,15 +57,15 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; className?: s
   GraduationCap: BadgeCheck,
 };
 
-// Role display names and colors
+// Role display names and colors - Brighter pastel theme
 const roleConfig: Record<UserRole, { label: string; color: string; bgColor: string }> = {
-  super_admin: { label: 'Super Admin', color: 'text-orange-700', bgColor: 'bg-orange-100' },
-  general_manager: { label: 'General Manager', color: 'text-amber-700', bgColor: 'bg-amber-100' },
-  area_safety_officer: { label: 'Area Safety Officer', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
-  manager: { label: 'Manager', color: 'text-lime-700', bgColor: 'bg-lime-100' },
-  safety_officer: { label: 'Safety Officer', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
-  shift_incharge: { label: 'Shift Incharge', color: 'text-cyan-700', bgColor: 'bg-cyan-100' },
-  worker: { label: 'Worker', color: 'text-stone-700', bgColor: 'bg-stone-100' },
+  super_admin: { label: 'Super Admin', color: 'text-orange-700', bgColor: 'bg-orange-100 border border-orange-300' },
+  general_manager: { label: 'General Manager', color: 'text-amber-700', bgColor: 'bg-amber-100 border border-amber-300' },
+  area_safety_officer: { label: 'Area Safety Officer', color: 'text-yellow-700', bgColor: 'bg-yellow-100 border border-yellow-300' },
+  manager: { label: 'Manager', color: 'text-emerald-700', bgColor: 'bg-emerald-100 border border-emerald-300' },
+  safety_officer: { label: 'Safety Officer', color: 'text-teal-700', bgColor: 'bg-teal-100 border border-teal-300' },
+  shift_incharge: { label: 'Shift Incharge', color: 'text-cyan-700', bgColor: 'bg-cyan-100 border border-cyan-300' },
+  worker: { label: 'Worker', color: 'text-slate-700', bgColor: 'bg-slate-100 border border-slate-300' },
 };
 
 export default function Sidebar() {
@@ -102,9 +102,9 @@ export default function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-white text-orange-600 rounded-xl shadow-lg border border-stone-200"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 bg-white text-orange-600 rounded-xl shadow-lg border border-slate-200"
       >
-        {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
+        {isMobileOpen ? <X size={20} strokeWidth={2.5} /> : <Menu size={20} strokeWidth={2.5} />}
       </button>
 
       {/* Overlay for mobile */}
@@ -121,37 +121,37 @@ export default function Sidebar() {
           'fixed left-0 top-0 h-full z-40 transition-all duration-300 ease-in-out',
           'lg:translate-x-0',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
-          'bg-white border-r border-gray-100 shadow-sm',
+          'bg-white border-r border-slate-200 shadow-sm',
           isCollapsed ? 'w-[72px]' : 'w-64'
         )}
       >
         <div className="flex flex-col h-full">
           {/* Logo & Collapse Button */}
           <div className={cn(
-            'border-b border-gray-100 flex items-center justify-between flex-shrink-0',
+            'border-b border-slate-100 flex items-center justify-between flex-shrink-0',
             isCollapsed ? 'p-3' : 'px-5 py-4'
           )}>
             <div className={cn('flex items-center gap-3', isCollapsed && 'justify-center w-full')}>
               <div className={cn(
-                'rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md',
+                'rounded-2xl bg-gradient-to-br from-orange-300 to-amber-300 flex items-center justify-center shadow-sm border border-orange-200',
                 isCollapsed ? 'w-11 h-11' : 'w-11 h-11'
               )}>
-                <ShieldCheck className="text-white w-6 h-6" />
+                <ShieldCheck className="text-orange-700 w-6 h-6" strokeWidth={2.5} />
               </div>
               {!isCollapsed && (
                 <div>
-                  <h1 className="text-lg font-bold text-stone-700">Kavach</h1>
-                  <p className="text-xs text-stone-400">Mine Safety System</p>
+                  <h1 className="text-base font-bold text-slate-700">Kavach</h1>
+                  <p className="text-xs text-slate-500">Mine Safety System</p>
                 </div>
               )}
             </div>
             {!isCollapsed && (
               <button
                 onClick={toggle}
-                className="hidden lg:flex p-1.5 text-stone-300 hover:text-stone-500 hover:bg-gray-50 rounded-lg transition-colors"
+                className="hidden lg:flex p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
                 title="Collapse sidebar (Ctrl+B)"
               >
-                <PanelLeftClose size={18} />
+                <PanelLeftClose size={18} strokeWidth={2.5} />
               </button>
             )}
           </div>
@@ -160,10 +160,10 @@ export default function Sidebar() {
           {isCollapsed && (
             <button
               onClick={toggle}
-              className="hidden lg:flex mx-auto mt-3 p-1.5 text-stone-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+              className="hidden lg:flex mx-auto mt-3 p-1.5 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
               title="Expand sidebar (Ctrl+B)"
             >
-              <PanelLeft size={18} />
+              <PanelLeft size={18} strokeWidth={2.5} />
             </button>
           )}
 
@@ -193,11 +193,11 @@ export default function Sidebar() {
                       onClick={() => setIsMobileOpen(false)}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        'flex items-center gap-3 rounded-lg transition-all duration-200',
+                        'flex items-center gap-3 rounded-xl transition-all duration-200',
                         isCollapsed ? 'px-3 py-2.5 justify-center' : 'px-3 py-2.5',
                         isActive
-                          ? 'bg-gradient-to-r from-orange-400 to-amber-400 text-white shadow-sm'
-                          : 'text-stone-500 hover:bg-gray-50 hover:text-stone-700'
+                          ? 'bg-gradient-to-r from-orange-200 to-amber-200 text-orange-700 border border-orange-300 shadow-sm'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                       )}
                     >
                       <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
@@ -213,18 +213,18 @@ export default function Sidebar() {
 
           {/* Quick Actions for specific roles */}
           {!isCollapsed && role === 'shift_incharge' && (
-            <div className="px-3 py-3 border-t border-gray-100 flex-shrink-0">
-              <button className="w-full py-2.5 bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-sm">
-                <Siren size={18} />
+            <div className="px-3 py-3 border-t border-slate-100 flex-shrink-0">
+              <button className="w-full py-2.5 bg-gradient-to-r from-red-300 to-orange-300 hover:from-red-400 hover:to-orange-400 text-red-800 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-sm border border-red-400">
+                <Siren size={18} strokeWidth={2.5} />
                 Emergency Alert
               </button>
             </div>
           )}
 
           {!isCollapsed && role === 'worker' && (
-            <div className="px-3 py-3 border-t border-gray-100 flex-shrink-0">
-              <button className="w-full py-2.5 bg-gradient-to-r from-red-400 to-red-500 hover:from-red-500 hover:to-red-600 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-sm">
-                <Siren size={18} />
+            <div className="px-3 py-3 border-t border-slate-100 flex-shrink-0">
+              <button className="w-full py-2.5 bg-gradient-to-r from-red-300 to-orange-300 hover:from-red-400 hover:to-orange-400 text-red-800 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-sm border border-red-400">
+                <Siren size={18} strokeWidth={2.5} />
                 SOS Alert
               </button>
             </div>
@@ -232,54 +232,54 @@ export default function Sidebar() {
 
           {/* Collapsed quick action icons */}
           {isCollapsed && (role === 'shift_incharge' || role === 'worker') && (
-            <div className="px-2 py-3 border-t border-gray-100 flex-shrink-0">
+            <div className="px-2 py-3 border-t border-slate-100 flex-shrink-0">
               <button
-                className="w-full p-2.5 bg-red-400 hover:bg-red-500 text-white rounded-lg flex items-center justify-center transition-all"
+                className="w-full p-2.5 bg-red-300 hover:bg-red-400 text-red-800 rounded-xl flex items-center justify-center transition-all border border-red-400"
                 title={role === 'worker' ? 'SOS Alert' : 'Emergency Alert'}
               >
-                <Siren size={18} />
+                <Siren size={18} strokeWidth={2.5} />
               </button>
             </div>
           )}
 
           {/* User section */}
           <div className={cn(
-            'border-t border-gray-100 bg-gray-50/30 flex-shrink-0',
+            'border-t border-slate-100 bg-slate-50/50 flex-shrink-0',
             isCollapsed ? 'p-2' : 'p-3'
           )}>
             {isCollapsed ? (
               <div className="flex flex-col items-center gap-1.5">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <User size={18} className="text-stone-400" />
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center border border-slate-200">
+                  <User size={18} className="text-slate-500" strokeWidth={2.5} />
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50/50 rounded-lg transition-all"
+                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                   title="Logout"
                 >
-                  <LogOut size={18} />
+                  <LogOut size={18} strokeWidth={2.5} />
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center flex-shrink-0">
-                  <User size={20} className="text-stone-400" />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center flex-shrink-0 border border-slate-200">
+                  <User size={20} className="text-slate-500" strokeWidth={2.5} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-stone-700 truncate text-sm">{displayName || 'User'}</p>
+                  <p className="font-semibold text-slate-700 truncate text-sm">{displayName || 'User'}</p>
                   {userType === 'worker' && worker && (
-                    <p className="text-xs text-stone-400">ID: {worker.employee_id}</p>
+                    <p className="text-xs text-slate-500">ID: {worker.employee_id}</p>
                   )}
                   {userType === 'staff' && user && (
-                    <p className="text-xs text-stone-400">{user.username}</p>
+                    <p className="text-xs text-slate-500">{user.username}</p>
                   )}
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="p-2 text-stone-300 hover:text-red-400 hover:bg-red-50/50 rounded-lg transition-all flex-shrink-0"
+                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
                   title="Logout"
                 >
-                  <LogOut size={18} />
+                  <LogOut size={18} strokeWidth={2.5} />
                 </button>
               </div>
             )}
