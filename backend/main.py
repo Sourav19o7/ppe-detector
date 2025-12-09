@@ -9,13 +9,16 @@ from datetime import datetime, timedelta
 from typing import Optional, List
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, status, Query
+from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, status, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from bson import ObjectId
 from dotenv import load_dotenv
+import asyncio
+import json
 
 from detector import PersonDetector
+from video_stream import get_video_processor, INFERENCE_PIPELINE_AVAILABLE
 from database import connect_to_mongodb, close_mongodb_connection, get_database
 from auth import (
     get_password_hash, verify_password, create_access_token,
@@ -675,6 +678,159 @@ async def register_face(name: str, file: UploadFile = File(...)):
 def get_known_faces():
     """Get list of registered faces."""
     return {"faces": detector.get_known_faces()}
+
+
+# ==================== Live Video Streaming ====================
+
+@app.get("/video/status")
+def get_video_status():
+    """Get the status of video streaming capability."""
+    processor = get_video_processor()
+    return {
+        "available": INFERENCE_PIPELINE_AVAILABLE,
+        "running": processor.is_running,
+        "message": "InferencePipeline available" if INFERENCE_PIPELINE_AVAILABLE else "Install 'inference' package for video streaming"
+    }
+
+
+@app.post("/video/start")
+async def start_video_stream(
+    video_source: int = Form(default=0),
+    max_fps: int = Form(default=15)
+):
+    """Start the video streaming pipeline."""
+    if not INFERENCE_PIPELINE_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Video streaming not available. Install 'inference' package."
+        )
+
+    processor = get_video_processor()
+
+    if processor.is_running:
+        return {"success": True, "message": "Video stream already running"}
+
+    # Update max_fps if different
+    processor.max_fps = max_fps
+
+    success = processor.start(video_source=video_source)
+
+    if success:
+        return {"success": True, "message": "Video stream started"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to start video stream")
+
+
+@app.post("/video/stop")
+async def stop_video_stream():
+    """Stop the video streaming pipeline."""
+    processor = get_video_processor()
+    processor.stop()
+    return {"success": True, "message": "Video stream stopped"}
+
+
+@app.websocket("/ws/video")
+async def websocket_video_stream(websocket: WebSocket):
+    """WebSocket endpoint for streaming video frames with detections."""
+    await websocket.accept()
+
+    processor = get_video_processor()
+
+    # Auto-start if not running
+    if not processor.is_running:
+        if not INFERENCE_PIPELINE_AVAILABLE:
+            await websocket.send_json({
+                "error": "Video streaming not available. Install 'inference' package."
+            })
+            await websocket.close()
+            return
+
+        processor.start(video_source=0)
+
+    try:
+        while True:
+            # Get frame from queue
+            frame_data = processor.get_frame(timeout=1.0)
+
+            if frame_data:
+                await websocket.send_json({
+                    "type": "frame",
+                    "frame": frame_data["frame"],
+                    "result": frame_data["result"]
+                })
+            else:
+                # Send heartbeat if no frame available
+                await websocket.send_json({"type": "heartbeat"})
+
+            # Small delay to prevent overwhelming the connection
+            await asyncio.sleep(0.01)
+
+    except WebSocketDisconnect:
+        print("WebSocket client disconnected")
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+    finally:
+        # Optionally stop the stream when last client disconnects
+        # processor.stop()
+        pass
+
+
+@app.get("/video/frame")
+async def get_video_frame():
+    """Get the latest video frame (for polling-based clients)."""
+    processor = get_video_processor()
+
+    if not processor.is_running:
+        raise HTTPException(status_code=400, detail="Video stream not running")
+
+    frame_data = processor.get_latest_frame()
+
+    if frame_data:
+        return JSONResponse({
+            "success": True,
+            "frame": frame_data["frame"],
+            "result": frame_data["result"]
+        })
+    else:
+        return JSONResponse({
+            "success": False,
+            "message": "No frame available yet"
+        })
+
+
+async def generate_mjpeg_stream():
+    """Generator for MJPEG stream."""
+    processor = get_video_processor()
+
+    while processor.is_running:
+        frame_data = processor.get_frame(timeout=1.0)
+
+        if frame_data:
+            frame_bytes = base64.b64decode(frame_data["frame"])
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+            )
+
+        await asyncio.sleep(0.01)
+
+
+@app.get("/video/mjpeg")
+async def mjpeg_stream():
+    """MJPEG stream endpoint for simple video display."""
+    processor = get_video_processor()
+
+    if not processor.is_running:
+        # Auto-start
+        if INFERENCE_PIPELINE_AVAILABLE:
+            processor.start(video_source=0)
+        else:
+            raise HTTPException(status_code=503, detail="Video streaming not available")
+
+    return StreamingResponse(
+        generate_mjpeg_stream(),
+        media_type="multipart/x-mixed-replace; boundary=frame"
+    )
 
 
 if __name__ == "__main__":

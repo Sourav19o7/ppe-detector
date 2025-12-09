@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Shield, AlertTriangle, CheckCircle, Clock, RefreshCw, HardHat, Eye, Hand } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Shield, AlertTriangle, CheckCircle, Clock, RefreshCw, HardHat, Eye, Hand, Radio, Camera as CameraIcon, Video } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import Camera from '@/components/Camera';
+import LiveCamera from '@/components/LiveCamera';
+import VideoStream from '@/components/VideoStream';
 import { Card } from '@/components/Card';
 import { Spinner } from '@/components/Loading';
 import { detectionApi, violationsApi } from '@/lib/api';
@@ -17,6 +19,8 @@ export default function PPEDetectionPage() {
   const [recentViolations, setRecentViolations] = useState<PPEViolationRecord[]>([]);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const [logViolations, setLogViolations] = useState(true);
+  const [detectionMode, setDetectionMode] = useState<'manual' | 'live' | 'stream'>('manual');
+  const [liveViolationCount, setLiveViolationCount] = useState(0);
 
   useEffect(() => {
     loadRecentViolations();
@@ -61,6 +65,27 @@ export default function PPEDetectionPage() {
     setResult(null);
   };
 
+  // Live detection handler
+  const handleLiveDetection = useCallback(async (file: File): Promise<DetectionResult> => {
+    const response = await detectionApi.detectAndLog(file, logViolations, location || undefined);
+
+    // Track violations in live mode
+    if (response.detections.summary.total_violations > 0) {
+      setLiveViolationCount(prev => prev + response.detections.summary.total_violations);
+    }
+
+    // Refresh violations list periodically during live mode
+    if (response.violations_logged) {
+      loadRecentViolations();
+    }
+
+    return response;
+  }, [logViolations, location]);
+
+  const handleLiveResult = useCallback((result: DetectionResult) => {
+    setResult(result);
+  }, []);
+
   const getPPEIcon = (label: string) => {
     const lowerLabel = label.toLowerCase();
     if (lowerLabel.includes('helmet')) return <HardHat size={16} />;
@@ -78,59 +103,194 @@ export default function PPEDetectionPage() {
           <p className="text-stone-500 mt-1">Detect personal protective equipment compliance</p>
         </div>
 
+        {/* Mode Toggle */}
+        <div className="flex flex-wrap gap-2 p-1 bg-stone-100 rounded-lg w-fit">
+          <button
+            onClick={() => {
+              setDetectionMode('manual');
+              setLiveViolationCount(0);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+              detectionMode === 'manual'
+                ? 'bg-white text-orange-600 shadow-sm'
+                : 'text-stone-600 hover:text-stone-800'
+            }`}
+          >
+            <CameraIcon size={18} />
+            Manual
+          </button>
+          <button
+            onClick={() => {
+              setDetectionMode('live');
+              setResult(null);
+              setCapturedFile(null);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+              detectionMode === 'live'
+                ? 'bg-white text-orange-600 shadow-sm'
+                : 'text-stone-600 hover:text-stone-800'
+            }`}
+          >
+            <Radio size={18} />
+            Live (Browser)
+          </button>
+          <button
+            onClick={() => {
+              setDetectionMode('stream');
+              setResult(null);
+              setCapturedFile(null);
+              setLiveViolationCount(0);
+            }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
+              detectionMode === 'stream'
+                ? 'bg-white text-orange-600 shadow-sm'
+                : 'text-stone-600 hover:text-stone-800'
+            }`}
+          >
+            <Video size={18} />
+            Live (Server)
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column - Camera and Detection */}
           <div className="space-y-4">
-            {/* Camera */}
-            <Card title="Capture Image">
-              <Camera onCapture={handleCapture} disabled={isProcessing} />
+            {/* Manual Mode */}
+            {detectionMode === 'manual' && (
+              <Card title="Capture Image">
+                <Camera onCapture={handleCapture} disabled={isProcessing} />
 
-              {/* Options */}
-              <div className="mt-4 space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">
-                    Location (optional)
+                {/* Options */}
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      Location (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="e.g., Entrance Gate A"
+                      className="w-full"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={logViolations}
+                      onChange={(e) => setLogViolations(e.target.checked)}
+                      className="w-4 h-4 text-orange-600 rounded"
+                    />
+                    <span className="text-sm text-stone-700">Log violations to database</span>
                   </label>
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g., Entrance Gate A"
-                    className="w-full"
-                  />
                 </div>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={logViolations}
-                    onChange={(e) => setLogViolations(e.target.checked)}
-                    className="w-4 h-4 text-orange-600 rounded"
-                  />
-                  <span className="text-sm text-stone-700">Log violations to database</span>
-                </label>
-              </div>
+                {capturedFile && !result && (
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isProcessing}
+                    className="w-full mt-4 py-3 px-4 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Spinner size="sm" className="border-white/30 border-t-white" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Shield size={20} />
+                        Detect PPE
+                      </>
+                    )}
+                  </button>
+                )}
+              </Card>
+            )}
 
-              {capturedFile && !result && (
-                <button
-                  onClick={handleSubmit}
-                  disabled={isProcessing}
-                  className="w-full mt-4 py-3 px-4 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Spinner size="sm" className="border-white/30 border-t-white" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Shield size={20} />
-                      Detect PPE
-                    </>
+            {/* Live Mode (Browser-side) */}
+            {detectionMode === 'live' && (
+              <Card
+                title="Live PPE Detection (Browser)"
+                description="Captures frames in browser, sends to API for detection"
+              >
+                <LiveCamera
+                  onDetection={handleLiveResult}
+                  detectEndpoint={handleLiveDetection}
+                  intervalMs={2000}
+                />
+
+                {/* Live Mode Options */}
+                <div className="mt-4 space-y-3 pt-4 border-t border-stone-100">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      Location (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="e.g., Entrance Gate A"
+                      className="w-full"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={logViolations}
+                      onChange={(e) => setLogViolations(e.target.checked)}
+                      className="w-4 h-4 text-orange-600 rounded"
+                    />
+                    <span className="text-sm text-stone-700">Log violations to database</span>
+                  </label>
+
+                  {liveViolationCount > 0 && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                      <AlertTriangle className="text-red-500" size={20} />
+                      <span className="text-red-700 font-medium">
+                        {liveViolationCount} violations detected this session
+                      </span>
+                    </div>
                   )}
-                </button>
-              )}
-            </Card>
+                </div>
+              </Card>
+            )}
+
+            {/* Stream Mode (Server-side with bounding boxes) */}
+            {detectionMode === 'stream' && (
+              <Card
+                title="Live PPE Detection (Server)"
+                description="Real-time video stream with bounding boxes drawn on server"
+              >
+                <VideoStream
+                  onDetection={(result) => {
+                    if (result.violations.length > 0) {
+                      setLiveViolationCount((prev) => prev + result.violations.length);
+                      loadRecentViolations();
+                    }
+                  }}
+                  onError={(error) => console.error('Stream error:', error)}
+                />
+
+                {liveViolationCount > 0 && (
+                  <div className="mt-4 flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                    <AlertTriangle className="text-red-500" size={20} />
+                    <span className="text-red-700 font-medium">
+                      {liveViolationCount} violations detected this session
+                    </span>
+                  </div>
+                )}
+
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-blue-700">
+                    <strong>Server-side streaming:</strong> Video is processed on the server using
+                    Roboflow InferencePipeline. Bounding boxes are drawn directly on the video frames
+                    for smooth, real-time visualization.
+                  </p>
+                </div>
+              </Card>
+            )}
 
             {/* Detection Result */}
             {result && (
@@ -217,13 +377,21 @@ export default function PPEDetectionPage() {
                   </p>
                 )}
 
-                <button
-                  onClick={resetForm}
-                  className="w-full py-2 px-4 bg-stone-100 text-stone-700 rounded-lg font-medium hover:bg-stone-200 transition-colors flex items-center justify-center gap-2"
-                >
-                  <RefreshCw size={18} />
-                  New Detection
-                </button>
+                {detectionMode === 'manual' && (
+                  <button
+                    onClick={resetForm}
+                    className="w-full py-2 px-4 bg-stone-100 text-stone-700 rounded-lg font-medium hover:bg-stone-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw size={18} />
+                    New Detection
+                  </button>
+                )}
+
+                {detectionMode !== 'manual' && (
+                  <p className="text-xs text-stone-500 text-center">
+                    Results update automatically during live detection
+                  </p>
+                )}
               </Card>
             )}
           </div>
