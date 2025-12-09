@@ -228,8 +228,8 @@ def get_shifts():
 @app.post("/detect")
 async def detect(
     file: UploadFile = File(...),
-    mark_attendance: bool = Form(True),
-    location: Optional[str] = Form(None)
+    mark_attendance: bool = Form(default=True),
+    location: Optional[str] = Form(default=None)
 ):
     """
     Upload an image and detect:
@@ -311,9 +311,9 @@ async def detect(
 @app.post("/detect-and-log")
 async def detect_and_log(
     file: UploadFile = File(...),
-    log_violations: bool = Form(True),
-    mark_attendance: bool = Form(True),
-    location: Optional[str] = Form(None)
+    log_violations: bool = Form(default=True),
+    mark_attendance: bool = Form(default=True),
+    location: Optional[str] = Form(default=None)
 ):
     """
     Detect PPE and faces, automatically log violations and mark attendance.
@@ -534,6 +534,58 @@ async def delete_employee(
         detector._save_known_faces()
 
     return {"success": True, "message": "Employee deleted successfully"}
+
+
+# ==================== Legacy Violations ====================
+
+@app.get("/violations")
+async def list_violations(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100)
+):
+    """List all PPE violations (legacy endpoint)."""
+    db = get_database()
+
+    cursor = db.ppe_violations.find().skip(skip).limit(limit).sort("timestamp", -1)
+    violations = []
+    async for v in cursor:
+        violations.append({
+            "id": str(v["_id"]),
+            "employee_id": v.get("employee_id"),
+            "employee_name": v.get("employee_name"),
+            "violations": v.get("violations", []),
+            "timestamp": v.get("timestamp"),
+            "location": v.get("location")
+        })
+
+    total = await db.ppe_violations.count_documents({})
+    return {"violations": violations, "total": total}
+
+
+@app.get("/violations/today")
+async def get_today_violations():
+    """Get today's PPE violations (legacy endpoint)."""
+    db = get_database()
+
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+
+    cursor = db.ppe_violations.find({
+        "timestamp": {"$gte": today, "$lt": tomorrow}
+    }).sort("timestamp", -1)
+
+    violations = []
+    async for v in cursor:
+        violations.append({
+            "id": str(v["_id"]),
+            "employee_id": v.get("employee_id"),
+            "employee_name": v.get("employee_name"),
+            "violations": v.get("violations", []),
+            "timestamp": v.get("timestamp"),
+            "location": v.get("location")
+        })
+
+    return {"violations": violations, "total": len(violations)}
 
 
 # ==================== Legacy Dashboard ====================
