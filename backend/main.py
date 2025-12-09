@@ -536,6 +536,84 @@ async def delete_employee(
     return {"success": True, "message": "Employee deleted successfully"}
 
 
+@app.put("/employees/{employee_id}")
+async def update_employee(
+    employee_id: str,
+    name: str = Form(...),
+    department: Optional[str] = Form(None),
+    current_admin: dict = Depends(get_current_admin)
+):
+    """Update employee (legacy endpoint)."""
+    db = get_database()
+
+    emp = await db.employees.find_one({"employee_id": employee_id})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    update_data = {"name": name}
+    if department is not None:
+        update_data["department"] = department
+
+    await db.employees.update_one(
+        {"employee_id": employee_id},
+        {"$set": update_data}
+    )
+
+    return {"success": True, "message": "Employee updated successfully"}
+
+
+@app.post("/employees/{employee_id}/register-face")
+async def register_employee_face(
+    employee_id: str,
+    file: UploadFile = File(...),
+    angle: Optional[str] = Form(None)
+):
+    """Register face for employee (legacy endpoint).
+
+    Supports multi-angle face registration:
+    - No angle: Primary face registration (center view)
+    - angle=angle_1: Left view
+    - angle=angle_2: Right view
+    """
+    db = get_database()
+
+    emp = await db.employees.find_one({"employee_id": employee_id})
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    contents = await file.read()
+
+    # Determine the face registration key
+    if angle:
+        face_key = f"{employee_id}_{angle}"
+        display_name = f"{emp['name']} ({angle})"
+    else:
+        face_key = employee_id
+        display_name = emp['name']
+
+    success = detector.register_face(face_key, contents, display_name)
+
+    if not success:
+        raise HTTPException(status_code=400, detail="No face detected in image")
+
+    # Update employee's face registration status
+    update_data = {"face_registered": True}
+
+    if angle:
+        registered_angles = emp.get("face_angles", [])
+        if angle not in registered_angles:
+            registered_angles.append(angle)
+        update_data["face_angles"] = registered_angles
+
+    await db.employees.update_one(
+        {"employee_id": employee_id},
+        {"$set": update_data}
+    )
+
+    angle_msg = f" ({angle})" if angle else ""
+    return {"success": True, "message": f"Face registered for {emp['name']}{angle_msg}"}
+
+
 # ==================== Legacy Violations ====================
 
 @app.get("/violations")

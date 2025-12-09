@@ -360,9 +360,18 @@ async def reset_worker_password(
 async def register_worker_face(
     worker_id: str,
     file: UploadFile = File(...),
+    angle: str = Form(None),
     current_user: dict = Depends(get_shift_incharge_or_above)
 ):
-    """Register face for worker."""
+    """Register face for worker.
+
+    Supports multi-angle face registration for improved recognition:
+    - No angle: Primary face registration (center view)
+    - angle=angle_1: Left view
+    - angle=angle_2: Right view
+
+    Multiple angles improve face recognition accuracy.
+    """
     # Import detector here to avoid circular imports
     from detector import PersonDetector
 
@@ -385,17 +394,41 @@ async def register_worker_face(
 
     contents = await file.read()
     detector = PersonDetector()
-    success = detector.register_face(worker["employee_id"], contents)
+
+    # Determine the face registration key
+    # Primary registration uses employee_id, angles use employee_id_angle_N
+    if angle:
+        face_key = f"{worker['employee_id']}_{angle}"
+        display_name = f"{worker['name']} ({angle})"
+    else:
+        face_key = worker["employee_id"]
+        display_name = worker["name"]
+
+    success = detector.register_face(face_key, contents, display_name)
 
     if not success:
         raise HTTPException(status_code=400, detail="No face detected in image")
 
+    # Update worker's face registration status
+    update_data = {"face_registered": True}
+
+    # Track registered angles in the worker document
+    if angle:
+        registered_angles = worker.get("face_angles", [])
+        if angle not in registered_angles:
+            registered_angles.append(angle)
+        update_data["face_angles"] = registered_angles
+    else:
+        # Primary face registered
+        update_data["primary_face_registered"] = True
+
     await db.workers.update_one(
         {"_id": worker["_id"]},
-        {"$set": {"face_registered": True}}
+        {"$set": update_data}
     )
 
-    return {"success": True, "message": f"Face registered for {worker['name']}"}
+    angle_msg = f" ({angle})" if angle else ""
+    return {"success": True, "message": f"Face registered for {worker['name']}{angle_msg}"}
 
 
 @router.get("/{worker_id}/violations")
