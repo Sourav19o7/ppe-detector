@@ -265,6 +265,16 @@ class VideoStreamProcessor:
             import traceback
             traceback.print_exc()
 
+    def _run_pipeline(self):
+        """Run the pipeline in a background thread."""
+        try:
+            self.pipeline.start()  # This blocks until pipeline stops
+        except Exception as e:
+            print(f"Pipeline error: {e}")
+        finally:
+            self.is_running = False
+            print("Pipeline thread ended")
+
     def start(self, video_source: int = 0) -> bool:
         """Start the video streaming pipeline."""
         if not INFERENCE_PIPELINE_AVAILABLE:
@@ -288,9 +298,10 @@ class VideoStreamProcessor:
                 on_prediction=self._process_prediction,
             )
 
-            # Start pipeline in a separate thread
+            # Start pipeline in a separate thread (non-blocking)
             self.is_running = True
-            self.pipeline.start()
+            self._pipeline_thread = Thread(target=self._run_pipeline, daemon=True)
+            self._pipeline_thread.start()
 
             print(f"Video pipeline started with source: {video_source}")
             return True
