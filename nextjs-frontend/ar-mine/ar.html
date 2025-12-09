@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>VR Mine - White Map Navigation</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
+    
+    <style>
+      /* MAP UI */
+      #minimap-container {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 25vw; /* 1/4th Screen Width */
+        height: 25vw; /* Square */
+        min-width: 260px;
+        min-height: 260px;
+        
+        /* White Background as requested */
+        background-color: #ffffff; 
+        border: 4px solid #333;
+        border-radius: 4px;
+        z-index: 9999;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      }
+      
+      #minimap-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background-color: white;
+      }
+
+      #map-label {
+        position: absolute;
+        bottom: 5px;
+        width: 100%;
+        text-align: center;
+        color: #000;
+        font-weight: bold;
+        font-family: sans-serif;
+        font-size: 14px;
+        pointer-events: none;
+        background-color: rgba(255,255,255,0.7);
+        padding: 2px 0;
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- MAP CONTAINER -->
+    <div id="minimap-container">
+        <canvas id="minimap-canvas" width="600" height="600"></canvas>
+        <div id="map-label">LIVE NAV - SECTOR 7</div>
+    </div>
+
+    <script>
+      // 1. MINE GENERATION COMPONENT
+      AFRAME.registerComponent('complex-mine', {
+        schema: {
+          size: {type: 'int', default: 60}, 
+          scale: {type: 'number', default: 5} 
+        },
+
+        init: function () {
+          this.map = []; 
+          this.generateLayout();
+          this.constructGeometry();
+          this.installLighting();
+          this.populateMachinery();
+          
+          // SAFETY DELAY: Wait 100ms to ensure Minimap system is ready to listen
+          setTimeout(() => {
+            this.el.emit('mine-generated', { 
+                map: this.map, 
+                size: this.data.size, 
+                scale: this.data.scale 
+            });
+          }, 100);
+        },
+
+        generateLayout: function () {
+          const s = this.data.size;
+          // 0=Rock, 1=MainRd, 2=Branch, 3=Room
+          for(let x=0; x<s; x++) {
+            this.map[x] = [];
+            for(let z=0; z<s; z++) this.map[x][z] = 0;
+          }
+
+          const mid = Math.floor(s/2);
+
+          // 1. Main Spine (Thick)
+          for(let z=2; z<s-2; z++) {
+            this.map[mid][z] = 1;     
+            this.map[mid-1][z] = 1;   
+            this.map[mid+1][z] = 1;   
+          }
+
+          // 2. Branches
+          [10, 25, 40, 50].forEach(z => {
+            // Left
+            for(let x=2; x<mid; x++) this.map[x][z] = 2;
+            // Right
+            for(let x=mid+1; x<s-2; x++) this.map[x][z] = 2;
+          });
+
+          // 3. Room Districts
+          this.createRoomPillar(5, 5, 20, 15);
+          this.createRoomPillar(mid+5, 35, s-5, s-5);
+        },
+
+        createRoomPillar: function(x1, z1, x2, z2) {
+            for(let x=x1; x<=x2; x++) {
+                for(let z=z1; z<=z2; z++) {
+                    if(x % 3 !== 0 || z % 3 !== 0) this.map[x][z] = 3;
+                    if(Math.random() < 0.1) this.map[x][z] = 0; // Random collapse
+                }
+            }
+        },
+
+        constructGeometry: function () {
+          const el = this.el;
+          const SZ = this.data.scale;
+          let geoContainer = document.createElement('a-entity');
+          el.appendChild(geoContainer);
+
+          const texWall = "#rockTex";
+          const texFloor = "#floorTex";
+
+          for(let x=1; x<this.data.size-1; x++) {
+            for(let z=1; z<this.data.size-1; z++) {
+                let type = this.map[x][z];
+                if(type === 0) continue; 
+
+                let posX = (x - this.data.size/2) * SZ;
+                let posZ = (z - this.data.size/2) * SZ;
+
+                // Floor
+                let floor = document.createElement('a-plane');
+                floor.setAttribute('rotation', '-90 0 0');
+                floor.setAttribute('position', `${posX} 0 ${posZ}`);
+                floor.setAttribute('width', SZ); floor.setAttribute('height', SZ);
+                floor.setAttribute('material', `src: ${texFloor}; repeat: 2 2; color: #999`); // Lighter floor
+                geoContainer.appendChild(floor);
+
+                // Ceiling
+                let ceil = document.createElement('a-plane');
+                ceil.setAttribute('rotation', '90 0 0');
+                ceil.setAttribute('position', `${posX} 4 ${posZ}`); 
+                ceil.setAttribute('width', SZ); ceil.setAttribute('height', SZ);
+                ceil.setAttribute('material', `src: ${texWall}; repeat: 1 1; color: #444`);
+                geoContainer.appendChild(ceil);
+
+                // Walls
+                this.checkAndBuildWall(x+1, z, posX+SZ/2, 2, posZ, 0, -90, 0, geoContainer);
+                this.checkAndBuildWall(x-1, z, posX-SZ/2, 2, posZ, 0, 90, 0, geoContainer);
+                this.checkAndBuildWall(x, z+1, posX, 2, posZ+SZ/2, 0, 180, 0, geoContainer);
+                this.checkAndBuildWall(x, z-1, posX, 2, posZ-SZ/2, 0, 0, 0, geoContainer);
+
+                if(type === 3 && (x+z)%5 === 0) this.addProp(geoContainer, posX, posZ);
+            }
+          }
+        },
+
+        checkAndBuildWall: function(nx, nz, px, py, pz, rx, ry, rz, container) {
+            if(this.map[nx][nz] === 0) {
+                let w = document.createElement('a-plane');
+                w.setAttribute('position', `${px} ${py} ${pz}`);
+                w.setAttribute('rotation', `${rx} ${ry} ${rz}`);
+                w.setAttribute('width', this.data.scale);
+                w.setAttribute('height', 4);
+                w.setAttribute('material', 'src: #rockTex; color: #666; roughness: 0.8');
+                container.appendChild(w);
+            }
+        },
+
+        addProp: function(container, x, z) {
+            let p = document.createElement('a-cylinder');
+            p.setAttribute('color', '#654321');
+            p.setAttribute('height', 4);
+            p.setAttribute('radius', 0.2);
+            p.setAttribute('position', `${x} 2 ${z}`);
+            container.appendChild(p);
+        },
+
+        installLighting: function() {
+            let container = this.el;
+            const SZ = this.data.scale;
+            const mid = Math.floor(this.data.size/2);
+
+            // Main Road Lights
+            for(let z=2; z<this.data.size-2; z+=3) {
+                let posX = 0; 
+                let posZ = (z - this.data.size/2) * SZ;
+                this.createBulb(container, posX, 3.8, posZ, '#ffaa00', 1.5, 12);
+            }
+
+            // Branches
+            [10, 25, 40, 50].forEach(zLevel => {
+                let posZ = (zLevel - this.data.size/2) * SZ;
+                for(let x=4; x<mid; x+=4) {
+                    let posX = (x - this.data.size/2) * SZ;
+                    this.createBulb(container, posX, 3.5, posZ, '#ffeecc', 0.8, 10);
+                }
+                for(let x=mid+3; x<this.data.size-4; x+=4) {
+                    let posX = (x - this.data.size/2) * SZ;
+                    this.createBulb(container, posX, 3.5, posZ, '#ffeecc', 0.8, 10);
+                }
+            });
+        },
+
+        createBulb: function(container, x, y, z, color, intensity, distance) {
+            let bulbGeo = document.createElement('a-sphere');
+            bulbGeo.setAttribute('radius', 0.15);
+            bulbGeo.setAttribute('position', `${x} ${y} ${z}`);
+            bulbGeo.setAttribute('material', `color: white; emissive: ${color}; emissiveIntensity: 2`);
+            container.appendChild(bulbGeo);
+
+            let light = document.createElement('a-entity');
+            light.setAttribute('light', `type: point; intensity: ${intensity}; distance: ${distance}; decay: 2; color: ${color}`);
+            light.setAttribute('position', `${x} ${y-0.2} ${z}`);
+            container.appendChild(light);
+        },
+
+        populateMachinery: function() {
+            let container = this.el;
+            const SZ = this.data.scale;
+            let length = this.data.size * SZ;
+            
+            let belt = document.createElement('a-box');
+            belt.setAttribute('color', '#111');
+            belt.setAttribute('width', 1.2); belt.setAttribute('height', 0.5); belt.setAttribute('depth', length);
+            belt.setAttribute('position', '2 0.5 0'); 
+            container.appendChild(belt);
+
+            // Landmark: Refuge Chamber
+            let refuge = document.createElement('a-box');
+            refuge.setAttribute('position', '-25 2 0');
+            refuge.setAttribute('width', 4); refuge.setAttribute('height', 3.5); refuge.setAttribute('depth', 4);
+            refuge.setAttribute('color', '#ddd');
+            let door = document.createElement('a-plane');
+            door.setAttribute('position', '0 0 2.1'); door.setAttribute('width', 2); door.setAttribute('height', 3);
+            door.setAttribute('color', '#00aa00');
+            refuge.appendChild(door);
+            container.appendChild(refuge);
+        }
+      });
+
+      // 2. MINIMAP SYSTEM (Updated for White Background)
+      AFRAME.registerComponent('minimap-system', {
+        init: function() {
+            this.canvas = document.getElementById('minimap-canvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.player = document.getElementById('rig');
+            this.cam = document.querySelector('[camera]');
+            
+            this.mapData = null;
+            this.gridSize = 0;
+            this.scale = 0;
+            
+            this.cW = this.canvas.width;
+            this.cH = this.canvas.height;
+
+            // Listen for map data
+            document.querySelector('a-scene').addEventListener('mine-generated', (e) => {
+                console.log("Map data received!");
+                this.mapData = e.detail.map;
+                this.gridSize = e.detail.size;
+                this.scale = e.detail.scale;
+                this.drawStaticMap();
+            });
+        },
+
+        drawStaticMap: function() {
+            if(!this.mapData) return;
+            
+            // 1. Fill Background White
+            this.ctx.fillStyle = "#ffffff"; 
+            this.ctx.fillRect(0, 0, this.cW, this.cH);
+
+            // Calculate cell size
+            let cellSize = this.cW / this.gridSize;
+
+            // 2. Draw Tunnels (Black/Dark Grey)
+            for(let x=0; x<this.gridSize; x++) {
+                for(let z=0; z<this.gridSize; z++) {
+                    let type = this.mapData[x][z];
+                    
+                    if(type !== 0) {
+                        // Color coding based on tunnel type
+                        if(type === 1) this.ctx.fillStyle = "#000000"; // Main Road (Pitch Black)
+                        else if (type === 2) this.ctx.fillStyle = "#555555"; // Branch (Dark Grey)
+                        else this.ctx.fillStyle = "#999999"; // Rooms (Light Grey)
+                        
+                        // Draw cell
+                        this.ctx.fillRect(x * cellSize, z * cellSize, cellSize + 0.6, cellSize + 0.6);
+                    }
+                }
+            }
+            
+            // 3. Draw Landmark (Refuge) in Green
+            this.ctx.fillStyle = "#00cc00";
+            // Coordinate conversion: World(-25, 0) -> Grid
+            let rx = (-25 / this.scale) + (this.gridSize / 2);
+            let rz = (0 / this.scale) + (this.gridSize / 2);
+            this.ctx.fillRect(rx * cellSize - 4, rz * cellSize - 4, 8, 8);
+
+            // Save this base image so we don't redraw walls every frame
+            this.backgroundImage = this.ctx.getImageData(0,0, this.cW, this.cH);
+        },
+
+        tick: function() {
+            if(!this.mapData || !this.backgroundImage) return;
+
+            // 1. Restore the base map (Walls/Roads)
+            this.ctx.putImageData(this.backgroundImage, 0, 0);
+
+            // 2. Calculate Player Position
+            let pos = this.player.getAttribute('position');
+            let rot = this.cam.getAttribute('rotation');
+
+            let gridX = (pos.x / this.scale) + (this.gridSize / 2);
+            let gridZ = (pos.z / this.scale) + (this.gridSize / 2);
+
+            let mapX = gridX * (this.cW / this.gridSize);
+            let mapZ = gridZ * (this.cH / this.gridSize);
+
+            // 3. Draw Player
+            this.ctx.save();
+            this.ctx.translate(mapX, mapZ);
+            this.ctx.rotate(-rot.y * (Math.PI / 180)); 
+            
+            // Red Dot
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, 10, 0, 2 * Math.PI); // Radius 10px
+            this.ctx.fillStyle = "#ff0000"; // Red
+            this.ctx.strokeStyle = "#ffffff";
+            this.ctx.lineWidth = 3;
+            this.ctx.fill();
+            this.ctx.stroke();
+            
+            // View Cone (Triangle)
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, -18);
+            this.ctx.lineTo(-8, 0);
+            this.ctx.lineTo(8, 0);
+            this.ctx.fillStyle = "#ff0000";
+            this.ctx.fill();
+
+            this.ctx.restore();
+        }
+      });
+    </script>
+
+    <!-- SCENE -->
+    <a-scene background="color: #111" fog="type: exponential; color: #221e11; density: 0.04" complex-mine minimap-system>
+      
+      <a-assets>
+         <img id="rockTex" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAB3RJTUUH5QwQCw0j7nN8NwAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAmklEQVRo3u3asQ2AMAxE0Z+9WAbJHoyRySipUoDjKr/0dY5OtuX2uD/8W0BQUFBAQEFBQUEBAQVFAQEFBQUEBBQUFBQQUDj8dIGCggICCgoKCggoKCggICAgisLCggoKCggoKCggICCAgIKCgoICCgoKCggoKCggICCQkBAQUFBAQEFBQUEFBQUEFBQUEBAQUFBAQEFBQUEFD4t8AJjXw3lQWcAAAAASUVORK5CYII=">
+         <img id="floorTex" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAB3RJTUUH5QwQCw4x8o/xGgAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAJElEQVRIx2M4wH9swH9qYtQ/av6j5j9q/qPmP2r+o+Y/av6j5gMAMk1/0fXm2ioAAAAASUVORK5CYII=">
+      </a-assets>
+
+      <a-entity light="type: ambient; color: #444; intensity: 0.7"></a-entity>
+
+      <a-entity id="rig" movement-controls="speed: 0.6" position="0 0.5 0">
+        <a-entity camera position="0 1.6 0" look-controls="pointerLockEnabled: true">
+          <a-entity light="type: spot; angle: 40; penumbra: 0.3; intensity: 1.2; distance: 30" position="0 0 0" target="#spotTarget"></a-entity>
+          <a-entity id="spotTarget" position="0 0 -5"></a-entity>
+        </a-entity>
+        <a-entity oculus-touch-controls="hand: left; model: true"></a-entity>
+        <a-entity oculus-touch-controls="hand: right; model: true"></a-entity>
+      </a-entity>
+
+    </a-scene>
+  </body>
+</html>

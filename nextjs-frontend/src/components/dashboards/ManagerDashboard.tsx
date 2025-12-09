@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Card, StatCard } from '@/components/Card';
 import { Spinner } from '@/components/Loading';
+import AtRiskWorkersWidget from '@/components/AtRiskWorkersWidget';
 import { dashboardApi } from '@/lib/api';
 import type { ManagerDashboard as DashboardType } from '@/types';
 
@@ -238,6 +239,9 @@ export default function ManagerDashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Predictive Analysis - At-Risk Workers */}
+      <AtRiskWorkersWidget limit={5} showTitle={true} />
     </div>
   );
 }

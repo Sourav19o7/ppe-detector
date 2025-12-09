@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { HardHat, UserCog, ShieldCheck, Loader2, AlertCircle, KeyRound, User } from 'lucide-react';
+import { HardHat, UserCog, Shield, Loader2, AlertCircle, KeyRound, User } from 'lucide-react';
 
 type LoginMode = 'staff' | 'worker';
 
@@ -42,41 +42,41 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-[0.03]">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-slate-50 to-stone-100">
+      {/* Subtle Background Pattern */}
+      <div className="absolute inset-0 opacity-[0.02]">
         <div className="absolute inset-0" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }}></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-md px-4">
+      <div className="relative z-10 w-full max-w-md px-6">
         {/* Logo and Title */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl mb-5 shadow-xl">
-            <ShieldCheck className="w-10 h-10 text-white" />
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-300 via-amber-200 to-orange-300 rounded-3xl mb-6 shadow-lg border border-orange-200">
+            <Shield className="w-10 h-10 text-orange-600" strokeWidth={2.5} />
           </div>
-          <h1 className="text-4xl font-bold text-stone-800 mb-3">Kavach</h1>
-          <p className="text-stone-500 text-lg">Mine Safety & PPE Compliance System</p>
+          <h1 className="text-4xl font-bold text-slate-800 mb-2.5 tracking-tight">Kavach</h1>
+          <p className="text-slate-500 text-base font-medium">Mine Safety & PPE Compliance System</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white border border-stone-200 rounded-2xl shadow-xl p-8">
+        <div className="bg-white border border-slate-200 rounded-3xl shadow-2xl shadow-slate-200/50 p-8">
           {/* Mode Toggle */}
-          <div className="flex bg-stone-100 rounded-xl p-1.5 mb-8">
+          <div className="flex bg-slate-50 rounded-2xl p-1.5 mb-8 border border-slate-100">
             <button
               type="button"
               onClick={() => {
                 setMode('staff');
                 setError('');
               }}
-              className={`flex-1 flex items-center justify-center gap-3 py-3.5 rounded-lg text-sm font-semibold transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-sm font-semibold transition-all ${
                 mode === 'staff'
-                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
-                  : 'text-stone-500 hover:text-stone-700'
+                  ? 'bg-gradient-to-r from-orange-200 to-amber-200 text-orange-700 shadow-md'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <UserCog size={22} />
+              <UserCog size={19} strokeWidth={2.5} />
               Staff Login
             </button>
             <button
@@ -85,13 +85,13 @@ export default function LoginPage() {
                 setMode('worker');
                 setError('');
               }}
-              className={`flex-1 flex items-center justify-center gap-3 py-3.5 rounded-lg text-sm font-semibold transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-sm font-semibold transition-all ${
                 mode === 'worker'
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-md'
-                  : 'text-stone-500 hover:text-stone-700'
+                  ? 'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 shadow-md'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <HardHat size={22} />
+              <HardHat size={19} strokeWidth={2.5} />
               Worker Login
             </button>
           </div>
@@ -100,36 +100,38 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {mode === 'staff' ? (
               <div>
-                <label htmlFor="username" className="block text-sm font-semibold text-stone-700 mb-2">
+                <label htmlFor="username" className="block text-sm font-semibold text-slate-700 mb-2.5">
                   Username
                 </label>
                 <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={22} />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} strokeWidth={2.5} />
                   <input
                     type="text"
                     id="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your username"
-                    className="w-full pl-12"
+                    className="w-full with-icon"
+                    style={{ paddingLeft: '48px' }}
                     required
                   />
                 </div>
               </div>
             ) : (
               <div>
-                <label htmlFor="employeeId" className="block text-sm font-semibold text-stone-700 mb-2">
+                <label htmlFor="employeeId" className="block text-sm font-semibold text-slate-700 mb-2.5">
                   Employee ID
                 </label>
                 <div className="relative">
-                  <HardHat className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={22} />
+                  <HardHat className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} strokeWidth={2.5} />
                   <input
                     type="text"
                     id="employeeId"
                     value={employeeId}
                     onChange={(e) => setEmployeeId(e.target.value)}
                     placeholder="Enter your Employee ID (e.g., W001)"
-                    className="w-full pl-12"
+                    className="w-full with-icon"
+                    style={{ paddingLeft: '48px' }}
                     required
                   />
                 </div>
@@ -137,38 +139,39 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-stone-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2.5">
                 Password
               </label>
               <div className="relative">
-                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={22} />
+                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} strokeWidth={2.5} />
                 <input
                   type="password"
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="w-full pl-12"
+                  className="w-full with-icon"
+                  style={{ paddingLeft: '48px' }}
                   required
                 />
               </div>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3.5 rounded-xl text-sm flex items-center gap-3">
-                <AlertCircle size={22} />
-                {error}
+              <div className="bg-red-50 border-1.5 border-red-300 text-red-700 px-4 py-3.5 rounded-2xl text-sm flex items-center gap-3">
+                <AlertCircle size={20} strokeWidth={2.5} />
+                <span className="font-medium">{error}</span>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn btn-primary py-4 text-base"
+              className="w-full btn btn-primary py-4 text-base font-semibold"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2.5} />
                   Signing in...
                 </>
               ) : (
@@ -178,8 +181,8 @@ export default function LoginPage() {
           </form>
 
           {/* Help Text */}
-          <div className="mt-8 pt-6 border-t border-stone-100">
-            <p className="text-center text-sm text-stone-500">
+          <div className="mt-8 pt-7 border-t border-slate-100">
+            <p className="text-center text-sm text-slate-500 leading-relaxed">
               {mode === 'staff' ? (
                 <>
                   Staff members use their assigned username and password.
@@ -198,45 +201,45 @@ export default function LoginPage() {
         </div>
 
         {/* Demo Credentials */}
-        <div className="mt-6 bg-white border border-stone-200 rounded-2xl p-5 shadow-lg">
-          <h3 className="text-stone-700 font-semibold mb-4 text-center">Demo Credentials</h3>
+        <div className="mt-6 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-6 shadow-lg">
+          <h3 className="text-slate-700 font-semibold mb-4 text-center text-sm">Demo Credentials</h3>
           <div className="grid grid-cols-2 gap-3 text-xs">
             {mode === 'staff' ? (
               <>
-                <div className="bg-stone-50 rounded-xl p-3">
-                  <p className="text-orange-600 font-semibold">Super Admin</p>
-                  <p className="text-stone-600 mt-1">superadmin / admin123</p>
+                <div className="bg-gradient-to-br from-orange-100 to-orange-50 rounded-xl p-3 border border-orange-200">
+                  <p className="text-orange-700 font-semibold mb-1">Super Admin</p>
+                  <p className="text-slate-600">superadmin / admin123</p>
                 </div>
-                <div className="bg-stone-50 rounded-xl p-3">
-                  <p className="text-orange-600 font-semibold">General Manager</p>
-                  <p className="text-stone-600 mt-1">gm / gm123</p>
+                <div className="bg-gradient-to-br from-amber-100 to-amber-50 rounded-xl p-3 border border-amber-200">
+                  <p className="text-amber-700 font-semibold mb-1">General Manager</p>
+                  <p className="text-slate-600">gm / gm123</p>
                 </div>
-                <div className="bg-stone-50 rounded-xl p-3">
-                  <p className="text-orange-600 font-semibold">Area Safety Officer</p>
-                  <p className="text-stone-600 mt-1">aso / aso123</p>
+                <div className="bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-xl p-3 border border-yellow-200">
+                  <p className="text-yellow-700 font-semibold mb-1">Area Safety Officer</p>
+                  <p className="text-slate-600">aso / aso123</p>
                 </div>
-                <div className="bg-stone-50 rounded-xl p-3">
-                  <p className="text-orange-600 font-semibold">Manager</p>
-                  <p className="text-stone-600 mt-1">manager1 / manager123</p>
+                <div className="bg-gradient-to-br from-lime-100 to-lime-50 rounded-xl p-3 border border-lime-200">
+                  <p className="text-lime-700 font-semibold mb-1">Manager</p>
+                  <p className="text-slate-600">manager1 / manager123</p>
                 </div>
-                <div className="bg-stone-50 rounded-xl p-3">
-                  <p className="text-orange-600 font-semibold">Safety Officer</p>
-                  <p className="text-stone-600 mt-1">safety1 / safety123</p>
+                <div className="bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-xl p-3 border border-emerald-200">
+                  <p className="text-emerald-700 font-semibold mb-1">Safety Officer</p>
+                  <p className="text-slate-600">safety1 / safety123</p>
                 </div>
-                <div className="bg-stone-50 rounded-xl p-3">
-                  <p className="text-orange-600 font-semibold">Shift Incharge</p>
-                  <p className="text-stone-600 mt-1">shift_day1 / shift123</p>
+                <div className="bg-gradient-to-br from-cyan-100 to-cyan-50 rounded-xl p-3 border border-cyan-200">
+                  <p className="text-cyan-700 font-semibold mb-1">Shift Incharge</p>
+                  <p className="text-slate-600">shift_day1 / shift123</p>
                 </div>
               </>
             ) : (
               <>
-                <div className="bg-stone-50 rounded-xl p-3">
-                  <p className="text-amber-600 font-semibold">Worker (Mine 1)</p>
-                  <p className="text-stone-600 mt-1">W001 / worker123</p>
+                <div className="bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-xl p-3 border border-emerald-200">
+                  <p className="text-emerald-700 font-semibold mb-1">Worker (Mine 1)</p>
+                  <p className="text-slate-600">W001 / worker123</p>
                 </div>
-                <div className="bg-stone-50 rounded-xl p-3">
-                  <p className="text-amber-600 font-semibold">Worker (Mine 2)</p>
-                  <p className="text-stone-600 mt-1">W101 / worker123</p>
+                <div className="bg-gradient-to-br from-teal-100 to-teal-50 rounded-xl p-3 border border-teal-200">
+                  <p className="text-teal-700 font-semibold mb-1">Worker (Mine 2)</p>
+                  <p className="text-slate-600">W101 / worker123</p>
                 </div>
               </>
             )}
@@ -244,7 +247,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-stone-400 text-sm mt-6">
+        <p className="text-center text-slate-400 text-sm mt-8">
           Kavach - Mine Safety System v2.0
         </p>
       </div>

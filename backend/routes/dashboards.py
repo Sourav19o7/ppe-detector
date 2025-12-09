@@ -305,6 +305,38 @@ async def get_safety_officer_dashboard(
             "created_at": alert["created_at"].isoformat(),
         })
 
+    # ML-based at-risk workers (predictive)
+    at_risk_predictions = await db.predictions.find({
+        "risk_category": {"$in": ["high", "critical"]},
+        "expires_at": {"$gt": datetime.utcnow()}
+    }).sort("overall_risk_score", -1).limit(10).to_list(length=10)
+
+    at_risk_workers_ml = []
+    for pred in at_risk_predictions:
+        worker = await db.workers.find_one({"_id": ObjectId(pred["worker_id"])})
+        if worker and worker.get("mine_id") == ObjectId(mine_id):
+            risk_factors = pred.get("risk_factors", [])
+            at_risk_workers_ml.append({
+                "worker_id": pred["worker_id"],
+                "employee_id": worker.get("employee_id", ""),
+                "name": worker.get("name", ""),
+                "risk_score": round(pred["overall_risk_score"], 1),
+                "risk_category": pred["risk_category"],
+                "predicted_violations": pred.get("predicted_violations_count", 0),
+                "attendance_rate": round(pred.get("attendance_rate_30d", 100), 1),
+                "main_issue": risk_factors[0]["description"] if risk_factors else "Multiple factors",
+                "requires_intervention": pred.get("requires_intervention", False)
+            })
+
+    # Risk distribution summary
+    risk_distribution = {}
+    for category in ["low", "medium", "high", "critical"]:
+        count = await db.predictions.count_documents({
+            "risk_category": category,
+            "expires_at": {"$gt": datetime.utcnow()}
+        })
+        risk_distribution[category] = count
+
     return {
         "mine_id": mine_id,
         "mine_name": mine_name,
@@ -319,6 +351,8 @@ async def get_safety_officer_dashboard(
         },
         "violation_trends": violation_trends,
         "high_risk_workers": high_risk_workers,
+        "at_risk_workers_predictive": at_risk_workers_ml,  # NEW: ML-based predictions
+        "risk_distribution": risk_distribution,  # NEW: Risk category distribution
         "zone_risk_analysis": zone_risk_scores,
         "recent_alerts": recent_alerts,
     }
@@ -426,6 +460,32 @@ async def get_manager_dashboard(
     # Entry delay analysis (placeholder - would need more detailed tracking)
     avg_delay_minutes = 0  # Would calculate from actual entry time vs shift start
 
+    # ML-based at-risk workers
+    at_risk_predictions = await db.predictions.find({
+        "risk_category": {"$in": ["high", "critical"]},
+        "expires_at": {"$gt": datetime.utcnow()}
+    }).sort("overall_risk_score", -1).limit(10).to_list(length=10)
+
+    at_risk_workers = []
+    for pred in at_risk_predictions:
+        worker = await db.workers.find_one({"_id": ObjectId(pred["worker_id"])})
+        if worker and worker.get("mine_id") == ObjectId(mine_id):
+            risk_factors = pred.get("risk_factors", [])
+            at_risk_workers.append({
+                "worker_id": pred["worker_id"],
+                "employee_id": worker.get("employee_id", ""),
+                "name": worker.get("name", ""),
+                "risk_score": round(pred["overall_risk_score"], 1),
+                "risk_category": pred["risk_category"],
+                "main_issue": risk_factors[0]["description"] if risk_factors else "Multiple factors",
+                "requires_intervention": pred.get("requires_intervention", False)
+            })
+
+    # Predictive insights summary
+    total_at_risk = len(at_risk_workers)
+    critical_risk_count = len([w for w in at_risk_workers if w["risk_category"] == "critical"])
+    intervention_needed = len([w for w in at_risk_workers if w["requires_intervention"]])
+
     return {
         "mine_id": mine_id,
         "mine_name": mine_name,
@@ -438,6 +498,12 @@ async def get_manager_dashboard(
         },
         "shift_performance": shift_performance,
         "top_compliant_workers": top_workers,
+        "at_risk_workers": at_risk_workers,  # NEW: ML-based predictions
+        "predictive_insights": {  # NEW: Summary of prediction data
+            "total_at_risk": total_at_risk,
+            "critical_risk_count": critical_risk_count,
+            "intervention_needed": intervention_needed
+        }
     }
 
 

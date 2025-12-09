@@ -535,3 +535,124 @@ async def get_worker_attendance(
         "entries": entries,
         "total": total
     }
+
+
+@router.get("/{worker_id}/prediction")
+async def get_worker_prediction_detail(
+    worker_id: str,
+    current_user: dict = Depends(get_shift_incharge_or_above)
+):
+    """
+    Get prediction details and recommendations for worker profile page.
+    """
+    db = get_database()
+
+    # Verify worker exists
+    try:
+        worker = await db.workers.find_one({"_id": ObjectId(worker_id)})
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid worker ID")
+
+    if not worker:
+        raise HTTPException(status_code=404, detail="Worker not found")
+
+    # Check mine access
+    mine_id = worker.get("mine_id")
+    if mine_id and not check_mine_access(current_user, str(mine_id)):
+        raise HTTPException(status_code=403, detail="No access to this worker's mine")
+
+    # Get latest prediction
+    prediction = await db.predictions.find_one(
+        {"worker_id": worker_id},
+        sort=[("prediction_date", -1)]
+    )
+
+    # If no prediction or expired, generate new one
+    if not prediction or prediction.get("expires_at", datetime.min) < datetime.utcnow():
+        # Import here to avoid circular dependency
+        from ml.prediction_service import PredictionService
+
+        service = PredictionService(db)
+        prediction = await service.predict_worker_risk(worker_id)
+
+        # Save to database
+        await db.predictions.insert_one(prediction)
+
+    # Generate recommendations based on risk factors
+    recommendations = _generate_recommendations(prediction)
+
+    return {
+        "worker_id": worker_id,
+        "employee_id": worker.get("employee_id", ""),
+        "name": worker.get("name", ""),
+        "prediction": {
+            "overall_risk_score": round(prediction["overall_risk_score"], 1),
+            "risk_category": prediction["risk_category"],
+            "violation_risk_score": round(prediction["violation_risk_score"], 1),
+            "attendance_risk_score": round(prediction["attendance_risk_score"], 1),
+            "predicted_violations": prediction["predicted_violations_count"],
+            "predicted_absent_days": prediction["predicted_absent_days"],
+            "attendance_rate_30d": round(prediction["attendance_rate_30d"], 1),
+            "high_risk_ppe_items": prediction["high_risk_ppe_items"],
+            "requires_intervention": prediction["requires_intervention"],
+            "risk_factors": prediction.get("risk_factors", []),
+            "confidence": prediction["confidence"],
+            "prediction_date": prediction["prediction_date"].isoformat(),
+            "expires_at": prediction["expires_at"].isoformat()
+        },
+        "recommendations": recommendations
+    }
+
+
+def _generate_recommendations(prediction: dict) -> list:
+    """Generate actionable recommendations based on prediction"""
+    recommendations = []
+
+    risk_factors = prediction.get("risk_factors", [])
+    risk_category = prediction.get("risk_category", "low")
+
+    # Extract factor types
+    factor_types = {rf["factor"] for rf in risk_factors}
+
+    # Violation-related recommendations
+    if any(f in factor_types for f in ["high_violation_count", "moderate_violation_count"]):
+        recommendations.append("Schedule mandatory PPE safety training session")
+
+        high_risk_items = prediction.get("high_risk_ppe_items", [])
+        if high_risk_items:
+            items_str = ", ".join(high_risk_items)
+            recommendations.append(f"Focus training on proper use of: {items_str}")
+
+    # Attendance-related recommendations
+    if "critical_low_attendance" in factor_types or "low_attendance" in factor_types:
+        recommendations.append("Conduct attendance counseling session")
+        recommendations.append("Review work-life balance and personal issues")
+
+    # Consecutive absence recommendations
+    if "extended_absence" in factor_types or "consecutive_absence" in factor_types:
+        recommendations.append("Immediate check-in required - verify worker wellbeing")
+        recommendations.append("Consider temporary reassignment to less critical zones")
+
+    # Compliance recommendations
+    if "very_low_compliance" in factor_types:
+        recommendations.append("IMMEDIATE ACTION: Assign safety buddy for supervision")
+        recommendations.append("Restrict access to high-risk zones until improvement")
+        recommendations.append("Weekly safety compliance reviews with supervisor")
+
+    # Warning-related recommendations
+    if "multiple_warnings" in factor_types:
+        recommendations.append("Escalate to formal performance improvement plan")
+        recommendations.append("Require sign-off from Safety Officer for zone access")
+
+    # New worker recommendations
+    if "new_worker_violations" in factor_types:
+        recommendations.append("Provide additional onboarding and safety orientation")
+        recommendations.append("Assign experienced mentor for first 60 days")
+
+    # General recommendations if critical
+    if risk_category == "critical" and not recommendations:
+        recommendations.append("CRITICAL: Immediate intervention required")
+        recommendations.append("Schedule meeting with worker and Safety Officer")
+        recommendations.append("Develop personalized safety improvement plan")
+
+    return recommendations[:5]  # Limit to top 5
