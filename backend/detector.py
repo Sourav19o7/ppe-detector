@@ -8,6 +8,7 @@ import tempfile
 import os
 from io import BytesIO
 from pathlib import Path
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -114,7 +115,7 @@ class PersonDetector:
         with open(self.known_faces_file, 'wb') as f:
             pickle.dump(self.known_faces, f)
 
-    def get_face_embedding(self, image: Image.Image) -> np.ndarray | None:
+    def get_face_embedding(self, image: Image.Image) -> Optional[np.ndarray]:
         """Extract face embedding from image using MTCNN."""
         if not FACE_RECOGNITION_AVAILABLE:
             return None
@@ -188,7 +189,7 @@ class PersonDetector:
         """Return list of registered face names."""
         return list(self.known_faces.keys())
 
-    def identify_face(self, face_image: Image.Image, threshold: float = 0.8) -> tuple[str, str] | None:
+    def identify_face(self, face_image: Image.Image, threshold: float = 0.8) -> Optional[Tuple[str, str]]:
         """Identify a face from known faces."""
         if not FACE_RECOGNITION_AVAILABLE or not self.known_faces:
             return None
