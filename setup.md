@@ -88,6 +88,11 @@ Access the application:
 3. **Install Python dependencies**
    ```bash
    pip install -r requirements.txt
+
+   # Required for WebSocket support (video streaming)
+   pip install 'uvicorn[standard]'
+   # Or alternatively:
+   pip install websockets
    ```
 
 4. **Create environment file**
@@ -360,6 +365,20 @@ lsof -i :8000
 kill -9 <PID>
 ```
 
+**WebSocket connection failed / "No supported WebSocket library detected"**
+```bash
+# Install WebSocket support for uvicorn
+pip install 'uvicorn[standard]'
+# Or alternatively:
+pip install websockets
+
+# Restart the backend server after installation
+```
+This error appears as:
+- `WARNING: No supported WebSocket library detected`
+- `WARNING: Unsupported upgrade request`
+- WebSocket connections returning 404
+
 ### Frontend Issues
 
 **npm install fails**
@@ -374,12 +393,43 @@ npm install
 - Check `NEXT_PUBLIC_API_URL` in `.env.local`
 - Verify CORS settings in backend
 
-### Camera/Detection Issues
+**TypeError: "X is not a function" errors**
+
+If you see errors like:
+- `mineApi.list is not a function`
+- `hasMinRole is not a function`
+- `videoApi.start is not a function`
+
+These indicate mismatches between frontend API calls and the actual API methods. The API methods available are:
+- `mineApi.getAll()` (not `list`)
+- `workerApi.getAll(params)` (not `list`)
+- `userApi.getAll(params)` (not `list`)
+- `alertApi.getAll(params)` (not `list`)
+- `videoApi.start(source, maxFps)` for video streaming
+
+**Export not found errors**
+
+If you see `Export X doesn't exist in target module`:
+- Check if the function is exported from the source file
+- Verify the import path is correct
+- Run `npm run build` to see all TypeScript errors
+
+### Camera/Video Streaming Issues
 
 **Camera not accessible**
 - Grant browser camera permissions
 - Close other apps using the camera
 - Check browser console for errors
+
+**Video WebSocket connection fails**
+1. Ensure `websockets` or `uvicorn[standard]` is installed
+2. Check the WebSocket URL matches the backend endpoint (`/ws/video`)
+3. Verify the backend is running and accessible
+4. Check browser console for specific error messages
+
+**"Video stream already running" message**
+- This is normal if the stream was started previously
+- The backend maintains stream state between requests
 
 **Face not recognized**
 - Ensure good lighting conditions
@@ -396,6 +446,7 @@ npm install
 - First run downloads ~200MB of ML models from HuggingFace
 - Face registration is required before face recognition works
 - Database seeding is recommended for testing
+- WebSocket support requires `uvicorn[standard]` or `websockets` package
 
 ---
 

@@ -86,6 +86,15 @@ export default function PPEDetectionPage() {
     setResult(result);
   }, []);
 
+  // Handler for manual snapshot capture during live mode
+  const handleSnapshotCapture = useCallback((result: DetectionResult) => {
+    setResult(result);
+    // Refresh violations if logged
+    if (result.violations_logged) {
+      loadRecentViolations();
+    }
+  }, []);
+
   const getPPEIcon = (label: string) => {
     const lowerLabel = label.toLowerCase();
     if (lowerLabel.includes('helmet')) return <HardHat size={16} />;
@@ -212,12 +221,14 @@ export default function PPEDetectionPage() {
             {detectionMode === 'live' && (
               <Card
                 title="Live PPE Detection (Browser)"
-                description="Captures frames in browser, sends to API for detection"
+                description="Captures frames in browser, sends to API for detection. Use 'Capture & Detect' for manual snapshots."
               >
                 <LiveCamera
                   onDetection={handleLiveResult}
                   detectEndpoint={handleLiveDetection}
                   intervalMs={2000}
+                  showSnapshotButton={true}
+                  onSnapshotCapture={handleSnapshotCapture}
                 />
 
                 {/* Live Mode Options */}
@@ -261,7 +272,7 @@ export default function PPEDetectionPage() {
             {detectionMode === 'stream' && (
               <Card
                 title="Live PPE Detection (Server)"
-                description="Real-time video stream with bounding boxes drawn on server"
+                description="Real-time video stream with bounding boxes drawn on server. Use 'Capture & Detect' for full analysis."
               >
                 <VideoStream
                   onDetection={(result) => {
@@ -271,6 +282,8 @@ export default function PPEDetectionPage() {
                     }
                   }}
                   onError={(error) => console.error('Stream error:', error)}
+                  showSnapshotButton={true}
+                  onSnapshotCapture={handleSnapshotCapture}
                 />
 
                 {liveViolationCount > 0 && (
