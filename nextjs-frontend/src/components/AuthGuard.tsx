@@ -11,7 +11,7 @@ const publicPaths = ['/login'];
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { token, setStaffAuth, setWorkerAuth, logout } = useAuthStore();
+  const { token, logout } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -27,18 +27,14 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       if (token) {
         try {
           const response = await authApi.verify();
-          // authApi.verify() returns { user?: User, worker?: Worker }
-          if (response.user || response.worker) {
-            // Update auth state with the verified user/worker data
-            if (response.user) {
-              setStaffAuth(token, response.user);
-            } else if (response.worker) {
-              setWorkerAuth(token, response.worker);
-            }
+          // authApi.verify() returns { valid: boolean, user_type, username, role, mine_id }
+          if (response.valid) {
+            // Token is valid - redirect away from login if on login page
             if (pathname === '/login') {
               router.push('/');
             }
           } else {
+            // Token is invalid
             logout();
             if (!isPublicPath) {
               router.push('/login');
@@ -56,7 +52,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     };
 
     checkAuth();
-  }, [token, pathname, router, setStaffAuth, setWorkerAuth, logout]);
+  }, [token, pathname, router, logout]);
 
   if (isLoading) {
     return <PageLoading />;

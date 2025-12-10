@@ -638,6 +638,272 @@ async def register_employee_face(
     return {"success": True, "message": f"Face registered for {emp['name']}{angle_msg}"}
 
 
+# ==================== Legacy Attendance ====================
+
+@app.post("/attendance/check-in")
+async def check_in_attendance(
+    file: UploadFile = File(...),
+    location: Optional[str] = Form(default=None)
+):
+    """
+    Mark attendance check-in via face recognition.
+    Used by gate verification screen for attendance marking.
+    """
+    try:
+        contents = await file.read()
+        result_image, detections = detector.process_image(contents)
+
+        buffered = BytesIO()
+        result_image.save(buffered, format="PNG")
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
+
+        db = get_database()
+
+        # Get identified person info
+        identified_persons = detections.get("summary", {}).get("identified_persons", [])
+        identified_names = detections.get("summary", {}).get("identified_names", [])
+
+        if not identified_persons:
+            return JSONResponse({
+                "success": False,
+                "message": "No face identified in image",
+                "attendance_marked": False
+            })
+
+        employee_id = identified_persons[0]
+        employee_name = identified_names[0] if identified_names else employee_id
+
+        # Try to find worker
+        worker = await db.workers.find_one({"employee_id": employee_id})
+        if not worker:
+            worker = await db.employees.find_one({"employee_id": employee_id})
+
+        if worker:
+            employee_name = worker.get("name", employee_name)
+
+        # Get violations from detection
+        violations = detections.get("violations", [])
+        violation_labels = [v.get("label", "Unknown") for v in violations]
+
+        # Check if already checked in today
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        existing = await db.attendance.find_one({
+            "employee_id": employee_id,
+            "date": today,
+            "type": "check_in"
+        })
+
+        if existing:
+            return JSONResponse({
+                "success": True,
+                "message": f"Already checked in today",
+                "attendance_marked": True,
+                "attendance": {
+                    "employee_id": employee_id,
+                    "employee_name": employee_name,
+                    "timestamp": existing["timestamp"].isoformat(),
+                    "already_checked_in": True
+                }
+            })
+
+        # Create attendance record
+        attendance_doc = {
+            "employee_id": employee_id,
+            "employee_name": employee_name,
+            "worker_id": str(worker["_id"]) if worker and "_id" in worker else None,
+            "type": "check_in",
+            "timestamp": datetime.utcnow(),
+            "date": today,
+            "location": location,
+            "ppe_compliant": len(violations) == 0,
+            "violations": violation_labels,
+            "image": f"data:image/png;base64,{img_base64}"
+        }
+
+        await db.attendance.insert_one(attendance_doc)
+
+        return JSONResponse({
+            "success": True,
+            "message": f"Attendance marked for {employee_name}",
+            "attendance_marked": True,
+            "attendance": {
+                "employee_id": employee_id,
+                "employee_name": employee_name,
+                "timestamp": attendance_doc["timestamp"].isoformat(),
+                "ppe_compliant": attendance_doc["ppe_compliant"],
+                "violations": violation_labels
+            }
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "error": str(e),
+            "attendance_marked": False
+        }, status_code=500)
+
+
+@app.post("/attendance/check-out")
+async def check_out_attendance(
+    file: UploadFile = File(...),
+    location: Optional[str] = Form(default=None)
+):
+    """
+    Mark attendance check-out via face recognition.
+    """
+    try:
+        contents = await file.read()
+        result_image, detections = detector.process_image(contents)
+
+        db = get_database()
+
+        # Get identified person info
+        identified_persons = detections.get("summary", {}).get("identified_persons", [])
+        identified_names = detections.get("summary", {}).get("identified_names", [])
+
+        if not identified_persons:
+            return JSONResponse({
+                "success": False,
+                "message": "No face identified in image",
+                "attendance_marked": False
+            })
+
+        employee_id = identified_persons[0]
+        employee_name = identified_names[0] if identified_names else employee_id
+
+        # Try to find worker
+        worker = await db.workers.find_one({"employee_id": employee_id})
+        if not worker:
+            worker = await db.employees.find_one({"employee_id": employee_id})
+
+        if worker:
+            employee_name = worker.get("name", employee_name)
+
+        # Create check-out record
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        attendance_doc = {
+            "employee_id": employee_id,
+            "employee_name": employee_name,
+            "worker_id": str(worker["_id"]) if worker and "_id" in worker else None,
+            "type": "check_out",
+            "timestamp": datetime.utcnow(),
+            "date": today,
+            "location": location
+        }
+
+        await db.attendance.insert_one(attendance_doc)
+
+        return JSONResponse({
+            "success": True,
+            "message": f"Check-out marked for {employee_name}",
+            "attendance_marked": True,
+            "attendance": {
+                "employee_id": employee_id,
+                "employee_name": employee_name,
+                "timestamp": attendance_doc["timestamp"].isoformat()
+            }
+        })
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({
+            "success": False,
+            "error": str(e),
+            "attendance_marked": False
+        }, status_code=500)
+
+
+@app.get("/attendance")
+async def get_attendance_records(
+    date: Optional[str] = None,
+    employee_id: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100)
+):
+    """Get attendance records with filters."""
+    db = get_database()
+
+    query = {}
+
+    if date:
+        query["date"] = date
+    elif start_date or end_date:
+        query["date"] = {}
+        if start_date:
+            query["date"]["$gte"] = start_date
+        if end_date:
+            query["date"]["$lte"] = end_date
+
+    if employee_id:
+        query["employee_id"] = employee_id
+
+    cursor = db.attendance.find(query).skip(skip).limit(limit).sort("timestamp", -1)
+    records = []
+
+    async for record in cursor:
+        records.append({
+            "id": str(record["_id"]),
+            "employee_id": record.get("employee_id"),
+            "employee_name": record.get("employee_name"),
+            "type": record.get("type"),
+            "timestamp": record["timestamp"].isoformat() if record.get("timestamp") else None,
+            "date": record.get("date"),
+            "location": record.get("location"),
+            "ppe_compliant": record.get("ppe_compliant"),
+            "violations": record.get("violations", [])
+        })
+
+    total = await db.attendance.count_documents(query)
+
+    return {"records": records, "total": total}
+
+
+@app.get("/attendance/today")
+async def get_today_attendance():
+    """Get today's attendance summary."""
+    db = get_database()
+
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
+    # Get unique check-ins
+    pipeline = [
+        {"$match": {"date": today, "type": "check_in"}},
+        {"$group": {
+            "_id": "$employee_id",
+            "employee_name": {"$first": "$employee_name"},
+            "check_in_time": {"$first": "$timestamp"},
+            "ppe_compliant": {"$first": "$ppe_compliant"}
+        }}
+    ]
+
+    check_ins = []
+    async for record in db.attendance.aggregate(pipeline):
+        check_ins.append({
+            "employee_id": record["_id"],
+            "employee_name": record.get("employee_name"),
+            "check_in_time": record["check_in_time"].isoformat() if record.get("check_in_time") else None,
+            "ppe_compliant": record.get("ppe_compliant", True)
+        })
+
+    # Get total workers for attendance rate
+    total_workers = await db.workers.count_documents({"is_active": True})
+    total_employees = await db.employees.count_documents({})
+    total_all = total_workers + total_employees
+
+    return {
+        "date": today,
+        "present": len(check_ins),
+        "total": total_all,
+        "attendance_rate": round((len(check_ins) / total_all * 100) if total_all > 0 else 0, 1),
+        "records": check_ins
+    }
+
+
 # ==================== Legacy Violations ====================
 
 @app.get("/violations")

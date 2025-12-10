@@ -632,3 +632,55 @@ export interface WorkerPredictionDetail {
   prediction: WorkerPrediction;
   recommendations: string[];
 }
+
+// ==================== Gate Verification Types ====================
+
+export type VerificationStatus = 'pending' | 'checking' | 'passed' | 'failed' | 'warning';
+
+export type VerificationItemType = 'helmet' | 'face' | 'vest' | 'shoes';
+
+export interface VerificationItem {
+  type: VerificationItemType;
+  rfidStatus: VerificationStatus;  // 'pending' for face (no RFID)
+  mlStatus: VerificationStatus;
+  rfidTagId?: string;
+  mlConfidence?: number;
+}
+
+export interface GateVerificationState {
+  // Verification items
+  items: Record<VerificationItemType, VerificationItem>;
+
+  // Overall state
+  overallStatus: 'idle' | 'verifying' | 'passed' | 'failed' | 'warning';
+
+  // Worker identification
+  identifiedWorker: Worker | null;
+  identificationConfidence: number;
+  attendanceMarked: boolean;
+
+  // Timer
+  timeRemaining: number;
+  isTimerRunning: boolean;
+  startTime: number | null;
+
+  // Session info
+  sessionId: string | null;
+  selectedGateId: string | null;
+  selectedMineId: string | null;
+}
+
+export interface RFIDScanEvent {
+  tagId: string;
+  tagType: 'helmet' | 'vest' | 'shoes';
+  timestamp: Date;
+}
+
+export interface VerificationResult {
+  success: boolean;
+  passedChecks: number;
+  totalChecks: number;
+  worker: Worker | null;
+  violations: string[];
+  canOverride: boolean;
+}
