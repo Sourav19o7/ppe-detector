@@ -103,6 +103,64 @@ async def update_worker_compliance(db, worker_id: str, has_violation: bool):
     )
 
 
+async def add_attendance_record(db, worker: dict, entry_type: str, violations: list, img_base64: str, location: str = None):
+    """Add attendance record to the attendance collection after worker detection."""
+    if not worker:
+        return None
+
+    employee_id = worker.get("employee_id")
+    employee_name = worker.get("name")
+    worker_id = str(worker["_id"]) if "_id" in worker else None
+
+    # Determine attendance type based on entry_type
+    attendance_type = "check_in" if entry_type == "entry" else "check_out"
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+
+    # For check-in, check if already checked in today
+    if attendance_type == "check_in":
+        existing = await db.attendance.find_one({
+            "employee_id": employee_id,
+            "date": today,
+            "type": "check_in"
+        })
+        if existing:
+            # Already checked in today, skip duplicate
+            return {
+                "employee_id": employee_id,
+                "employee_name": employee_name,
+                "timestamp": existing["timestamp"].isoformat(),
+                "already_checked_in": True
+            }
+
+    # Create attendance record
+    attendance_doc = {
+        "employee_id": employee_id,
+        "employee_name": employee_name,
+        "worker_id": worker_id,
+        "type": attendance_type,
+        "timestamp": datetime.utcnow(),
+        "date": today,
+        "location": location,
+        "ppe_compliant": len(violations) == 0,
+        "violations": violations,
+        "source": "gate_entry",  # Track that this came from gate entry
+    }
+
+    # Only add image for check-in
+    if attendance_type == "check_in" and img_base64:
+        attendance_doc["image"] = f"data:image/png;base64,{img_base64}"
+
+    await db.attendance.insert_one(attendance_doc)
+
+    return {
+        "employee_id": employee_id,
+        "employee_name": employee_name,
+        "timestamp": attendance_doc["timestamp"].isoformat(),
+        "ppe_compliant": attendance_doc["ppe_compliant"],
+        "violations": violations
+    }
+
+
 # Global detector instance (loaded once at module import)
 _detector = None
 
@@ -117,7 +175,7 @@ def get_detector():
 
 @router.post("/detect")
 async def detect_and_record_entry(
-    gate_id: str = Form(...),
+    gate_id: str = Form(None),  # Made optional
     file: UploadFile = File(...),
     entry_type: str = Form("entry"),
     current_user: dict = Depends(get_shift_incharge_or_above)
@@ -125,17 +183,49 @@ async def detect_and_record_entry(
     """
     Process gate camera feed - detect PPE and faces, record entry.
     This is the main endpoint for gate cameras.
+    Gate ID is optional - if not provided, will use the first available gate.
     """
     db = get_database()
 
-    # Verify gate exists
-    try:
-        gate = await db.gates.find_one({"_id": ObjectId(gate_id)})
-    except:
-        raise HTTPException(status_code=400, detail="Invalid gate ID")
+    gate = None
 
-    if not gate:
-        raise HTTPException(status_code=404, detail="Gate not found")
+    # If gate_id provided, verify it exists
+    if gate_id:
+        try:
+            gate = await db.gates.find_one({"_id": ObjectId(gate_id)})
+        except:
+            raise HTTPException(status_code=400, detail="Invalid gate ID")
+
+        if not gate:
+            raise HTTPException(status_code=404, detail="Gate not found")
+    else:
+        # No gate_id provided - find the first available gate
+        gate = await db.gates.find_one({"is_active": True, "has_camera": True})
+        if not gate:
+            # Create a default test gate if none exists
+            default_mine = await db.mines.find_one({"is_active": True})
+            if not default_mine:
+                # Create a default mine
+                mine_result = await db.mines.insert_one({
+                    "name": "Default Mine",
+                    "location": "Auto-created",
+                    "is_active": True,
+                    "created_at": datetime.utcnow(),
+                })
+                default_mine = {"_id": mine_result.inserted_id}
+
+            # Create a default gate
+            gate_result = await db.gates.insert_one({
+                "mine_id": default_mine["_id"],
+                "name": "Default Gate",
+                "gate_type": "both",
+                "has_camera": True,
+                "is_active": True,
+                "created_at": datetime.utcnow(),
+            })
+            gate = await db.gates.find_one({"_id": gate_result.inserted_id})
+
+        gate_id = str(gate["_id"])
 
     mine_id = str(gate["mine_id"])
 
@@ -212,6 +302,19 @@ async def detect_and_record_entry(
     if worker_id:
         await update_worker_compliance(db, worker_id, len(violation_labels) > 0)
 
+    # Add attendance record to attendance collection
+    attendance_record = None
+    if worker:
+        gate_name_for_location = gate.get("name", "Unknown Gate")
+        attendance_record = await add_attendance_record(
+            db,
+            worker,
+            entry_type,
+            violation_labels,
+            img_base64,
+            location=gate_name_for_location
+        )
+
     # Get gate name for response
     gate_name = gate.get("name", "Unknown Gate")
 
@@ -236,6 +339,8 @@ async def detect_and_record_entry(
         "image": f"data:image/png;base64,{img_base64}",
         "detections": detections,
         "violations": violation_labels,
+        "attendance_marked": attendance_record is not None,
+        "attendance": attendance_record,
         "message": f"Entry {'approved' if entry_status == EntryStatus.APPROVED else 'denied'} - {len(violation_labels)} violation(s) detected"
     })
 
