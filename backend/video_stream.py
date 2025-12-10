@@ -268,7 +268,8 @@ class VideoStreamProcessor:
     def _run_pipeline(self):
         """Run the pipeline in a background thread."""
         try:
-            self.pipeline.start()  # This blocks until pipeline stops
+            self.pipeline.start()
+            self.pipeline.join()  # Wait for the pipeline to finish
         except Exception as e:
             print(f"Pipeline error: {e}")
         finally:

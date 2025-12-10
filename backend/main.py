@@ -141,6 +141,16 @@ app.include_router(gas_sensors_router)
 app.include_router(predictions_router)
 
 
+# ==================== WebSocket Test ====================
+
+@app.websocket("/ws/test")
+async def websocket_test(websocket: WebSocket):
+    """Simple test WebSocket endpoint."""
+    await websocket.accept()
+    await websocket.send_json({"message": "Hello from WebSocket!"})
+    await websocket.close()
+
+
 # ==================== Health Check ====================
 
 @app.get("/")
@@ -822,6 +832,7 @@ async def stop_video_stream():
 async def websocket_video_stream(websocket: WebSocket):
     """WebSocket endpoint for streaming video frames with detections."""
     await websocket.accept()
+    print("WebSocket client connected to /ws/video")
 
     processor = get_video_processor()
 
@@ -829,14 +840,25 @@ async def websocket_video_stream(websocket: WebSocket):
     if not processor.is_running:
         if not INFERENCE_PIPELINE_AVAILABLE:
             await websocket.send_json({
-                "error": "Video streaming not available. Install 'inference' package."
+                "error": "Video streaming not available. Install 'inference' package: pip install inference"
             })
             await websocket.close()
             return
 
-        processor.start(video_source=0)
+        print("Starting video processor...")
+        success = processor.start(video_source=0)
+        if not success:
+            await websocket.send_json({
+                "error": "Failed to start video stream. Check if camera is available."
+            })
+            await websocket.close()
+            return
+
+        # Give the pipeline time to initialize
+        await asyncio.sleep(1.0)
 
     try:
+        heartbeat_count = 0
         while True:
             # Get frame from queue
             frame_data = processor.get_frame(timeout=1.0)
@@ -847,9 +869,18 @@ async def websocket_video_stream(websocket: WebSocket):
                     "frame": frame_data["frame"],
                     "result": frame_data["result"]
                 })
+                heartbeat_count = 0
             else:
+                heartbeat_count += 1
                 # Send heartbeat if no frame available
                 await websocket.send_json({"type": "heartbeat"})
+
+                # If too many heartbeats without frames, check if pipeline is still running
+                if heartbeat_count > 10 and not processor.is_running:
+                    await websocket.send_json({
+                        "error": "Video pipeline stopped unexpectedly"
+                    })
+                    break
 
             # Small delay to prevent overwhelming the connection
             await asyncio.sleep(0.01)
@@ -858,9 +889,10 @@ async def websocket_video_stream(websocket: WebSocket):
         print("WebSocket client disconnected")
     except Exception as e:
         print(f"WebSocket error: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
-        # Optionally stop the stream when last client disconnects
-        # processor.stop()
+        print("WebSocket connection closed")
         pass
 
 
