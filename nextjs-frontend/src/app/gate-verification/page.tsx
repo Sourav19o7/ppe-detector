@@ -101,11 +101,11 @@ export default function GateVerificationPage() {
     const loadMines = async () => {
       try {
         const userMineIds = getMineIds();
-        const response = await mineApi.list({ is_active: true });
+        const allMines = await mineApi.getAll();
 
-        // Filter mines based on user access
-        const accessibleMines = response.mines.filter(
-          (mine) => userMineIds.length === 0 || userMineIds.includes(mine.id)
+        // Filter mines based on user access and active status
+        const accessibleMines = allMines.filter(
+          (mine) => mine.is_active && (userMineIds.length === 0 || userMineIds.includes(mine.id))
         );
 
         setMines(accessibleMines);
