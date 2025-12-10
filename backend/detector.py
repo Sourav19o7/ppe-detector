@@ -80,8 +80,6 @@ class PersonDetector:
             "Helmet": (0, 200, 0),
             "goggles": (0, 180, 80),
             "Goggles": (0, 180, 80),
-            "glove": (0, 160, 60),
-            "Gloves": (0, 160, 60),
             "mask": (0, 140, 100),
             "Mask": (0, 140, 100),
             "shoes": (0, 120, 80),
@@ -90,12 +88,11 @@ class PersonDetector:
             "Vest": (0, 255, 0),
             "vest": (0, 255, 0),
             # Missing PPE - Red shades
-            "NO Helmet": (255, 0, 0),
-            "NO Goggles": (255, 50, 50),
-            "NO Gloves": (255, 80, 80),
-            "NO Mask": (255, 100, 100),
-            "NO Safety Shoes": (255, 120, 120),
-            "NO Vest": (255, 60, 60),
+            "Without Helmet": (255, 0, 0),
+            "Without Goggles": (255, 50, 50),
+            "Without Mask": (255, 100, 100),
+            "Without Safety Shoes": (255, 120, 120),
+            "Without Vest": (255, 60, 60),
             # Face
             "face": (255, 255, 0),
             "default": (128, 128, 128)
@@ -251,8 +248,6 @@ class PersonDetector:
             return "Vest"
         if label_lower in ["goggles", "safety goggles", "glasses", "safety glasses"]:
             return "Goggles"
-        if label_lower in ["gloves", "glove", "safety gloves"]:
-            return "Gloves"
         if label_lower in ["mask", "face mask", "dust mask", "respirator"]:
             return "Mask"
         if label_lower in ["shoes", "safety shoes", "safety shoe", "boots", "safety boots"]:
@@ -265,8 +260,6 @@ class PersonDetector:
             return "NO Vest"
         if label_lower in ["no goggles", "no-goggles", "no_goggles", "missing goggles"]:
             return "NO Goggles"
-        if label_lower in ["no gloves", "no-gloves", "no_gloves", "no glove", "no-glove", "missing gloves"]:
-            return "NO Gloves"
         if label_lower in ["no mask", "no-mask", "no_mask", "missing mask"]:
             return "NO Mask"
         if label_lower in ["no shoes", "no-shoes", "no_shoes", "no safety shoes", "missing shoes"]:
@@ -280,7 +273,7 @@ class PersonDetector:
 
     def _is_violation(self, label: str) -> bool:
         """Check if label indicates missing PPE."""
-        return label.startswith("Without ")
+        return label.startswith("NO ")
 
     def _run_roboflow_detection(self, image: Image.Image) -> list:
         """Run PPE detection using Roboflow workflow."""
