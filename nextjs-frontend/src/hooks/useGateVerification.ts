@@ -15,6 +15,34 @@ interface UseGateVerificationOptions {
   onAttendanceMarked?: () => void;
 }
 
+// PPE Detection Service URL (ppe_detection.py - runs on port 8002)
+const PPE_DETECTION_URL = process.env.NEXT_PUBLIC_PPE_DETECTION_URL || 'http://localhost:8002';
+
+// PPE Detection response from the new service
+interface PPEDetectionResponse {
+  success: boolean;
+  error?: string;
+  detections?: {
+    helmet: {
+      detected: boolean;
+      confidence: number;
+      bbox: number[] | null;
+    };
+    vest: {
+      detected: boolean;
+      confidence: number;
+      bbox: number[] | null;
+    };
+    persons: number;
+    compliant: boolean;
+    raw?: Array<{
+      label: string;
+      confidence: number;
+      bbox: number[];
+    }>;
+  };
+}
+
 interface DetectionResponse {
   success: boolean;
   message?: string;
@@ -100,16 +128,18 @@ export function useGateVerification({
   const frameRef = useRef<string | null>(null);
   const [detectionLog, setDetectionLog] = useState<string[]>([]);
 
-  // RFID Scanner integration
+  // RFID Scanner integration - connects to rfid.py WebSocket
+  // Always enabled so we can show connection status even before verification starts
   const rfidScanner = useRFIDScanner({
-    enabled: store.isTimerRunning,
+    enabled: true, // Always connect to show connection status
     onScan: (event) => {
-      if (event.tagType !== 'face') {
+      // Only process scans when verification is running
+      if (store.isTimerRunning && event.tagType !== 'face') {
         store.updateRFIDStatus(event.tagType, 'passed', event.tagId);
         addLog(`RFID scanned: ${event.tagType} (${event.tagId})`);
       }
     },
-    mockMode: true, // Enable keyboard mock (H, V, S keys)
+    mockMode: true, // Enable keyboard mock (H, V, S keys) as fallback
   });
 
   // Add to detection log
@@ -120,7 +150,7 @@ export function useGateVerification({
   }, []);
 
   // Start verification session
-  const startVerification = useCallback(() => {
+  const startVerification = useCallback(async () => {
     if (!gateId || !mineId) {
       console.error('Gate ID and Mine ID are required');
       return;
@@ -129,7 +159,18 @@ export function useGateVerification({
     setDetectionLog([]);
     addLog('Verification started');
     store.startVerification(gateId, mineId);
-  }, [gateId, mineId, store, addLog]);
+
+    // Trigger RFID scanning via the backend (ESP32)
+    if (rfidScanner.startRFIDScan) {
+      addLog('Starting RFID scanner...');
+      const started = await rfidScanner.startRFIDScan();
+      if (started) {
+        addLog('RFID scanner started');
+      } else {
+        addLog('Failed to start RFID scanner (using keyboard fallback: H/V/S)');
+      }
+    }
+  }, [gateId, mineId, store, addLog, rfidScanner]);
 
   // Reset verification
   const resetVerification = useCallback(() => {
@@ -138,6 +179,32 @@ export function useGateVerification({
     setDetectionLog([]);
     addLog('Verification reset');
   }, [store, addLog]);
+
+  // Start RFID scanning only (sends "1" to ESP32)
+  const startRFIDOnly = useCallback(async () => {
+    addLog('Triggering RFID scanner...');
+    if (rfidScanner.startRFIDScan) {
+      const started = await rfidScanner.startRFIDScan();
+      if (started) {
+        addLog('RFID scanner triggered - sent "1" to ESP32');
+      } else {
+        addLog('Failed to trigger RFID scanner');
+      }
+      return started;
+    }
+    return false;
+  }, [rfidScanner, addLog]);
+
+  // Start ML detection only (without RFID)
+  const startMLOnly = useCallback(() => {
+    if (!gateId || !mineId) {
+      console.error('Gate ID and Mine ID are required');
+      return;
+    }
+    setDetectionLog([]);
+    addLog('ML Detection started (RFID manual)');
+    store.startVerification(gateId, mineId);
+  }, [gateId, mineId, store, addLog]);
 
   // Set current video frame (called from LiveVideoPanel)
   const setCurrentFrame = useCallback((frame: string) => {
@@ -352,7 +419,53 @@ export function useGateVerification({
     }
   }, [store, addLog]);
 
-  // Perform detection on current frame
+  // Perform PPE detection using the new PPE detection service
+  const performPPEDetection = useCallback(async () => {
+    if (!frameRef.current || isDetectingRef.current) {
+      return;
+    }
+
+    try {
+      // Send frame to PPE detection service
+      const response = await fetch(`${PPE_DETECTION_URL}/detect-frame`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          frame: frameRef.current,
+        }),
+      });
+
+      const result: PPEDetectionResponse = await response.json();
+
+      if (result.success && result.detections) {
+        const { helmet, vest, compliant } = result.detections;
+
+        // Update helmet status
+        if (helmet.detected && store.items.helmet.mlStatus !== 'passed') {
+          store.updateMLStatus('helmet', 'passed', helmet.confidence);
+          addLog(`PPE: Helmet detected (${(helmet.confidence * 100).toFixed(0)}%)`);
+        }
+
+        // Update vest status
+        if (vest.detected && store.items.vest.mlStatus !== 'passed') {
+          store.updateMLStatus('vest', 'passed', vest.confidence);
+          addLog(`PPE: Vest detected (${(vest.confidence * 100).toFixed(0)}%)`);
+        }
+
+        // Log compliance status
+        if (compliant) {
+          addLog('PPE: COMPLIANT - Both helmet and vest detected');
+        }
+      }
+    } catch (error) {
+      // Silently fail PPE detection - will retry on next interval
+      console.error('PPE detection error:', error);
+    }
+  }, [store, addLog]);
+
+  // Perform detection on current frame (face recognition + legacy PPE)
   const performDetection = useCallback(async () => {
     if (!gateId || !frameRef.current || isDetectingRef.current) {
       if (!frameRef.current) {
@@ -366,7 +479,10 @@ export function useGateVerification({
     try {
       addLog('Sending frame for detection...');
 
-      // Convert base64 to File
+      // Run PPE detection in parallel with face recognition
+      performPPEDetection();
+
+      // Convert base64 to File for face recognition
       const fetchResponse = await fetch(frameRef.current);
       const blob = await fetchResponse.blob();
       const file = new File([blob], 'frame.jpg', { type: 'image/jpeg' });
@@ -403,7 +519,7 @@ export function useGateVerification({
     } finally {
       isDetectingRef.current = false;
     }
-  }, [gateId, processDetectionResponse, addLog]);
+  }, [gateId, processDetectionResponse, addLog, performPPEDetection]);
 
   // Timer tick effect
   useEffect(() => {
@@ -429,7 +545,7 @@ export function useGateVerification({
   useEffect(() => {
     if (store.isTimerRunning && store.overallStatus === 'verifying') {
       // Set all items to 'checking' initially
-      ['helmet', 'vest', 'shoes'].forEach((item) => {
+      ['helmet', 'vest'].forEach((item) => {
         const itemType = item as VerificationItemType;
         if (store.items[itemType].rfidStatus === 'pending') {
           store.updateRFIDStatus(itemType, 'checking');
@@ -438,6 +554,18 @@ export function useGateVerification({
           store.updateMLStatus(itemType, 'checking');
         }
       });
+
+      // Shoes - RFID only (new PPE model doesn't detect shoes)
+      // Auto-pass shoes ML since the new model focuses on helmet and vest
+      if (store.items.shoes.rfidStatus === 'pending') {
+        store.updateRFIDStatus('shoes', 'checking');
+      }
+      if (store.items.shoes.mlStatus === 'pending') {
+        // Auto-pass shoes ML - the new PPE model doesn't detect shoes
+        store.updateMLStatus('shoes', 'passed', 1.0);
+        addLog('Shoes ML: Auto-passed (using RFID verification)');
+      }
+
       if (store.items.face.mlStatus === 'pending') {
         store.updateMLStatus('face', 'checking');
       }
@@ -461,7 +589,7 @@ export function useGateVerification({
         clearInterval(detectionIntervalRef.current);
       }
     };
-  }, [store.isTimerRunning, store.overallStatus, performDetection, store]);
+  }, [store.isTimerRunning, store.overallStatus, performDetection, store, addLog]);
 
   // Handle verification outcome
   useEffect(() => {
@@ -511,6 +639,8 @@ export function useGateVerification({
     resetVerification,
     setCurrentFrame,
     triggerRFIDScan,
+    startRFIDOnly,
+    startMLOnly,
     determineOutcome: store.determineOutcome,
     markAttendance,
   };

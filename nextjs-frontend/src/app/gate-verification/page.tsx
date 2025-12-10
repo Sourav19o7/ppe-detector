@@ -306,6 +306,8 @@ export default function GateVerificationPage() {
                 attendanceMarked={verification.attendanceMarked}
                 rfidConnected={verification.rfidConnected}
                 onStart={verification.startVerification}
+                onStartRFID={verification.startRFIDOnly}
+                onStartML={verification.startMLOnly}
                 onReset={verification.resetVerification}
                 onOverride={() => setShowOverrideModal(true)}
                 disabled={!selectedGateId}

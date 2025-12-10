@@ -1,6 +1,6 @@
 'use client';
 
-import { User, CheckCircle, XCircle, AlertTriangle, Play, RotateCcw, Shield } from 'lucide-react';
+import { User, CheckCircle, XCircle, AlertTriangle, Play, RotateCcw, Shield, Radio, Camera } from 'lucide-react';
 import { CountdownTimer } from './CountdownTimer';
 import type { Worker } from '@/types';
 
@@ -15,6 +15,8 @@ interface StatusPanelProps {
   attendanceMarked: boolean;
   rfidConnected: boolean;
   onStart: () => void;
+  onStartRFID: () => void;
+  onStartML: () => void;
   onReset: () => void;
   onOverride: () => void;
   disabled?: boolean;
@@ -31,6 +33,8 @@ export function StatusPanel({
   attendanceMarked,
   rfidConnected,
   onStart,
+  onStartRFID,
+  onStartML,
   onReset,
   onOverride,
   disabled = false,
@@ -179,14 +183,56 @@ export function StatusPanel({
       {/* Action Buttons */}
       <div className="mt-auto flex flex-col gap-2">
         {overallStatus === 'idle' && (
-          <button
-            onClick={onStart}
-            disabled={disabled}
-            className="w-full py-4 px-6 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold text-lg hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            <Play size={24} />
-            START VERIFICATION
-          </button>
+          <>
+            {/* Main Start Button */}
+            <button
+              onClick={onStart}
+              disabled={disabled}
+              className="w-full py-4 px-6 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-bold text-lg hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              <Play size={24} />
+              START VERIFICATION
+            </button>
+
+            {/* Separate RFID and ML buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={onStartRFID}
+                disabled={disabled}
+                className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Radio size={18} />
+                Start RFID
+              </button>
+              <button
+                onClick={onStartML}
+                disabled={disabled}
+                className="flex-1 py-3 px-4 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Camera size={18} />
+                Start ML
+              </button>
+            </div>
+          </>
+        )}
+
+        {overallStatus === 'verifying' && (
+          <div className="flex gap-2">
+            <button
+              onClick={onStartRFID}
+              className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+            >
+              <Radio size={18} />
+              Trigger RFID
+            </button>
+            <button
+              onClick={onReset}
+              className="flex-1 py-3 px-4 bg-stone-600 text-white rounded-xl font-semibold hover:bg-stone-700 transition-all flex items-center justify-center gap-2"
+            >
+              <RotateCcw size={18} />
+              Reset
+            </button>
+          </div>
         )}
 
         {(overallStatus === 'passed' || overallStatus === 'failed' || overallStatus === 'warning') && (
