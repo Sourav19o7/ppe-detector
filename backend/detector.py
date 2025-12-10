@@ -1,21 +1,20 @@
 """
 Detection module combining PPE detection, face detection, and face recognition.
-Uses Roboflow workflow for PPE detection with SAHI (Slicing Aided Hyper Inference).
+Uses local YOLO models for PPE detection (based on prodbykosta/ppe-safety-detection-ai).
 """
 import pickle
 import base64
-import tempfile
 import os
 from io import BytesIO
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, List
 
+import cv2
 import numpy as np
 import torch
 from PIL import Image, ImageDraw, ImageFont
 from ultralytics import YOLO
 from huggingface_hub import hf_hub_download
-from inference_sdk import InferenceHTTPClient
 
 # Try to import face recognition components
 try:
@@ -25,22 +24,56 @@ except ImportError:
     FACE_RECOGNITION_AVAILABLE = False
 
 
+# ================= CONFIGURATION =================
+MODELS_DIR = Path(__file__).parent / "models"
+PPE_MODEL_PATH = os.environ.get("PPE_MODEL_PATH", str(MODELS_DIR / "ppe_best.pt"))
+
+# Detection confidence thresholds (from prodbykosta/ppe-safety-detection-ai)
+HELMET_CONFIDENCE = float(os.environ.get("HELMET_CONFIDENCE", "0.65"))
+VEST_CONFIDENCE = float(os.environ.get("VEST_CONFIDENCE", "0.70"))
+PERSON_CONFIDENCE = float(os.environ.get("PERSON_CONFIDENCE", "0.50"))
+NMS_IOU = float(os.environ.get("NMS_IOU", "0.50"))
+
+# PPE class name mappings (handles various label formats from different YOLO models)
+HELMET_LABELS = {
+    "helmet", "hardhat", "hard-hat", "hard_hat", "safety_helmet",
+    "safety-helmet", "head", "hard hat", "safety helmet"
+}
+VEST_LABELS = {
+    "vest", "jacket", "reflective_jacket", "reflective_vest",
+    "safety_vest", "safety-vest", "hi-vis", "high-vis",
+    "safety vest", "reflective vest"
+}
+GOGGLES_LABELS = {"goggles", "safety_goggles", "glasses", "safety_glasses", "safety goggles"}
+GLOVES_LABELS = {"gloves", "glove", "safety_gloves", "safety gloves"}
+MASK_LABELS = {"mask", "face_mask", "dust_mask", "respirator", "face mask"}
+SHOES_LABELS = {"shoes", "safety_shoes", "safety_shoe", "boots", "safety_boots", "safety shoes"}
+PERSON_LABELS = {"person", "worker", "human"}
+
+
 class PersonDetector:
-    """Combined PPE and face detection/recognition using Roboflow."""
+    """Combined PPE and face detection/recognition using local YOLO models."""
 
     def __init__(self, known_faces_dir: str = "../known_faces"):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print(f"Using device: {self.device}")
 
-        # Initialize Roboflow client for PPE detection
-        print("Connecting to Roboflow PPE detection workflow...")
-        self.roboflow_client = InferenceHTTPClient(
-            api_url="https://serverless.roboflow.com",
-            api_key="e96XmSjaw1rrek7TBBxu"
-        )
-        self.roboflow_workspace = "smart-india-hackathon-dgm5d"
-        self.roboflow_workflow_id = "small-object-detection-sahi"
-        print("Roboflow PPE detection workflow connected!")
+        # PPE Model configuration
+        self.ppe_model = None
+        self.person_model = None
+        self.ppe_model_path = PPE_MODEL_PATH
+        self.ppe_class_names = {}
+
+        # Detection thresholds
+        self.helmet_conf = HELMET_CONFIDENCE
+        self.vest_conf = VEST_CONFIDENCE
+        self.person_conf = PERSON_CONFIDENCE
+        self.nms_iou = NMS_IOU
+        self.min_box_area = 900  # 30x30 pixels minimum
+        self.max_aspect_ratio = 3.5
+
+        # Initialize PPE detection
+        self._load_ppe_model()
 
         # Face Detection Model (arnabdhar/YOLOv8-Face-Detection)
         print("Loading face detection model...")
@@ -102,6 +135,43 @@ class PersonDetector:
         }
 
         print("All models loaded successfully!")
+
+    def _load_ppe_model(self):
+        """Load local YOLO model for PPE detection."""
+        print("=" * 50)
+        print("Initializing Local PPE Detection System")
+        print("=" * 50)
+
+        # Try to load custom PPE model
+        if os.path.exists(self.ppe_model_path):
+            print(f"Loading custom PPE model from: {self.ppe_model_path}")
+            try:
+                self.ppe_model = YOLO(self.ppe_model_path)
+                self.ppe_class_names = self.ppe_model.names
+                print(f"PPE Model loaded! Classes: {self.ppe_class_names}")
+            except Exception as e:
+                print(f"Error loading custom PPE model: {e}")
+                self.ppe_model = None
+        else:
+            print(f"Custom PPE model not found at: {self.ppe_model_path}")
+
+        # Load YOLOv8n for person detection (and as fallback for PPE)
+        print("Loading YOLOv8n for person detection...")
+        try:
+            self.person_model = YOLO("yolov8n.pt")
+            print("YOLOv8n loaded successfully!")
+
+            # If no custom PPE model, use YOLOv8n for everything
+            if self.ppe_model is None:
+                print("Using YOLOv8n for PPE detection (limited to person detection)")
+                self.ppe_model = self.person_model
+                self.ppe_class_names = self.ppe_model.names
+        except Exception as e:
+            print(f"Error loading YOLOv8n: {e}")
+
+        print("=" * 50)
+        print(f"PPE Detection thresholds - Helmet: {self.helmet_conf}, Vest: {self.vest_conf}")
+        print("=" * 50)
 
     def _load_known_faces(self) -> dict:
         """Load known face embeddings from disk."""
@@ -240,121 +310,108 @@ class PersonDetector:
         return None
 
     def _normalize_label(self, label: str) -> str:
-        """Normalize label names from Roboflow model."""
-        # Map Roboflow labels to standardized format
-        label_lower = label.lower().strip()
+        """Normalize label names to standardized format."""
+        label_lower = label.lower().strip().replace("-", " ").replace("_", " ")
 
-        # Positive PPE detections
-        if label_lower in ["helmet", "hardhat", "hard hat", "hard-hat"]:
+        # Check against known label sets
+        if label_lower in HELMET_LABELS or any(h in label_lower for h in HELMET_LABELS):
             return "Helmet"
-        if label_lower in ["vest", "safety vest", "safety-vest", "hi-vis", "high-vis"]:
+        if label_lower in VEST_LABELS or any(v in label_lower for v in VEST_LABELS):
             return "Vest"
-        if label_lower in ["goggles", "safety goggles", "glasses", "safety glasses"]:
+        if label_lower in GOGGLES_LABELS or any(g in label_lower for g in GOGGLES_LABELS):
             return "Goggles"
-        if label_lower in ["gloves", "glove", "safety gloves"]:
+        if label_lower in GLOVES_LABELS or any(g in label_lower for g in GLOVES_LABELS):
             return "Gloves"
-        if label_lower in ["mask", "face mask", "dust mask", "respirator"]:
+        if label_lower in MASK_LABELS or any(m in label_lower for m in MASK_LABELS):
             return "Mask"
-        if label_lower in ["shoes", "safety shoes", "safety shoe", "boots", "safety boots"]:
+        if label_lower in SHOES_LABELS or any(s in label_lower for s in SHOES_LABELS):
             return "Safety Shoes"
+        if label_lower in PERSON_LABELS or any(p in label_lower for p in PERSON_LABELS):
+            return "Person"
 
         # Missing PPE violations
-        if label_lower in ["no helmet", "no-helmet", "no_helmet", "missing helmet", "no hardhat", "no-hardhat"]:
-            return "NO Helmet"
-        if label_lower in ["no vest", "no-vest", "no_vest", "missing vest", "no safety vest"]:
-            return "NO Vest"
-        if label_lower in ["no goggles", "no-goggles", "no_goggles", "missing goggles"]:
-            return "NO Goggles"
-        if label_lower in ["no gloves", "no-gloves", "no_gloves", "no glove", "no-glove", "missing gloves"]:
-            return "NO Gloves"
-        if label_lower in ["no mask", "no-mask", "no_mask", "missing mask"]:
-            return "NO Mask"
-        if label_lower in ["no shoes", "no-shoes", "no_shoes", "no safety shoes", "missing shoes"]:
-            return "NO Safety Shoes"
-
-        # Person detection (not a PPE item)
-        if label_lower in ["person", "human", "worker"]:
-            return "Person"
+        if "no" in label_lower or "without" in label_lower or "missing" in label_lower:
+            if any(h in label_lower for h in ["helmet", "hardhat", "hat"]):
+                return "NO Helmet"
+            if any(v in label_lower for v in ["vest", "jacket"]):
+                return "NO Vest"
+            if "goggles" in label_lower or "glasses" in label_lower:
+                return "NO Goggles"
+            if "glove" in label_lower:
+                return "NO Gloves"
+            if "mask" in label_lower:
+                return "NO Mask"
+            if any(s in label_lower for s in ["shoes", "boots"]):
+                return "NO Safety Shoes"
 
         return label
 
     def _is_violation(self, label: str) -> bool:
         """Check if label indicates missing PPE."""
-        return label.startswith("Without ")
+        return label.startswith("NO ") or label.startswith("Without ")
 
-    def _run_roboflow_detection(self, image: Image.Image) -> list:
-        """Run PPE detection using Roboflow workflow."""
+    def _is_valid_detection(self, bbox: List[int]) -> bool:
+        """Validate detection based on size and aspect ratio constraints."""
+        x1, y1, x2, y2 = bbox
+        width = x2 - x1
+        height = y2 - y1
+        area = width * height
+
+        if area < self.min_box_area:
+            return False
+
+        aspect_ratio = height / max(width, 1)
+        if aspect_ratio > self.max_aspect_ratio:
+            return False
+
+        return True
+
+    def _run_ppe_detection(self, image: Image.Image) -> list:
+        """Run PPE detection using local YOLO model."""
         detections = []
 
+        if self.ppe_model is None:
+            print("No PPE model loaded!")
+            return detections
+
         try:
-            # Save image to temporary file for Roboflow
-            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
-                image.save(tmp_file.name, format='JPEG', quality=95)
-                tmp_path = tmp_file.name
+            # Convert PIL Image to numpy array for YOLO
+            frame = np.array(image)
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-            # Run Roboflow workflow
-            result = self.roboflow_client.run_workflow(
-                workspace_name=self.roboflow_workspace,
-                workflow_id=self.roboflow_workflow_id,
-                images={"image": tmp_path},
-                use_cache=True
-            )
+            # Run inference
+            results = self.ppe_model(
+                frame,
+                conf=min(self.helmet_conf, self.vest_conf, self.person_conf),
+                iou=self.nms_iou,
+                verbose=False
+            )[0]
 
-            # Clean up temp file
-            os.unlink(tmp_path)
+            # Process detections
+            for box in results.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                confidence = float(box.conf[0])
+                class_id = int(box.cls[0])
 
-            # Parse Roboflow results
-            if result and len(result) > 0:
-                workflow_result = result[0]
+                # Get class name
+                raw_label = self.ppe_class_names.get(class_id, f"class_{class_id}")
 
-                # Handle different result structures from Roboflow
-                predictions = None
+                bbox = [x1, y1, x2, y2]
 
-                # Check for predictions in various locations
-                if isinstance(workflow_result, dict):
-                    # Try different keys where predictions might be stored
-                    for key in ['predictions', 'output', 'detections', 'results']:
-                        if key in workflow_result:
-                            predictions = workflow_result[key]
-                            break
+                # Validate detection
+                if not self._is_valid_detection(bbox):
+                    continue
 
-                    # If predictions is still None, the result itself might be the predictions
-                    if predictions is None and 'class' in str(workflow_result):
-                        predictions = [workflow_result]
+                detections.append({
+                    'bbox': bbox,
+                    'label': raw_label,
+                    'confidence': confidence
+                })
 
-                if predictions:
-                    # Handle if predictions is wrapped in another structure
-                    if isinstance(predictions, dict) and 'predictions' in predictions:
-                        predictions = predictions['predictions']
-
-                    for pred in predictions if isinstance(predictions, list) else [predictions]:
-                        if isinstance(pred, dict):
-                            # Extract bounding box coordinates
-                            # Roboflow can return different formats
-                            x = pred.get('x', 0)
-                            y = pred.get('y', 0)
-                            width = pred.get('width', 0)
-                            height = pred.get('height', 0)
-
-                            # Convert center coordinates to corner coordinates
-                            x1 = int(x - width / 2)
-                            y1 = int(y - height / 2)
-                            x2 = int(x + width / 2)
-                            y2 = int(y + height / 2)
-
-                            label = pred.get('class', pred.get('label', 'unknown'))
-                            confidence = pred.get('confidence', 0.0)
-
-                            detections.append({
-                                'bbox': [x1, y1, x2, y2],
-                                'label': label,
-                                'confidence': confidence
-                            })
-
-                print(f"Roboflow detected {len(detections)} objects")
+            print(f"Local YOLO detected {len(detections)} objects")
 
         except Exception as e:
-            print(f"Roboflow detection error: {e}")
+            print(f"PPE detection error: {e}")
             import traceback
             traceback.print_exc()
 
@@ -378,17 +435,17 @@ class PersonDetector:
             "violations": []
         }
 
-        # Run Roboflow PPE detection
-        roboflow_detections = self._run_roboflow_detection(image)
+        # Run local YOLO PPE detection
+        ppe_detections = self._run_ppe_detection(image)
 
-        for det in roboflow_detections:
+        for det in ppe_detections:
             x1, y1, x2, y2 = det['bbox']
             raw_label = det['label']
             conf = det['confidence']
 
             label = self._normalize_label(raw_label)
 
-            # Skip person detections (not PPE)
+            # Skip person detections (not a PPE item)
             if label == "Person":
                 continue
 

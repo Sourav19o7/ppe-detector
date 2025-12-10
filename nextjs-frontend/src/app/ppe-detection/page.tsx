@@ -298,7 +298,7 @@ export default function PPEDetectionPage() {
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-700">
                     <strong>Server-side streaming:</strong> Video is processed on the server using
-                    Roboflow InferencePipeline. Bounding boxes are drawn directly on the video frames
+                    local YOLO model. Bounding boxes are drawn directly on the video frames
                     for smooth, real-time visualization.
                   </p>
                 </div>
