@@ -46,9 +46,10 @@ interface StatCardProps {
     positive: boolean;
   };
   color?: 'orange' | 'green' | 'red' | 'amber' | 'blue' | 'purple' | 'cyan' | 'yellow';
+  subtitle?: string;
 }
 
-export function StatCard({ title, value, icon, trend, color = 'orange' }: StatCardProps) {
+export function StatCard({ title, value, icon, trend, color = 'orange', subtitle }: StatCardProps) {
   const colorClasses = {
     orange: 'from-orange-200 to-amber-200 border-orange-300 text-orange-600',
     green: 'from-emerald-100 to-teal-200 border-emerald-300 text-emerald-600',
@@ -81,6 +82,11 @@ export function StatCard({ title, value, icon, trend, color = 'orange' }: StatCa
 
         {/* Title - smaller text below */}
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</p>
+
+        {/* Subtitle */}
+        {subtitle && (
+          <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+        )}
 
         {/* Trend indicator */}
         {trend && (

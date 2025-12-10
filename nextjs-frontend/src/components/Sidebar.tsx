@@ -202,7 +202,7 @@ export default function Sidebar() {
                           : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                       )}
                     >
-                      <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                      <Icon size={20} />
                       {!isCollapsed && (
                         <span className="text-sm font-medium">{item.name}</span>
                       )}

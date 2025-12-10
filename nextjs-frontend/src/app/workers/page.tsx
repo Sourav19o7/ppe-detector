@@ -31,7 +31,7 @@ export default function WorkersPage() {
     worker_id: '',
     department: '',
   });
-  const [faceImage, setFaceImage] = useState<File | null>(null);
+  const [faceImages, setFaceImages] = useState<File[]>([]);
   const [facePreview, setFacePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -62,7 +62,7 @@ export default function WorkersPage() {
   const openAddModal = () => {
     setEditingWorker(null);
     setFormData({ name: '', worker_id: '', department: '' });
-    setFaceImage(null);
+    setFaceImages([]);
     setFacePreview(null);
     setModalError(null);
     setShowModal(true);
@@ -75,14 +75,14 @@ export default function WorkersPage() {
       worker_id: worker.employee_id,
       department: worker.department || '',
     });
-    setFaceImage(null);
+    setFaceImages([]);
     setFacePreview(null);
     setShowModal(true);
   };
 
   const openFaceModal = (worker: Employee) => {
     setSelectedWorker(worker);
-    setFaceImage(null);
+    setFaceImages([]);
     setFacePreview(null);
     setShowFaceModal(true);
   };
@@ -90,12 +90,24 @@ export default function WorkersPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setFaceImage(file);
+      setFaceImages([file]);
       const reader = new FileReader();
       reader.onload = (ev) => {
         setFacePreview(ev.target?.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFaceScanCaptureForRegistration = (files: File[]) => {
+    setFaceImages(files);
+    // Set preview from the first (center) image
+    if (files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setFacePreview(ev.target?.result as string);
+      };
+      reader.readAsDataURL(files[0]);
     }
   };
 
@@ -115,13 +127,14 @@ export default function WorkersPage() {
         );
         setMessage({ type: 'success', text: 'Worker updated successfully' });
       } else {
+        // Create the worker first with the primary face image (center view)
         await employeeApi.create(
           formData.name,
           formData.worker_id,
           formData.department || undefined,
-          faceImage || undefined
+          faceImages.length > 0 ? faceImages[0] : undefined
         );
-        setMessage({ type: 'success', text: 'Worker registered successfully' });
+        setMessage({ type: 'success', text: `Worker registered successfully${faceImages.length > 1 ? ` with ${faceImages.length} face angles` : ''}` });
       }
       setShowModal(false);
       loadWorkers();
@@ -145,13 +158,13 @@ export default function WorkersPage() {
   };
 
   const handleRegisterFace = async () => {
-    if (!selectedWorker || !faceImage) return;
+    if (!selectedWorker || faceImages.length === 0) return;
 
     setIsSubmitting(true);
     setMessage(null);
 
     try {
-      await employeeApi.registerFace(selectedWorker.employee_id, faceImage);
+      await employeeApi.registerFace(selectedWorker.employee_id, faceImages[0]);
       setMessage({ type: 'success', text: 'Face registered successfully' });
       setShowFaceModal(false);
       loadWorkers();
@@ -404,7 +417,7 @@ export default function WorkersPage() {
       {/* Add/Edit Worker Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md my-8 max-h-[90vh] flex flex-col">
+          <div className={`bg-white rounded-xl shadow-xl w-full ${editingWorker ? 'max-w-md' : 'max-w-4xl'} my-8 max-h-[90vh] flex flex-col`}>
             <div className="p-6 border-b border-stone-100 flex items-center justify-between flex-shrink-0">
               <h2 className="text-lg font-semibold">
                 {editingWorker ? 'Edit Worker' : 'Register New Worker'}
@@ -423,80 +436,75 @@ export default function WorkersPage() {
                   {modalError}
                 </div>
               )}
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Enter worker's full name"
-                  required
-                />
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
-                  Worker ID *
-                </label>
-                <input
-                  type="text"
-                  value={formData.worker_id}
-                  onChange={(e) => setFormData({ ...formData, worker_id: e.target.value })}
-                  placeholder="e.g., WRK001"
-                  disabled={!!editingWorker}
-                  required
-                />
-                {!editingWorker && (
-                  <p className="text-xs text-stone-500 mt-1">Unique identifier for the worker</p>
-                )}
-              </div>
+              <div className={`${!editingWorker ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : ''}`}>
+                {/* Left Column - Form Fields */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Enter worker's full name"
+                      required
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
-                  Department
-                </label>
-                <input
-                  type="text"
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  placeholder="e.g., Construction, Warehouse"
-                />
-              </div>
-
-              {!editingWorker && (
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">
-                    Face Photo
-                  </label>
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-orange-300 rounded-lg p-6 text-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-colors"
-                  >
-                    {facePreview ? (
-                      <img
-                        src={facePreview}
-                        alt="Preview"
-                        className="w-32 h-32 object-cover rounded-lg mx-auto"
-                      />
-                    ) : (
-                      <>
-                        <CameraIcon className="mx-auto text-orange-600/50 mb-2" size={40} />
-                        <p className="text-sm text-stone-600">Click to upload face photo</p>
-                        <p className="text-xs text-stone-400 mt-1">Required for attendance recognition</p>
-                      </>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      Worker ID *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.worker_id}
+                      onChange={(e) => setFormData({ ...formData, worker_id: e.target.value })}
+                      placeholder="e.g., WRK001"
+                      disabled={!!editingWorker}
+                      required
+                    />
+                    {!editingWorker && (
+                      <p className="text-xs text-stone-500 mt-1">Unique identifier for the worker</p>
                     )}
                   </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
+
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      Department
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      placeholder="e.g., Construction, Warehouse"
+                    />
+                  </div>
                 </div>
-              )}
+
+                {/* Right Column - 3D Face Scan */}
+                {!editingWorker && (
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-2 flex items-center gap-2">
+                      <Scan size={16} className="text-orange-500" />
+                      3D Face Registration
+                    </label>
+                    <FaceScanCapture
+                      onCapture={handleFaceScanCaptureForRegistration}
+                      disabled={isSubmitting}
+                    />
+                    {faceImages.length > 0 && (
+                      <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                        <CheckCircle size={14} />
+                        {faceImages.length === 1
+                          ? 'Face photo captured'
+                          : `${faceImages.length} face angles captured`}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div className="flex gap-3 pt-4">
                 <button

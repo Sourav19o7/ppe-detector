@@ -138,7 +138,8 @@ export default function GateMonitoringPage() {
 
       if (result.success) {
         // Play sound for violations
-        if (result.violations?.length > 0 && soundEnabled && audioRef.current) {
+        const violationsCount = result.violations?.length ?? 0;
+        if (violationsCount > 0 && soundEnabled && audioRef.current) {
           audioRef.current.play();
         }
 
@@ -146,8 +147,8 @@ export default function GateMonitoringPage() {
 
         setDetectionResult({
           success: true,
-          message: result.violations?.length > 0
-            ? `Entry DENIED - ${result.violations.length} violation(s) detected`
+          message: violationsCount > 0
+            ? `Entry DENIED - ${violationsCount} violation(s) detected`
             : identifiedPerson
               ? `Entry APPROVED - ${identifiedPerson} identified, PPE compliant`
               : 'Entry APPROVED - PPE compliant (Worker not identified)',
@@ -180,7 +181,7 @@ export default function GateMonitoringPage() {
     if (!reason) return;
 
     try {
-      await gateEntryApi.override(entryId, reason);
+      await gateEntryApi.override(entryId, { status: 'approved', reason });
       loadLiveData(true);
     } catch (err) {
       console.error('Override failed:', err);

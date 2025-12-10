@@ -48,7 +48,7 @@ export default function VideoStream({ onDetection, onError }: VideoStreamProps) 
       const status = await videoApi.getStatus();
       setStreamAvailable(status.available);
       if (!status.available) {
-        setConnectionError(status.message);
+        setConnectionError(status.message ?? 'Video streaming not available');
       }
     } catch (err) {
       console.error('Failed to check stream status:', err);
