@@ -7,8 +7,11 @@ import { Spinner } from '../Loading';
 interface LiveVideoPanelProps {
   isActive: boolean;
   onFrameCapture?: (frame: string) => void;
+  onSnapshotCapture?: (frame: string) => void;
   identifiedWorker?: { name: string; employee_id: string } | null;
   attendanceMarked?: boolean;
+  showSnapshotButton?: boolean;
+  isCapturing?: boolean;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -16,8 +19,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export function LiveVideoPanel({
   isActive,
   onFrameCapture,
+  onSnapshotCapture,
   identifiedWorker,
   attendanceMarked,
+  showSnapshotButton = false,
+  isCapturing = false,
 }: LiveVideoPanelProps) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -154,6 +160,13 @@ export function LiveVideoPanel({
     }
   };
 
+  // Handle snapshot capture
+  const handleSnapshotCapture = useCallback(() => {
+    if (currentFrame && onSnapshotCapture) {
+      onSnapshotCapture(currentFrame);
+    }
+  }, [currentFrame, onSnapshotCapture]);
+
   return (
     <div className="flex flex-col gap-3">
       {/* Video Display */}
@@ -239,26 +252,54 @@ export function LiveVideoPanel({
       </div>
 
       {/* Controls */}
-      <button
-        onClick={toggleStream}
-        className={`w-full py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-          isStreaming
-            ? 'bg-red-600 text-white hover:bg-red-700'
-            : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600'
-        }`}
-      >
-        {isStreaming ? (
-          <>
-            <Square size={18} />
-            Stop Camera
-          </>
-        ) : (
-          <>
-            <Play size={18} />
-            Start Camera
-          </>
+      <div className="flex gap-2">
+        <button
+          onClick={toggleStream}
+          className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+            isStreaming
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600'
+          }`}
+        >
+          {isStreaming ? (
+            <>
+              <Square size={18} />
+              Stop Camera
+            </>
+          ) : (
+            <>
+              <Play size={18} />
+              Start Camera
+            </>
+          )}
+        </button>
+
+        {/* Snapshot Button - only show when streaming and showSnapshotButton is true */}
+        {showSnapshotButton && isStreaming && currentFrame && (
+          <button
+            onClick={handleSnapshotCapture}
+            disabled={isCapturing || !currentFrame}
+            className={`py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+              isCapturing
+                ? 'bg-stone-400 text-white cursor-not-allowed'
+                : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600'
+            }`}
+            title="Capture snapshot for detection"
+          >
+            {isCapturing ? (
+              <>
+                <Spinner size="sm" className="text-white" />
+                Detecting...
+              </>
+            ) : (
+              <>
+                <Camera size={18} />
+                Capture & Detect
+              </>
+            )}
+          </button>
         )}
-      </button>
+      </div>
     </div>
   );
 }

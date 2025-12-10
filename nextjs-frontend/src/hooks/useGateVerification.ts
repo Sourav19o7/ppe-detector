@@ -127,6 +127,7 @@ export function useGateVerification({
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const frameRef = useRef<string | null>(null);
   const [detectionLog, setDetectionLog] = useState<string[]>([]);
+  const [isSnapshotCapturing, setIsSnapshotCapturing] = useState(false);
 
   // RFID Scanner integration - connects to rfid.py WebSocket
   // Always enabled so we can show connection status even before verification starts
@@ -614,6 +615,78 @@ export function useGateVerification({
     }
   }, [store, addLog]);
 
+  // Capture snapshot and perform full detection (PPE + face) with attendance marking
+  const captureSnapshot = useCallback(async (frameData: string) => {
+    if (!gateId || !frameData) {
+      addLog('Cannot capture snapshot: missing gate ID or frame data');
+      return null;
+    }
+
+    setIsSnapshotCapturing(true);
+    addLog('Capturing snapshot for detection...');
+
+    try {
+      // Store the frame for later use
+      frameRef.current = frameData;
+
+      // Run PPE detection in parallel
+      performPPEDetection();
+
+      // Convert base64 to File for gate entry detection
+      const fetchResponse = await fetch(frameData);
+      const blob = await fetchResponse.blob();
+      const file = new File([blob], 'snapshot.jpg', { type: 'image/jpeg' });
+
+      addLog(`Snapshot size: ${(blob.size / 1024).toFixed(1)}KB - Sending for detection...`);
+
+      // Call the gate entry detect API (includes face recognition + PPE + attendance)
+      const result = await gateEntryApi.detect(gateId, file, 'entry');
+
+      addLog(`Snapshot detection: ${result.success ? 'SUCCESS' : 'FAILED'}`);
+
+      if (result.success) {
+        // Process detection response (updates store with PPE and face results)
+        await processDetectionResponse(result);
+
+        // Log detailed results
+        if (result.detections) {
+          const ppeCount = result.detections.ppe?.length || 0;
+          const faceCount = result.detections.faces?.length || 0;
+          const violations = result.detections.violations?.length || 0;
+
+          addLog(`Detected: ${ppeCount} PPE items, ${faceCount} faces, ${violations} violations`);
+
+          if (result.detections.summary) {
+            const { identified_persons, safety_compliant } = result.detections.summary;
+            if (identified_persons?.length > 0) {
+              addLog(`Identified: ${identified_persons.join(', ')}`);
+            }
+            addLog(`Safety compliant: ${safety_compliant ? 'YES' : 'NO'}`);
+          }
+        }
+
+        // If worker was identified and attendance not yet marked, mark it
+        if (result.entry?.worker_id && !store.attendanceMarked) {
+          addLog('Attendance marked via snapshot detection');
+          store.markAttendance();
+          onAttendanceMarked?.();
+        }
+
+        // Check if verification is now complete
+        checkCompletion();
+      }
+
+      return result;
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || error?.message || String(error);
+      addLog(`Snapshot detection error: ${errorMessage}`);
+      console.error('Snapshot detection failed:', error);
+      return null;
+    } finally {
+      setIsSnapshotCapturing(false);
+    }
+  }, [gateId, store, addLog, processDetectionResponse, performPPEDetection, checkCompletion, onAttendanceMarked]);
+
   return {
     // State
     items: store.items,
@@ -622,6 +695,7 @@ export function useGateVerification({
     timeRemaining: store.timeRemaining,
     isTimerRunning: store.isTimerRunning,
     attendanceMarked: store.attendanceMarked,
+    isSnapshotCapturing,
 
     // Computed
     passedCount: store.getPassedCount(),
@@ -643,5 +717,6 @@ export function useGateVerification({
     startMLOnly,
     determineOutcome: store.determineOutcome,
     markAttendance,
+    captureSnapshot,
   };
 }

@@ -59,28 +59,28 @@ export default function SuperAdminDashboard() {
 
       // Fetch data in parallel
       const [minesData, workersData, usersData, alertsData, dashboardData] = await Promise.all([
-        mineApi.list({ limit: 5 }),
-        workerApi.list({ limit: 1 }),
-        userApi.list({ limit: 1 }),
-        alertApi.list({ status: 'active', limit: 5 }),
+        mineApi.getAll(),
+        workerApi.getAll({ limit: 1 }),
+        userApi.getAll({ limit: 1 }),
+        alertApi.getAll({ status: 'active', limit: 5 }),
         dashboardApi.getStats().catch(() => null),
       ]);
 
       // Build system stats
       const systemStats: SystemStats = {
-        totalMines: minesData.total,
-        totalWorkers: workersData.total,
-        totalUsers: usersData.total,
-        activeAlerts: alertsData.total,
+        totalMines: minesData.length,
+        totalWorkers: workersData.length,
+        totalUsers: usersData.length,
+        activeAlerts: alertsData.length,
         todayEntries: dashboardData?.present_today || 0,
         todayViolations: dashboardData?.violations_today || 0,
         overallCompliance: dashboardData?.compliance_rate || 100,
-        systemStatus: alertsData.total > 5 ? 'warning' : 'healthy',
+        systemStatus: alertsData.length > 5 ? 'warning' : 'healthy',
       };
 
       setStats(systemStats);
-      setRecentAlerts(alertsData.alerts || []);
-      setRecentMines(minesData.mines || []);
+      setRecentAlerts(alertsData);
+      setRecentMines(minesData.slice(0, 5));
       setError(null);
     } catch (err) {
       setError('Failed to load dashboard data');

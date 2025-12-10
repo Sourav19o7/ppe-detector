@@ -19,6 +19,8 @@ interface StatusPanelProps {
   onStartML: () => void;
   onReset: () => void;
   onOverride: () => void;
+  onCaptureSnapshot?: () => void;
+  isCapturingSnapshot?: boolean;
   disabled?: boolean;
 }
 
@@ -37,6 +39,8 @@ export function StatusPanel({
   onStartML,
   onReset,
   onOverride,
+  onCaptureSnapshot,
+  isCapturingSnapshot = false,
   disabled = false,
 }: StatusPanelProps) {
   const getStatusDisplay = () => {
@@ -217,21 +221,48 @@ export function StatusPanel({
         )}
 
         {overallStatus === 'verifying' && (
-          <div className="flex gap-2">
-            <button
-              onClick={onStartRFID}
-              className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-            >
-              <Radio size={18} />
-              Trigger RFID
-            </button>
-            <button
-              onClick={onReset}
-              className="flex-1 py-3 px-4 bg-stone-600 text-white rounded-xl font-semibold hover:bg-stone-700 transition-all flex items-center justify-center gap-2"
-            >
-              <RotateCcw size={18} />
-              Reset
-            </button>
+          <div className="flex flex-col gap-2">
+            {/* Snapshot Capture Button - prominent placement */}
+            {onCaptureSnapshot && (
+              <button
+                onClick={onCaptureSnapshot}
+                disabled={isCapturingSnapshot}
+                className={`w-full py-4 px-6 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 ${
+                  isCapturingSnapshot
+                    ? 'bg-stone-400 text-white cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600 shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {isCapturingSnapshot ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Detecting...
+                  </>
+                ) : (
+                  <>
+                    <Camera size={22} />
+                    Capture & Detect
+                  </>
+                )}
+              </button>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={onStartRFID}
+                className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+              >
+                <Radio size={18} />
+                Trigger RFID
+              </button>
+              <button
+                onClick={onReset}
+                className="flex-1 py-3 px-4 bg-stone-600 text-white rounded-xl font-semibold hover:bg-stone-700 transition-all flex items-center justify-center gap-2"
+              >
+                <RotateCcw size={18} />
+                Reset
+              </button>
+            </div>
           </div>
         )}
 

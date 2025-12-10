@@ -140,13 +140,19 @@ export default function WorkersPage() {
       loadWorkers();
     } catch (err: unknown) {
       console.error('Registration error:', err);
-      const error = err as { response?: { data?: { detail?: string }; status?: number }; message?: string };
+      const error = err as { response?: { data?: { detail?: string | Array<{ msg?: string; loc?: string[] }> }; status?: number }; message?: string };
       let errorMessage = 'Failed to register worker. Please try again.';
 
       if (error.response?.status === 401) {
         errorMessage = 'Session expired. Please login again.';
       } else if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
+        const detail = error.response.data.detail;
+        // Handle both string and array of validation errors
+        if (typeof detail === 'string') {
+          errorMessage = detail;
+        } else if (Array.isArray(detail)) {
+          errorMessage = detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+        }
       } else if (error.message) {
         errorMessage = error.message;
       }

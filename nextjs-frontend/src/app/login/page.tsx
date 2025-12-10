@@ -63,8 +63,19 @@ export default function LoginPage() {
       await new Promise(resolve => setTimeout(resolve, 100));
       router.push('/');
     } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: { detail?: string } } };
-      setError(errorObj?.response?.data?.detail || 'Login failed. Please check your credentials.');
+      const errorObj = err as { response?: { data?: { detail?: string | Array<{ msg: string }> } } };
+      const detail = errorObj?.response?.data?.detail;
+
+      // Handle Pydantic validation errors (array of objects with msg field)
+      if (Array.isArray(detail)) {
+        setError(detail.map(e => e.msg).join(', ') || 'Validation error');
+      } else if (typeof detail === 'string') {
+        setError(detail);
+      } else if (detail && typeof detail === 'object') {
+        setError(JSON.stringify(detail));
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }

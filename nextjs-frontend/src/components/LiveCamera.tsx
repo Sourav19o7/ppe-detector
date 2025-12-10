@@ -13,6 +13,8 @@ interface LiveCameraProps {
   detectEndpoint: (file: File) => Promise<DetectionResult>;
   intervalMs?: number;
   disabled?: boolean;
+  showSnapshotButton?: boolean;
+  onSnapshotCapture?: (result: DetectionResult) => void;
 }
 
 export default function LiveCamera({
@@ -21,12 +23,15 @@ export default function LiveCamera({
   detectEndpoint,
   intervalMs = 2000,
   disabled = false,
+  showSnapshotButton = true,
+  onSnapshotCapture,
 }: LiveCameraProps) {
   const webcamRef = useRef<Webcam>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isLive, setIsLive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSnapshotCapturing, setIsSnapshotCapturing] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<DetectionResult | null>(null);
   const [detectionInterval, setDetectionInterval] = useState(intervalMs);
@@ -129,6 +134,40 @@ export default function LiveCamera({
     }
   };
 
+  // Manual snapshot capture - captures current frame and runs full detection
+  const captureSnapshot = useCallback(async () => {
+    if (!webcamRef.current || isSnapshotCapturing) return;
+
+    const imageSrc = webcamRef.current.getScreenshot({
+      width: 1280,
+      height: 720,
+    });
+
+    if (!imageSrc) {
+      onError?.('Failed to capture frame');
+      return;
+    }
+
+    setIsSnapshotCapturing(true);
+
+    try {
+      const file = dataURLtoFile(imageSrc, 'snapshot-capture.png');
+      const result = await detectEndpoint(file);
+
+      setLastResult(result);
+      onDetection(result);
+      onSnapshotCapture?.(result);
+
+      return result;
+    } catch (err) {
+      console.error('Snapshot detection error:', err);
+      onError?.('Snapshot detection failed');
+      return null;
+    } finally {
+      setIsSnapshotCapturing(false);
+    }
+  }, [isSnapshotCapturing, detectEndpoint, onDetection, onSnapshotCapture, onError]);
+
   return (
     <div className="space-y-4">
       {/* Camera View */}
@@ -198,6 +237,16 @@ export default function LiveCamera({
                 )}
               </>
             )}
+
+            {/* Snapshot capturing indicator */}
+            {isSnapshotCapturing && (
+              <div className="absolute inset-0 bg-white/20 flex items-center justify-center">
+                <div className="bg-blue-600 text-white px-6 py-3 rounded-xl flex items-center gap-3 shadow-lg">
+                  <Spinner size="md" className="border-white/30 border-t-white" />
+                  <span className="font-medium">Capturing & Detecting...</span>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -225,6 +274,32 @@ export default function LiveCamera({
             </>
           )}
         </button>
+
+        {/* Snapshot Capture Button */}
+        {showSnapshotButton && (
+          <button
+            onClick={captureSnapshot}
+            disabled={disabled || !!cameraError || isSnapshotCapturing}
+            className={`py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+              isSnapshotCapturing
+                ? 'bg-stone-400 text-white'
+                : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600'
+            }`}
+            title="Capture snapshot for detection"
+          >
+            {isSnapshotCapturing ? (
+              <>
+                <Spinner size="sm" className="border-white/30 border-t-white" />
+                Detecting...
+              </>
+            ) : (
+              <>
+                <CameraIcon size={18} />
+                Capture & Detect
+              </>
+            )}
+          </button>
+        )}
 
         <button
           onClick={() => setShowSettings(!showSettings)}

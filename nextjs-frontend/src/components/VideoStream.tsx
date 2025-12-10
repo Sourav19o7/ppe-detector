@@ -1,9 +1,11 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Play, Square, Settings, AlertTriangle, CheckCircle, Wifi, WifiOff } from 'lucide-react';
+import { Play, Square, Settings, AlertTriangle, CheckCircle, Wifi, WifiOff, Camera } from 'lucide-react';
 import { Spinner } from './Loading';
-import { videoApi } from '@/lib/api';
+import { videoApi, detectionApi } from '@/lib/api';
+import { dataURLtoFile } from '@/lib/utils';
+import type { DetectionResult } from '@/types';
 
 interface Detection {
   label: string;
@@ -22,11 +24,21 @@ interface StreamResult {
 interface VideoStreamProps {
   onDetection?: (result: StreamResult) => void;
   onError?: (error: string) => void;
+  showSnapshotButton?: boolean;
+  onSnapshotCapture?: (result: DetectionResult) => void;
+  snapshotDetectEndpoint?: (imageData: string) => Promise<DetectionResult>;
 }
 
-export default function VideoStream({ onDetection, onError }: VideoStreamProps) {
+export default function VideoStream({
+  onDetection,
+  onError,
+  showSnapshotButton = true,
+  onSnapshotCapture,
+  snapshotDetectEndpoint,
+}: VideoStreamProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isSnapshotCapturing, setIsSnapshotCapturing] = useState(false);
   const [streamAvailable, setStreamAvailable] = useState<boolean | null>(null);
   const [currentFrame, setCurrentFrame] = useState<string | null>(null);
   const [latestResult, setLatestResult] = useState<StreamResult | null>(null);
@@ -46,7 +58,7 @@ export default function VideoStream({ onDetection, onError }: VideoStreamProps) 
   const checkStreamStatus = async () => {
     try {
       const status = await videoApi.getStatus();
-      setStreamAvailable(status.available);
+      setStreamAvailable(status.available ?? false);
       if (!status.available) {
         setConnectionError(status.message ?? 'Video streaming not available');
       }
@@ -194,6 +206,42 @@ export default function VideoStream({ onDetection, onError }: VideoStreamProps) 
     }
   };
 
+  // Manual snapshot capture - captures current frame and runs full detection
+  const captureSnapshot = useCallback(async () => {
+    if (!currentFrame || isSnapshotCapturing) return;
+
+    setIsSnapshotCapturing(true);
+    addLog('Capturing snapshot for detection...');
+
+    try {
+      // Convert data URL to File object for the API
+      const file = dataURLtoFile(currentFrame, 'snapshot-capture.jpg');
+
+      let result: DetectionResult;
+
+      if (snapshotDetectEndpoint) {
+        // Use custom endpoint if provided (still expects base64 for backwards compatibility)
+        const base64Data = currentFrame.replace(/^data:image\/\w+;base64,/, '');
+        result = await snapshotDetectEndpoint(base64Data);
+      } else {
+        // Use default detection API with File object
+        result = await detectionApi.detect(file);
+      }
+
+      addLog(`Snapshot detection complete: ${result.detections?.summary?.safety_compliant ? 'Compliant' : 'Violations found'}`);
+      onSnapshotCapture?.(result);
+
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      addLog(`Snapshot detection error: ${errorMessage}`);
+      onError?.('Snapshot detection failed');
+      return null;
+    } finally {
+      setIsSnapshotCapturing(false);
+    }
+  }, [currentFrame, isSnapshotCapturing, snapshotDetectEndpoint, onSnapshotCapture, onError]);
+
   // If streaming not available, show message
   if (streamAvailable === false) {
     return (
@@ -294,6 +342,16 @@ export default function VideoStream({ onDetection, onError }: VideoStreamProps) 
             </div>
           </div>
         )}
+
+        {/* Snapshot capturing indicator */}
+        {isSnapshotCapturing && (
+          <div className="absolute inset-0 bg-white/20 flex items-center justify-center">
+            <div className="bg-blue-600 text-white px-6 py-3 rounded-xl flex items-center gap-3 shadow-lg">
+              <Spinner size="md" className="border-white/30 border-t-white" />
+              <span className="font-medium">Capturing & Detecting...</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Controls */}
@@ -324,6 +382,32 @@ export default function VideoStream({ onDetection, onError }: VideoStreamProps) 
             </>
           )}
         </button>
+
+        {/* Snapshot Capture Button */}
+        {showSnapshotButton && (
+          <button
+            onClick={captureSnapshot}
+            disabled={!currentFrame || isSnapshotCapturing}
+            className={`py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+              isSnapshotCapturing
+                ? 'bg-stone-400 text-white'
+                : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600'
+            }`}
+            title="Capture snapshot for full detection"
+          >
+            {isSnapshotCapturing ? (
+              <>
+                <Spinner size="sm" className="border-white/30 border-t-white" />
+                Detecting...
+              </>
+            ) : (
+              <>
+                <Camera size={18} />
+                Capture & Detect
+              </>
+            )}
+          </button>
+        )}
 
         <button
           onClick={() => setShowSettings(!showSettings)}

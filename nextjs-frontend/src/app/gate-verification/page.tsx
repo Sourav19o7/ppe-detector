@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScanLine, ChevronDown, Volume2, VolumeX, Maximize2, CheckCircle, Terminal, User } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
@@ -35,6 +35,9 @@ export default function GateVerificationPage() {
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [attendanceNotification, setAttendanceNotification] = useState<string | null>(null);
 
+  // Ref to store current frame for snapshot capture from StatusPanel
+  const currentFrameRef = useRef<string | null>(null);
+
   // Verification hook
   const verification = useGateVerification({
     gateId: selectedGateId,
@@ -61,6 +64,19 @@ export default function GateVerificationPage() {
       setTimeout(() => setAttendanceNotification(null), 3000);
     },
   });
+
+  // Handler for frame capture from LiveVideoPanel - stores in ref for StatusPanel use
+  const handleFrameCapture = useCallback((frame: string) => {
+    currentFrameRef.current = frame;
+    verification.setCurrentFrame(frame);
+  }, [verification]);
+
+  // Handler for snapshot capture from StatusPanel
+  const handleSnapshotCapture = useCallback(() => {
+    if (currentFrameRef.current) {
+      verification.captureSnapshot(currentFrameRef.current);
+    }
+  }, [verification]);
 
   // Sound effects
   const playSound = useCallback((type: 'success' | 'error' | 'scan') => {
@@ -101,11 +117,11 @@ export default function GateVerificationPage() {
     const loadMines = async () => {
       try {
         const userMineIds = getMineIds();
-        const response = await mineApi.list({ is_active: true });
+        const allMines = await mineApi.getAll();
 
-        // Filter mines based on user access
-        const accessibleMines = response.mines.filter(
-          (mine) => userMineIds.length === 0 || userMineIds.includes(mine.id)
+        // Filter mines based on user access and active status
+        const accessibleMines = allMines.filter(
+          (mine) => mine.is_active && (userMineIds.length === 0 || userMineIds.includes(mine.id))
         );
 
         setMines(accessibleMines);
@@ -286,9 +302,12 @@ export default function GateVerificationPage() {
             videoPanel={
               <LiveVideoPanel
                 isActive={verification.isTimerRunning}
-                onFrameCapture={verification.setCurrentFrame}
+                onFrameCapture={handleFrameCapture}
+                onSnapshotCapture={verification.captureSnapshot}
                 identifiedWorker={verification.identifiedWorker}
                 attendanceMarked={verification.attendanceMarked}
+                showSnapshotButton={true}
+                isCapturing={verification.isSnapshotCapturing}
               />
             }
             workerFigure={
@@ -310,6 +329,8 @@ export default function GateVerificationPage() {
                 onStartML={verification.startMLOnly}
                 onReset={verification.resetVerification}
                 onOverride={() => setShowOverrideModal(true)}
+                onCaptureSnapshot={handleSnapshotCapture}
+                isCapturingSnapshot={verification.isSnapshotCapturing}
                 disabled={!selectedGateId}
               />
             }
