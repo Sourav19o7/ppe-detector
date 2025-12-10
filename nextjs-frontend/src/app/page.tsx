@@ -15,14 +15,15 @@ import WorkerDashboard from '@/components/dashboards/WorkerDashboard';
 import SuperAdminDashboard from '@/components/dashboards/SuperAdminDashboard';
 
 export default function DashboardPage() {
-  const { getRole, isAuthenticated, userType } = useAuthStore();
+  const { getRole, isAuthenticated, userType, _hasHydrated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted) {
+  // Wait for both component mount and Zustand hydration
+  if (!mounted || !_hasHydrated) {
     return (
       <AppLayout>
         <PageLoading />
@@ -31,6 +32,15 @@ export default function DashboardPage() {
   }
 
   const role = getRole();
+
+  // If role is null after hydration, show loading (auth might still be processing)
+  if (!role) {
+    return (
+      <AppLayout>
+        <PageLoading />
+      </AppLayout>
+    );
+  }
 
   // Render role-specific dashboard
   const renderDashboard = () => {
@@ -50,8 +60,8 @@ export default function DashboardPage() {
       case 'worker':
         return <WorkerDashboard />;
       default:
-        // Fallback for legacy/unknown roles - show basic dashboard
-        return <ShiftInchargeDashboard />;
+        // Fallback - super admin dashboard as it has most access
+        return <SuperAdminDashboard />;
     }
   };
 

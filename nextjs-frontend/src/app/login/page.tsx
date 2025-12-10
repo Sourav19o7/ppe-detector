@@ -27,11 +27,40 @@ export default function LoginPage() {
     try {
       if (mode === 'staff') {
         const response = await authApi.login(username, password);
-        setStaffAuth(response.access_token, response.user);
+        console.log('Login response:', response);
+
+        if (!response.access_token) {
+          throw new Error('No access token in response');
+        }
+
+        const token = response.access_token;
+        const user = {
+          ...response.user,
+          mine_ids: response.user.mine_ids || [],
+        };
+
+        // Store in localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('userType', 'staff');
+
+        console.log('Token stored:', localStorage.getItem('token'));
+
+        setStaffAuth(token, user);
       } else {
         const response = await authApi.workerLogin(employeeId, password);
-        setWorkerAuth(response.access_token, response.worker);
+        const token = response.access_token;
+        const worker = response.worker;
+
+        // Store in localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('worker', JSON.stringify(worker));
+        localStorage.setItem('userType', 'worker');
+
+        setWorkerAuth(token, worker);
       }
+      // Small delay to ensure state is persisted before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
       router.push('/');
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { detail?: string } } };
