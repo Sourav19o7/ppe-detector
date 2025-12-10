@@ -4,6 +4,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { Play, Square, Settings, AlertTriangle, CheckCircle, Wifi, WifiOff, Camera } from 'lucide-react';
 import { Spinner } from './Loading';
 import { videoApi, detectionApi } from '@/lib/api';
+import { dataURLtoFile } from '@/lib/utils';
 import type { DetectionResult } from '@/types';
 
 interface Detection {
@@ -213,17 +214,18 @@ export default function VideoStream({
     addLog('Capturing snapshot for detection...');
 
     try {
-      // Extract base64 data from the data URL
-      const base64Data = currentFrame.replace(/^data:image\/\w+;base64,/, '');
+      // Convert data URL to File object for the API
+      const file = dataURLtoFile(currentFrame, 'snapshot-capture.jpg');
 
       let result: DetectionResult;
 
       if (snapshotDetectEndpoint) {
-        // Use custom endpoint if provided
+        // Use custom endpoint if provided (still expects base64 for backwards compatibility)
+        const base64Data = currentFrame.replace(/^data:image\/\w+;base64,/, '');
         result = await snapshotDetectEndpoint(base64Data);
       } else {
-        // Use default detection API
-        result = await detectionApi.detect(base64Data);
+        // Use default detection API with File object
+        result = await detectionApi.detect(file);
       }
 
       addLog(`Snapshot detection complete: ${result.detections?.summary?.safety_compliant ? 'Compliant' : 'Violations found'}`);
