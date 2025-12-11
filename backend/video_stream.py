@@ -166,6 +166,10 @@ class VideoStreamProcessor:
                     if label.lower() == "person":
                         continue
 
+                    # Skip glasses/goggles detections
+                    if label == "Goggles":
+                        continue
+
                     is_violation = self._is_violation(label)
                     color = self.colors.get(label, self.colors["default"])
 

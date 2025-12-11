@@ -385,6 +385,10 @@ class PersonDetector:
             if label == "Person":
                 continue
 
+            # Skip glasses/goggles detections
+            if label == "Goggles":
+                continue
+
             is_violation = self._is_violation(label)
             color = self.colors.get(label, (0, 255, 0) if not is_violation else (255, 0, 0))
 
