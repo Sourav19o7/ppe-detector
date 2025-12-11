@@ -18,6 +18,134 @@ from schemas import (
 router = APIRouter(prefix="/dashboard", tags=["Dashboards"])
 
 
+# ==================== Super Admin Dashboard ====================
+
+@router.get("/super-admin")
+async def get_super_admin_dashboard(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Dashboard for Super Admin:
+    - System-wide statistics
+    - All mines overview
+    - All workers count
+    - All users count
+    - Active alerts
+    - Today's entries and violations
+    - Overall compliance rate
+    """
+    db = get_database()
+
+    # Verify super admin role
+    if current_user.get("role") != "super_admin":
+        raise HTTPException(status_code=403, detail="Super admin access required")
+
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    week_ago = today - timedelta(days=7)
+
+    # Get counts in parallel using aggregation for efficiency
+    total_mines = await db.mines.count_documents({"is_active": True})
+    total_workers = await db.workers.count_documents({"is_active": True})
+    total_users = await db.users.count_documents({"is_active": True})
+
+    # Today's entries (distinct workers who entered today)
+    today_entries = await db.gate_entries.count_documents({
+        "timestamp": {"$gte": today, "$lt": tomorrow},
+        "entry_type": "entry"
+    })
+
+    # Today's violations
+    today_violations = await db.gate_entries.count_documents({
+        "timestamp": {"$gte": today, "$lt": tomorrow},
+        "violations": {"$ne": []}
+    })
+
+    # Active alerts
+    active_alerts = await db.alerts.count_documents({
+        "status": "active"
+    })
+
+    # Week compliance rate
+    week_entries = await db.gate_entries.count_documents({
+        "timestamp": {"$gte": week_ago},
+        "entry_type": "entry"
+    })
+    week_violations = await db.gate_entries.count_documents({
+        "timestamp": {"$gte": week_ago},
+        "violations": {"$ne": []}
+    })
+
+    compliance_rate = 100.0
+    if week_entries > 0:
+        compliance_rate = round((1 - week_violations / week_entries) * 100, 1)
+
+    # System status based on alerts and compliance
+    system_status = "healthy"
+    if active_alerts > 10 or compliance_rate < 80:
+        system_status = "critical"
+    elif active_alerts > 5 or compliance_rate < 90:
+        system_status = "warning"
+
+    # Get recent alerts
+    alerts_cursor = db.alerts.find({
+        "status": "active"
+    }).sort("created_at", -1).limit(5)
+
+    recent_alerts = []
+    async for alert in alerts_cursor:
+        mine = await db.mines.find_one({"_id": alert.get("mine_id")})
+        recent_alerts.append({
+            "id": str(alert["_id"]),
+            "alert_type": alert["alert_type"],
+            "severity": alert["severity"],
+            "status": alert["status"],
+            "message": alert["message"],
+            "mine_id": str(alert.get("mine_id", "")),
+            "mine_name": mine["name"] if mine else "Unknown",
+            "created_at": alert["created_at"].isoformat(),
+        })
+
+    # Get recent mines
+    mines_cursor = db.mines.find({"is_active": True}).sort("created_at", -1).limit(5)
+    recent_mines = []
+    async for mine in mines_cursor:
+        # Get zone and gate counts
+        zone_count = await db.zones.count_documents({"mine_id": mine["_id"]})
+        gate_count = await db.gates.count_documents({"mine_id": mine["_id"]})
+
+        recent_mines.append({
+            "id": str(mine["_id"]),
+            "name": mine["name"],
+            "location": mine.get("location", ""),
+            "is_active": mine.get("is_active", True),
+            "zones": [{"id": str(i)} for i in range(zone_count)],  # Placeholder for count
+            "gates": [{"id": str(i)} for i in range(gate_count)],  # Placeholder for count
+            "created_at": mine.get("created_at", datetime.utcnow()).isoformat(),
+        })
+
+    return {
+        "stats": {
+            "total_mines": total_mines,
+            "total_workers": total_workers,
+            "total_users": total_users,
+            "active_alerts": active_alerts,
+            "today_entries": today_entries,
+            "today_violations": today_violations,
+            "compliance_rate": compliance_rate,
+            "system_status": system_status,
+        },
+        "recent_alerts": recent_alerts,
+        "recent_mines": recent_mines,
+        # Legacy format for compatibility
+        "total_employees": total_workers,
+        "present_today": today_entries,
+        "absent_today": max(0, total_workers - today_entries),
+        "violations_today": today_violations,
+        "violations_this_week": week_violations,
+    }
+
+
 def get_current_shift() -> ShiftType:
     """Determine current shift based on time."""
     now = datetime.utcnow()

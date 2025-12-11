@@ -65,11 +65,11 @@ export function StatCard({ title, value, icon, trend, color = 'orange', subtitle
   const [bgGradient, borderColor, iconColor] = selectedColors.split(' ');
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm card-hover transition-all duration-300">
-      <div className="flex flex-col items-center text-center">
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm card-hover transition-all duration-300 min-h-[180px]">
+      <div className="flex flex-col items-center justify-center text-center h-full gap-2">
         {/* Icon at top */}
         <div className={cn(
-          'w-14 h-14 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-sm mb-4 border',
+          'w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-sm border flex-shrink-0',
           bgGradient,
           borderColor,
           iconColor
@@ -78,20 +78,20 @@ export function StatCard({ title, value, icon, trend, color = 'orange', subtitle
         </div>
 
         {/* Value */}
-        <p className="text-3xl font-bold text-slate-700 mb-2">{value}</p>
+        <p className="text-2xl font-bold text-slate-700 leading-tight">{value}</p>
 
         {/* Title - smaller text below */}
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</p>
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider leading-tight">{title}</p>
 
         {/* Subtitle */}
         {subtitle && (
-          <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+          <p className="text-[11px] text-slate-400 leading-tight">{subtitle}</p>
         )}
 
         {/* Trend indicator */}
         {trend && (
           <div className={cn(
-            'inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full text-xs font-semibold',
+            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold',
             trend.positive
               ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
               : 'bg-red-100 text-red-700 border border-red-300'

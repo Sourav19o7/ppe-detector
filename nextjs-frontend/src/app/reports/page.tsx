@@ -1,18 +1,38 @@
 'use client';
 
-import { useState } from 'react';
-import { FileText, Calendar, Download, Users, AlertTriangle, Clock, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, Calendar, Download, Users, AlertTriangle, Clock, Settings, Plus } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/Card';
 import { Spinner } from '@/components/Loading';
 import { reportsApi, employeeApi } from '@/lib/api';
 import { formatDate, formatTime, getDateString } from '@/lib/utils';
-import type { AttendanceReport, ViolationReport, Employee } from '@/types';
+import { ReportGenerator, ScheduleList, ReportScheduleModal } from '@/components/reports';
+import type {
+  AttendanceReport,
+  ViolationReport,
+  Employee,
+  ReportTypeInfo,
+  ReportSchedule,
+  CreateScheduleRequest
+} from '@/types';
+import { useAuthStore } from '@/lib/store';
 
-type ReportType = 'attendance' | 'violations';
+type TabType = 'generate' | 'schedules' | 'legacy';
 
 export default function ReportsPage() {
-  const [reportType, setReportType] = useState<ReportType>('attendance');
+  const { user } = useAuthStore();
+  const [activeTab, setActiveTab] = useState<TabType>('generate');
+
+  // New report state
+  const [reportTypes, setReportTypes] = useState<ReportTypeInfo[]>([]);
+  const [schedules, setSchedules] = useState<ReportSchedule[]>([]);
+  const [schedulesLoading, setSchedulesLoading] = useState(true);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<ReportSchedule | undefined>();
+
+  // Legacy report state
+  const [legacyReportType, setLegacyReportType] = useState<'attendance' | 'violations'>('attendance');
   const [startDate, setStartDate] = useState(getDateString(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
   const [endDate, setEndDate] = useState(getDateString());
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
@@ -20,7 +40,34 @@ export default function ReportsPage() {
   const [attendanceReport, setAttendanceReport] = useState<AttendanceReport | null>(null);
   const [violationReport, setViolationReport] = useState<ViolationReport | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [employeeSearch, setEmployeeSearch] = useState('');
+
+  // Load report types and schedules on mount
+  useEffect(() => {
+    loadReportTypes();
+    loadSchedules();
+    loadEmployees();
+  }, []);
+
+  const loadReportTypes = async () => {
+    try {
+      const data = await reportsApi.getReportTypes();
+      setReportTypes(data.report_types);
+    } catch (err) {
+      console.error('Failed to load report types:', err);
+    }
+  };
+
+  const loadSchedules = async () => {
+    setSchedulesLoading(true);
+    try {
+      const data = await reportsApi.getSchedules();
+      setSchedules(data.schedules);
+    } catch (err) {
+      console.error('Failed to load schedules:', err);
+    } finally {
+      setSchedulesLoading(false);
+    }
+  };
 
   const loadEmployees = async () => {
     try {
@@ -31,17 +78,52 @@ export default function ReportsPage() {
     }
   };
 
-  useState(() => {
-    loadEmployees();
-  });
+  const handleCreateSchedule = async (schedule: CreateScheduleRequest) => {
+    await reportsApi.createSchedule(schedule);
+    await loadSchedules();
+  };
 
-  const generateReport = async () => {
+  const handleEditSchedule = (schedule: ReportSchedule) => {
+    setEditingSchedule(schedule);
+    setShowScheduleModal(true);
+  };
+
+  const handleDeleteSchedule = async (scheduleId: string) => {
+    try {
+      await reportsApi.deleteSchedule(scheduleId);
+      await loadSchedules();
+    } catch (err) {
+      console.error('Failed to delete schedule:', err);
+    }
+  };
+
+  const handleToggleSchedule = async (scheduleId: string, isActive: boolean) => {
+    try {
+      await reportsApi.updateSchedule(scheduleId, { is_active: isActive });
+      await loadSchedules();
+    } catch (err) {
+      console.error('Failed to toggle schedule:', err);
+    }
+  };
+
+  const handleTestSchedule = async (scheduleId: string) => {
+    try {
+      await reportsApi.testSchedule(scheduleId);
+      alert('Test report sent successfully!');
+    } catch (err) {
+      console.error('Failed to test schedule:', err);
+      alert('Failed to send test report');
+    }
+  };
+
+  // Legacy report functions
+  const generateLegacyReport = async () => {
     setIsLoading(true);
     setAttendanceReport(null);
     setViolationReport(null);
 
     try {
-      if (reportType === 'attendance') {
+      if (legacyReportType === 'attendance') {
         const report = await reportsApi.getAttendanceReport(
           startDate,
           endDate,
@@ -66,12 +148,12 @@ export default function ReportsPage() {
   const downloadCSV = () => {
     let csvContent = '';
 
-    if (reportType === 'attendance' && attendanceReport) {
+    if (legacyReportType === 'attendance' && attendanceReport) {
       csvContent = 'Employee ID,Employee Name,Date,Check Ins,Check Outs,Total Hours\n';
       attendanceReport.records.forEach((record) => {
         csvContent += `${record.employee_id},${record.employee_name},${record.date},"${record.check_ins.map(t => formatTime(t)).join(', ')}","${record.check_outs.map(t => formatTime(t)).join(', ')}",${record.total_hours || 'N/A'}\n`;
       });
-    } else if (reportType === 'violations' && violationReport) {
+    } else if (legacyReportType === 'violations' && violationReport) {
       csvContent = 'ID,Employee ID,Employee Name,Timestamp,Violations,Location\n';
       violationReport.violations.forEach((v) => {
         csvContent += `${v.id},${v.employee_id || 'Unknown'},${v.employee_name || 'Unknown'},${v.timestamp},"${v.violations.map(viol => viol.label).join(', ')}",${v.location || 'N/A'}\n`;
@@ -82,324 +164,453 @@ export default function ReportsPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${reportType}_report_${startDate}_to_${endDate}.csv`;
+    a.download = `${legacyReportType}_report_${startDate}_to_${endDate}.csv`;
     a.click();
   };
-
-  const filteredEmployees = employees.filter(
-    (emp) =>
-      emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-      emp.employee_id.toLowerCase().includes(employeeSearch.toLowerCase())
-  );
 
   return (
     <AppLayout>
       <div className="space-y-6">
         {/* Page Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-stone-800">Reports</h1>
-          <p className="text-stone-500 mt-1">Generate attendance and violation reports</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-stone-800">Reports</h1>
+            <p className="text-stone-500 mt-1">Generate, schedule, and download reports</p>
+          </div>
+          {activeTab === 'schedules' && (
+            <button
+              onClick={() => {
+                setEditingSchedule(undefined);
+                setShowScheduleModal(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              <Plus size={18} />
+              New Schedule
+            </button>
+          )}
         </div>
 
-        {/* Report Configuration */}
-        <Card title="Generate Report">
-          <div className="space-y-4">
-            {/* Report Type */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setReportType('attendance')}
-                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-                  reportType === 'attendance'
-                    ? 'bg-orange-600 text-white'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                }`}
-              >
-                <Users size={20} />
-                Attendance Report
-              </button>
-              <button
-                onClick={() => setReportType('violations')}
-                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-                  reportType === 'violations'
-                    ? 'bg-orange-600 text-white'
-                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                }`}
-              >
-                <AlertTriangle size={20} />
-                Violations Report
-              </button>
-            </div>
-
-            {/* Date Range */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            {/* Employee Filter */}
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">
-                Employee (Optional)
-              </label>
-              <select
-                value={selectedEmployee}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
-                className="w-full"
-              >
-                <option value="">All Employees</option>
-                {employees.map((emp) => (
-                  <option key={emp.employee_id} value={emp.employee_id}>
-                    {emp.name} ({emp.employee_id})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Generate Button */}
-            <button
-              onClick={generateReport}
-              disabled={isLoading}
-              className="w-full py-3 px-4 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {isLoading ? (
-                <>
-                  <Spinner size="sm" className="border-white/30 border-t-white" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <FileText size={20} />
-                  Generate Report
-                </>
-              )}
-            </button>
-          </div>
-        </Card>
-
-        {/* Attendance Report */}
-        {attendanceReport && (
-          <Card
-            title="Attendance Report"
-            description={`${formatDate(attendanceReport.start_date)} - ${formatDate(attendanceReport.end_date)}`}
+        {/* Tabs */}
+        <div className="flex gap-1 bg-stone-100 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setActiveTab('generate')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'generate'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
           >
-            {/* Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="p-4 bg-blue-50 rounded-lg text-center">
-                <p className="text-2xl font-bold text-blue-600">
-                  {attendanceReport.summary.unique_employees}
-                </p>
-                <p className="text-sm text-blue-700">Employees</p>
-              </div>
-              <div className="p-4 bg-green-50 rounded-lg text-center">
-                <p className="text-2xl font-bold text-green-600">
-                  {attendanceReport.summary.total_records}
-                </p>
-                <p className="text-sm text-green-700">Records</p>
-              </div>
-              <div className="p-4 bg-purple-50 rounded-lg text-center">
-                <p className="text-2xl font-bold text-purple-600">
-                  {attendanceReport.summary.total_days}
-                </p>
-                <p className="text-sm text-purple-700">Days</p>
-              </div>
-              <div className="p-4 bg-yellow-50 rounded-lg text-center">
-                <p className="text-2xl font-bold text-yellow-600">
-                  {attendanceReport.summary.total_hours_worked.toFixed(1)}h
-                </p>
-                <p className="text-sm text-yellow-700">Total Hours</p>
-              </div>
-            </div>
+            <span className="flex items-center gap-2">
+              <FileText size={16} />
+              Generate Report
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('schedules')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'schedules'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Settings size={16} />
+              Scheduled Reports
+              {schedules.length > 0 && (
+                <span className="px-1.5 py-0.5 text-xs bg-orange-100 text-orange-700 rounded-full">
+                  {schedules.length}
+                </span>
+              )}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('legacy')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === 'legacy'
+                ? 'bg-white text-stone-900 shadow-sm'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Clock size={16} />
+              Legacy Reports
+            </span>
+          </button>
+        </div>
 
-            {/* Table */}
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Employee</th>
-                    <th>Date</th>
-                    <th>Check In</th>
-                    <th>Check Out</th>
-                    <th>Hours</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendanceReport.records.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="text-center text-stone-500 py-8">
-                        No records found
-                      </td>
-                    </tr>
-                  ) : (
-                    attendanceReport.records.map((record, idx) => (
-                      <tr key={idx}>
-                        <td>
-                          <div>
-                            <p className="font-medium">{record.employee_name}</p>
-                            <p className="text-xs text-stone-500">{record.employee_id}</p>
-                          </div>
-                        </td>
-                        <td>{formatDate(record.date)}</td>
-                        <td>
-                          {record.check_ins.map((t, i) => (
-                            <span key={i} className="badge badge-success mr-1">
-                              {formatTime(t)}
-                            </span>
-                          ))}
-                        </td>
-                        <td>
-                          {record.check_outs.map((t, i) => (
-                            <span key={i} className="badge badge-info mr-1">
-                              {formatTime(t)}
-                            </span>
-                          ))}
-                        </td>
-                        <td>{record.total_hours?.toFixed(2) || '-'}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+        {/* Generate Report Tab */}
+        {activeTab === 'generate' && (
+          <div className="space-y-6">
+            <ReportGenerator
+              reportTypes={reportTypes}
+              mineId={user?.mine_id}
+            />
 
-            {/* Download Button */}
-            <button
-              onClick={downloadCSV}
-              className="mt-4 py-2 px-4 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors flex items-center gap-2"
-            >
-              <Download size={18} />
-              Download CSV
-            </button>
-          </Card>
+            {/* Report Types Info */}
+            <Card title="Available Report Types">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {reportTypes.map((rt) => (
+                  <div
+                    key={rt.id}
+                    className="p-4 border border-stone-200 rounded-lg hover:border-orange-300 transition-colors"
+                  >
+                    <h4 className="font-medium text-stone-800">{rt.name}</h4>
+                    <p className="text-sm text-stone-500 mt-1">{rt.description}</p>
+                    <div className="flex gap-1 mt-2">
+                      {rt.available_formats.map((f) => (
+                        <span
+                          key={f}
+                          className={`px-2 py-0.5 text-xs rounded ${
+                            f === 'pdf'
+                              ? 'bg-red-100 text-red-700'
+                              : f === 'excel'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
+                          {f.toUpperCase()}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
         )}
 
-        {/* Violations Report */}
-        {violationReport && (
-          <Card
-            title="Violations Report"
-            description={`${formatDate(violationReport.start_date)} - ${formatDate(violationReport.end_date)}`}
-          >
-            {/* Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-              <div className="p-4 bg-red-50 rounded-lg text-center">
-                <p className="text-2xl font-bold text-red-600">
-                  {violationReport.summary.total_violations}
-                </p>
-                <p className="text-sm text-red-700">Total Violations</p>
-              </div>
-              <div className="p-4 bg-orange-50 rounded-lg text-center">
-                <p className="text-2xl font-bold text-orange-600">
-                  {violationReport.summary.employees_with_violations}
-                </p>
-                <p className="text-sm text-orange-700">Employees</p>
-              </div>
-              <div className="p-4 bg-blue-50 rounded-lg text-center col-span-2 md:col-span-1">
-                <p className="text-2xl font-bold text-blue-600">
-                  {Object.keys(violationReport.summary.violation_breakdown).length}
-                </p>
-                <p className="text-sm text-blue-700">Violation Types</p>
-              </div>
-            </div>
+        {/* Scheduled Reports Tab */}
+        {activeTab === 'schedules' && (
+          <div className="space-y-6">
+            <ScheduleList
+              schedules={schedules}
+              onEdit={handleEditSchedule}
+              onDelete={handleDeleteSchedule}
+              onToggle={handleToggleSchedule}
+              onTest={handleTestSchedule}
+              loading={schedulesLoading}
+            />
+          </div>
+        )}
 
-            {/* Violation Breakdown */}
-            {Object.keys(violationReport.summary.violation_breakdown).length > 0 && (
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-stone-700 mb-2">Breakdown by Type:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(violationReport.summary.violation_breakdown).map(([type, count]) => (
-                    <span key={type} className="badge badge-danger">
-                      {type}: {count}
-                    </span>
-                  ))}
+        {/* Legacy Reports Tab */}
+        {activeTab === 'legacy' && (
+          <div className="space-y-6">
+            {/* Report Configuration */}
+            <Card title="Generate Legacy Report">
+              <div className="space-y-4">
+                {/* Report Type */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setLegacyReportType('attendance')}
+                    className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                      legacyReportType === 'attendance'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    }`}
+                  >
+                    <Users size={20} />
+                    Attendance Report
+                  </button>
+                  <button
+                    onClick={() => setLegacyReportType('violations')}
+                    className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                      legacyReportType === 'violations'
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    }`}
+                  >
+                    <AlertTriangle size={20} />
+                    Violations Report
+                  </button>
                 </div>
+
+                {/* Date Range */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Employee Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">
+                    Employee (Optional)
+                  </label>
+                  <select
+                    value={selectedEmployee}
+                    onChange={(e) => setSelectedEmployee(e.target.value)}
+                    className="w-full"
+                  >
+                    <option value="">All Employees</option>
+                    {employees.map((emp) => (
+                      <option key={emp.employee_id} value={emp.employee_id}>
+                        {emp.name} ({emp.employee_id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Generate Button */}
+                <button
+                  onClick={generateLegacyReport}
+                  disabled={isLoading}
+                  className="w-full py-3 px-4 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <>
+                      <Spinner size="sm" className="border-white/30 border-t-white" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText size={20} />
+                      Generate Report
+                    </>
+                  )}
+                </button>
               </div>
+            </Card>
+
+            {/* Attendance Report */}
+            {attendanceReport && (
+              <Card
+                title="Attendance Report"
+                description={`${formatDate(attendanceReport.start_date)} - ${formatDate(attendanceReport.end_date)}`}
+              >
+                {/* Summary */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 bg-blue-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-blue-600">
+                      {attendanceReport.summary.unique_employees}
+                    </p>
+                    <p className="text-sm text-blue-700">Employees</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-green-600">
+                      {attendanceReport.summary.total_records}
+                    </p>
+                    <p className="text-sm text-green-700">Records</p>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-purple-600">
+                      {attendanceReport.summary.total_days}
+                    </p>
+                    <p className="text-sm text-purple-700">Days</p>
+                  </div>
+                  <div className="p-4 bg-yellow-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-yellow-600">
+                      {attendanceReport.summary.total_hours_worked.toFixed(1)}h
+                    </p>
+                    <p className="text-sm text-yellow-700">Total Hours</p>
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Date</th>
+                        <th>Check In</th>
+                        <th>Check Out</th>
+                        <th>Hours</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attendanceReport.records.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="text-center text-stone-500 py-8">
+                            No records found
+                          </td>
+                        </tr>
+                      ) : (
+                        attendanceReport.records.map((record, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <div>
+                                <p className="font-medium">{record.employee_name}</p>
+                                <p className="text-xs text-stone-500">{record.employee_id}</p>
+                              </div>
+                            </td>
+                            <td>{formatDate(record.date)}</td>
+                            <td>
+                              {record.check_ins.map((t, i) => (
+                                <span key={i} className="badge badge-success mr-1">
+                                  {formatTime(t)}
+                                </span>
+                              ))}
+                            </td>
+                            <td>
+                              {record.check_outs.map((t, i) => (
+                                <span key={i} className="badge badge-info mr-1">
+                                  {formatTime(t)}
+                                </span>
+                              ))}
+                            </td>
+                            <td>{record.total_hours?.toFixed(2) || '-'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Download Button */}
+                <button
+                  onClick={downloadCSV}
+                  className="mt-4 py-2 px-4 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors flex items-center gap-2"
+                >
+                  <Download size={18} />
+                  Download CSV
+                </button>
+              </Card>
             )}
 
-            {/* Table */}
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Person</th>
-                    <th>Date/Time</th>
-                    <th>Violations</th>
-                    <th>Location</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {violationReport.violations.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} className="text-center text-stone-500 py-8">
-                        No violations found
-                      </td>
-                    </tr>
-                  ) : (
-                    violationReport.violations.map((record) => (
-                      <tr key={record.id}>
-                        <td>
-                          <p className="font-medium">
-                            {record.employee_name || 'Unknown'}
-                          </p>
-                          {record.employee_id && (
-                            <p className="text-xs text-stone-500">{record.employee_id}</p>
-                          )}
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-1 text-stone-600">
-                            <Calendar size={14} />
-                            {formatDate(record.timestamp)}
-                          </div>
-                          <div className="flex items-center gap-1 text-stone-500 text-sm">
-                            <Clock size={12} />
-                            {formatTime(record.timestamp)}
-                          </div>
-                        </td>
-                        <td>
-                          <div className="flex flex-wrap gap-1">
-                            {record.violations.map((v, i) => (
-                              <span key={i} className="badge badge-danger text-xs">
-                                {v.label}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="text-stone-600">{record.location || '-'}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {/* Violations Report */}
+            {violationReport && (
+              <Card
+                title="Violations Report"
+                description={`${formatDate(violationReport.start_date)} - ${formatDate(violationReport.end_date)}`}
+              >
+                {/* Summary */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 bg-red-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-red-600">
+                      {violationReport.summary.total_violations}
+                    </p>
+                    <p className="text-sm text-red-700">Total Violations</p>
+                  </div>
+                  <div className="p-4 bg-orange-50 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-orange-600">
+                      {violationReport.summary.employees_with_violations}
+                    </p>
+                    <p className="text-sm text-orange-700">Employees</p>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg text-center col-span-2 md:col-span-1">
+                    <p className="text-2xl font-bold text-blue-600">
+                      {Object.keys(violationReport.summary.violation_breakdown).length}
+                    </p>
+                    <p className="text-sm text-blue-700">Violation Types</p>
+                  </div>
+                </div>
 
-            {/* Download Button */}
-            <button
-              onClick={downloadCSV}
-              className="mt-4 py-2 px-4 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors flex items-center gap-2"
-            >
-              <Download size={18} />
-              Download CSV
-            </button>
-          </Card>
+                {/* Violation Breakdown */}
+                {Object.keys(violationReport.summary.violation_breakdown).length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-stone-700 mb-2">Breakdown by Type:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(violationReport.summary.violation_breakdown).map(([type, count]) => (
+                        <span key={type} className="badge badge-danger">
+                          {type}: {count}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Table */}
+                <div className="table-container">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Person</th>
+                        <th>Date/Time</th>
+                        <th>Violations</th>
+                        <th>Location</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {violationReport.violations.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="text-center text-stone-500 py-8">
+                            No violations found
+                          </td>
+                        </tr>
+                      ) : (
+                        violationReport.violations.map((record) => (
+                          <tr key={record.id}>
+                            <td>
+                              <p className="font-medium">
+                                {record.employee_name || 'Unknown'}
+                              </p>
+                              {record.employee_id && (
+                                <p className="text-xs text-stone-500">{record.employee_id}</p>
+                              )}
+                            </td>
+                            <td>
+                              <div className="flex items-center gap-1 text-stone-600">
+                                <Calendar size={14} />
+                                {formatDate(record.timestamp)}
+                              </div>
+                              <div className="flex items-center gap-1 text-stone-500 text-sm">
+                                <Clock size={12} />
+                                {formatTime(record.timestamp)}
+                              </div>
+                            </td>
+                            <td>
+                              <div className="flex flex-wrap gap-1">
+                                {record.violations.map((v, i) => (
+                                  <span key={i} className="badge badge-danger text-xs">
+                                    {v.label}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="text-stone-600">{record.location || '-'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Download Button */}
+                <button
+                  onClick={downloadCSV}
+                  className="mt-4 py-2 px-4 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors flex items-center gap-2"
+                >
+                  <Download size={18} />
+                  Download CSV
+                </button>
+              </Card>
+            )}
+          </div>
         )}
+
+        {/* Schedule Modal */}
+        <ReportScheduleModal
+          isOpen={showScheduleModal}
+          onClose={() => {
+            setShowScheduleModal(false);
+            setEditingSchedule(undefined);
+          }}
+          onSave={handleCreateSchedule}
+          schedule={editingSchedule}
+          reportTypes={reportTypes}
+          mineId={user?.mine_id}
+        />
       </div>
     </AppLayout>
   );

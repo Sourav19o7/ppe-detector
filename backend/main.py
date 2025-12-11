@@ -41,6 +41,7 @@ from routes.gas_sensors import router as gas_sensors_router
 from routes.predictions import router as predictions_router
 from routes.sos_alerts import router as sos_alerts_router
 from routes.danger_zones import router as danger_zones_router
+from reports import reports_router
 
 load_dotenv()
 
@@ -53,9 +54,16 @@ async def lifespan(app: FastAPI):
 
     # Start ML prediction scheduler
     try:
-        from ml.scheduler import start_scheduler
+        from ml.scheduler import start_scheduler, scheduler
         db = get_database()
         start_scheduler(db)
+
+        # Register report scheduler
+        try:
+            from reports.report_scheduler import register_report_scheduler
+            register_report_scheduler(scheduler, db)
+        except Exception as e:
+            print(f"Warning: Failed to register report scheduler: {e}")
     except Exception as e:
         print(f"Warning: Failed to start ML scheduler: {e}")
 
@@ -233,6 +241,7 @@ app.include_router(gas_sensors_router)
 app.include_router(predictions_router)
 app.include_router(sos_alerts_router)
 app.include_router(danger_zones_router)
+app.include_router(reports_router)
 
 
 # ==================== WebSocket Test ====================

@@ -488,7 +488,7 @@ export function useGateVerification({
 
       addLog(`Frame size: ${(blob.size / 1024).toFixed(1)}KB`);
 
-      const result = await gateEntryApi.detect(gateId, file, 'entry');
+      const result = await gateEntryApi.detect(gateId || 'default', file, 'entry');
 
       addLog(`Detection response received: ${result.success ? 'SUCCESS' : 'FAILED'}`);
 
@@ -652,7 +652,7 @@ export function useGateVerification({
       addLog(`Snapshot size: ${(blob.size / 1024).toFixed(1)}KB - Sending for detection...`);
 
       // Call the gate entry detect API (includes face recognition + PPE + attendance)
-      const result = await gateEntryApi.detect(gateId, file, 'entry');
+      const result = await gateEntryApi.detect(gateId || 'default', file, 'entry');
 
       addLog(`Snapshot detection: ${result.success ? 'SUCCESS' : 'FAILED'}`);
 

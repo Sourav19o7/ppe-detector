@@ -57,7 +57,57 @@ export default function SuperAdminDashboard() {
       if (showRefresh) setRefreshing(true);
       else setLoading(true);
 
-      // Fetch data in parallel
+      // Try the optimized super admin endpoint first
+      try {
+        const superAdminData = await dashboardApi.getSuperAdmin();
+
+        // Build system stats from optimized endpoint
+        const systemStats: SystemStats = {
+          totalMines: superAdminData.stats?.total_mines || 0,
+          totalWorkers: superAdminData.stats?.total_workers || 0,
+          totalUsers: superAdminData.stats?.total_users || 0,
+          activeAlerts: superAdminData.stats?.active_alerts || 0,
+          todayEntries: superAdminData.stats?.today_entries || superAdminData.present_today || 0,
+          todayViolations: superAdminData.stats?.today_violations || superAdminData.violations_today || 0,
+          overallCompliance: superAdminData.stats?.compliance_rate || superAdminData.compliance_rate || 100,
+          systemStatus: superAdminData.stats?.system_status || 'healthy',
+        };
+
+        setStats(systemStats);
+
+        // Set alerts from the response
+        if (superAdminData.recent_alerts) {
+          setRecentAlerts(superAdminData.recent_alerts.map((a: any) => ({
+            id: a.id,
+            alert_type: a.alert_type,
+            severity: a.severity,
+            status: a.status,
+            message: a.message,
+            mine_id: a.mine_id,
+            mine_name: a.mine_name,
+            created_at: a.created_at,
+          })));
+        }
+
+        // Set mines from the response
+        if (superAdminData.recent_mines) {
+          setRecentMines(superAdminData.recent_mines.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            location: m.location,
+            is_active: m.is_active,
+            zones: m.zones || [],
+            gates: m.gates || [],
+          })));
+        }
+
+        setError(null);
+        return;
+      } catch (superAdminErr) {
+        console.log('Super admin endpoint not available, falling back to legacy...');
+      }
+
+      // Fallback to legacy approach if super admin endpoint fails
       const [minesResult, workersResult, usersResult, alertsResult, dashboardData] = await Promise.all([
         mineApi.list(),
         workerApi.list({ limit: 1 }),

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -21,7 +22,6 @@ import {
   LogOut,
   Menu,
   X,
-  ShieldCheck,
   Siren,
   UserCog,
   ClipboardCheck,
@@ -139,14 +139,14 @@ export default function Sidebar() {
           )}>
             <div className={cn('flex items-center gap-3', isCollapsed && 'justify-center w-full')}>
               <div className={cn(
-                'rounded-2xl bg-gradient-to-br from-orange-300 to-amber-300 flex items-center justify-center shadow-sm border border-orange-200',
-                isCollapsed ? 'w-11 h-11' : 'w-11 h-11'
+                'rounded-xl overflow-hidden flex items-center justify-center',
+                isCollapsed ? 'w-10 h-10' : 'w-10 h-10'
               )}>
-                <ShieldCheck className="text-orange-700 w-6 h-6" strokeWidth={2.5} />
+                <Image src="/favicon.png" alt="Raksham Logo" width={40} height={40} className="object-contain" />
               </div>
               {!isCollapsed && (
                 <div>
-                  <h1 className="text-base font-bold text-slate-700">Kavach</h1>
+                  <h1 className="text-base font-bold text-slate-700">Raksham</h1>
                   <p className="text-xs text-slate-500">Mine Safety System</p>
                 </div>
               )}
@@ -187,7 +187,7 @@ export default function Sidebar() {
           )}
 
           {/* Navigation */}
-          <nav className={cn('flex-1 py-2', isCollapsed ? 'px-2' : 'px-3')}>
+          <nav className={cn('flex-1 py-1 overflow-y-auto', isCollapsed ? 'px-2' : 'px-3')}>
             <ul className="space-y-0.5">
               {navItems.map((item) => {
                 const Icon = iconMap[item.icon] || Gauge;
@@ -199,14 +199,14 @@ export default function Sidebar() {
                       onClick={() => setIsMobileOpen(false)}
                       title={isCollapsed ? item.name : undefined}
                       className={cn(
-                        'flex items-center gap-3 rounded-xl transition-all duration-200',
-                        isCollapsed ? 'px-3 py-2.5 justify-center' : 'px-3 py-2.5',
+                        'flex items-center gap-2.5 rounded-lg transition-all duration-200',
+                        isCollapsed ? 'px-2.5 py-2 justify-center' : 'px-3 py-2',
                         isActive
                           ? 'bg-gradient-to-r from-orange-200 to-amber-200 text-orange-700 border border-orange-300 shadow-sm'
                           : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                       )}
                     >
-                      <Icon size={20} />
+                      <Icon size={18} />
                       {!isCollapsed && (
                         <span className="text-sm font-medium">{item.name}</span>
                       )}

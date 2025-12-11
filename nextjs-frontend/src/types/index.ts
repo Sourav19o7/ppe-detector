@@ -782,3 +782,136 @@ export interface VerificationResult {
   violations: string[];
   canOverride: boolean;
 }
+
+// ==================== Report Types ====================
+
+export type ReportType =
+  // Shift Incharge Reports
+  | 'shift_summary'
+  | 'shift_handover'
+  | 'entry_exit_log'
+  | 'alert_resolution'
+  // Safety Officer Reports
+  | 'weekly_compliance'
+  | 'high_risk_workers'
+  | 'zone_risk_analysis'
+  | 'violation_trends'
+  // Manager Reports
+  | 'daily_operations'
+  | 'shift_performance'
+  | 'worker_rankings'
+  | 'monthly_summary'
+  | 'escalation_report'
+  // Area Safety Officer Reports
+  | 'mine_comparison'
+  | 'risk_heatmap'
+  | 'critical_incidents'
+  | 'compliance_leaderboard'
+  // General Manager Reports
+  | 'executive_summary'
+  | 'kpi_dashboard'
+  | 'regulatory_compliance'
+  | 'financial_impact'
+  // Worker Reports
+  | 'compliance_card'
+  | 'worker_monthly';
+
+export type ReportFormat = 'pdf' | 'excel' | 'csv';
+
+export type ScheduleFrequency = 'daily' | 'weekly' | 'monthly';
+
+export interface ReportTypeInfo {
+  id: ReportType;
+  name: string;
+  description: string;
+  available_formats: ReportFormat[];
+  min_role: string;
+  parameters: string[];
+}
+
+export interface EmailRecipient {
+  email: string;
+  name: string;
+  type: 'to' | 'cc' | 'bcc';
+}
+
+export interface ScheduleConfig {
+  frequency: ScheduleFrequency;
+  time: string;           // "HH:MM" format (UTC)
+  day_of_week?: number;   // 1-7 for weekly schedules
+  day_of_month?: number;  // 1-31 for monthly schedules
+}
+
+export interface ReportScheduleConfig {
+  format: ReportFormat[];
+  date_range: 'previous_shift' | 'previous_day' | 'previous_week' | 'previous_month';
+  filters?: Record<string, string | number | boolean>;
+}
+
+export interface GenerateReportRequest {
+  report_type: ReportType;
+  format: ReportFormat;
+  start_date: string;
+  end_date: string;
+  mine_id?: string;
+  filters?: Record<string, string | number | boolean>;
+}
+
+export interface GenerateReportResponse {
+  success: boolean;
+  report_id: string;
+  download_url?: string;
+  file_name: string;
+  format: ReportFormat;
+  generated_at: string;
+  message: string;
+}
+
+export interface ReportSchedule {
+  id: string;
+  name: string;
+  report_type: ReportType;
+  role_target: UserRole;
+  created_by: string;
+  mine_id?: string;
+  schedule: ScheduleConfig;
+  recipients: EmailRecipient[];
+  config: ReportScheduleConfig;
+  is_active: boolean;
+  next_run: string;
+  last_run?: string;
+  created_at: string;
+}
+
+export interface CreateScheduleRequest {
+  name: string;
+  report_type: ReportType;
+  mine_id?: string;
+  schedule: ScheduleConfig;
+  recipients: EmailRecipient[];
+  config: ReportScheduleConfig;
+}
+
+export interface UpdateScheduleRequest {
+  name?: string;
+  schedule?: ScheduleConfig;
+  recipients?: EmailRecipient[];
+  config?: ReportScheduleConfig;
+  is_active?: boolean;
+}
+
+export interface ReportHistory {
+  id: string;
+  schedule_id?: string;
+  report_type: ReportType;
+  format: ReportFormat;
+  generated_by: string;
+  mine_id?: string;
+  file_path: string;
+  file_size: number;
+  status: 'success' | 'failed';
+  error_message?: string;
+  generated_at: string;
+  email_sent: boolean;
+  recipients_count: number;
+}
