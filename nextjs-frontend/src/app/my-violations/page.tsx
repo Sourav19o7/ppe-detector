@@ -12,13 +12,12 @@ import {
   Shield,
   TrendingUp,
   TrendingDown,
+  X,
+  Eye,
 } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Card, StatCard } from '@/components/Card';
 import { Spinner } from '@/components/Loading';
-import { useAuthStore } from '@/lib/store';
-import { workerApi } from '@/lib/api';
-import { formatTime } from '@/lib/utils';
 
 interface Violation {
   id: string;
@@ -27,6 +26,9 @@ interface Violation {
   violations: string[];
   status: string;
   shift: string;
+  zone?: string;
+  acknowledged?: boolean;
+  image_url?: string;
 }
 
 interface ViolationStats {
@@ -36,8 +38,75 @@ interface ViolationStats {
   mostCommon: string;
 }
 
+// Mock violations data for Stavan Sheth
+const mockViolations: Violation[] = [
+  {
+    id: 'v1',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    gate_name: 'Gate A - Main Entry',
+    violations: ['NO-HELMET'],
+    status: 'recorded',
+    shift: 'Morning',
+    zone: 'Zone A - Mining Area',
+    acknowledged: true,
+    image_url: '/violations/v1.jpg',
+  },
+  {
+    id: 'v2',
+    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    gate_name: 'Gate B - Equipment Zone',
+    violations: ['NO-VEST', 'NO-GLOVES'],
+    status: 'recorded',
+    shift: 'Afternoon',
+    zone: 'Zone B - Equipment Area',
+    acknowledged: true,
+    image_url: '/violations/v2.jpg',
+  },
+  {
+    id: 'v3',
+    timestamp: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+    gate_name: 'Gate A - Main Entry',
+    violations: ['NO-BOOTS'],
+    status: 'recorded',
+    shift: 'Morning',
+    zone: 'Zone A - Mining Area',
+    acknowledged: false,
+    image_url: '/violations/v3.jpg',
+  },
+  {
+    id: 'v4',
+    timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+    gate_name: 'Gate C - Storage',
+    violations: ['NO-HELMET', 'NO-VEST'],
+    status: 'recorded',
+    shift: 'Night',
+    zone: 'Zone C - Storage Area',
+    acknowledged: true,
+    image_url: '/violations/v4.jpg',
+  },
+  {
+    id: 'v5',
+    timestamp: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000).toISOString(),
+    gate_name: 'Gate A - Main Entry',
+    violations: ['NO-GLOVES'],
+    status: 'recorded',
+    shift: 'Morning',
+    zone: 'Zone A - Mining Area',
+    acknowledged: true,
+  },
+  {
+    id: 'v6',
+    timestamp: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+    gate_name: 'Gate B - Equipment Zone',
+    violations: ['NO-VEST'],
+    status: 'recorded',
+    shift: 'Afternoon',
+    zone: 'Zone B - Equipment Area',
+    acknowledged: true,
+  },
+];
+
 export default function MyViolationsPage() {
-  const { worker } = useAuthStore();
   const [violations, setViolations] = useState<Violation[]>([]);
   const [stats, setStats] = useState<ViolationStats>({
     total: 0,
@@ -46,68 +115,48 @@ export default function MyViolationsPage() {
     mostCommon: '-',
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [filter, setFilter] = useState<'all' | 'week' | 'month'>('all');
-  const limit = 10;
+  const [selectedViolation, setSelectedViolation] = useState<Violation | null>(null);
+  const limit = 5;
 
   useEffect(() => {
     loadViolations();
   }, [page, filter]);
 
   const loadViolations = async () => {
-    if (!worker) return;
+    setLoading(true);
 
-    try {
-      setLoading(true);
-      const data = await workerApi.getViolations(worker.id);
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Process violations data
-      const processedViolations: Violation[] = (data || []).map((v: any) => ({
-        id: v.id || v._id,
-        timestamp: v.timestamp,
-        gate_name: v.gate_name,
-        violations: v.violations || [],
-        status: v.status || 'recorded',
-        shift: v.shift || 'unknown',
-      }));
+    // Filter violations based on time period
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      setViolations(processedViolations);
-      setTotalPages(Math.ceil((processedViolations.length || 0) / limit));
-
-      // Calculate stats
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-      const allViolations = data || [];
+      const allViolations = data.violations || [];
       const weekViolations = allViolations.filter((v: any) => new Date(v.timestamp) >= weekAgo);
       const monthViolations = allViolations.filter((v: any) => new Date(v.timestamp) >= monthAgo);
 
-      // Find most common violation type
-      const violationCounts: Record<string, number> = {};
-      allViolations.forEach((v: any) => {
-        (v.violations || []).forEach((type: string) => {
-          violationCounts[type] = (violationCounts[type] || 0) + 1;
-        });
+    // Find most common violation type
+    const violationCounts: Record<string, number> = {};
+    mockViolations.forEach(v => {
+      v.violations.forEach(type => {
+        violationCounts[type] = (violationCounts[type] || 0) + 1;
       });
-      const mostCommon = Object.entries(violationCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
+    });
+    const mostCommon = Object.entries(violationCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
 
-      setStats({
-        total: allViolations.length,
-        thisWeek: weekViolations.length,
-        thisMonth: monthViolations.length,
-        mostCommon: mostCommon.replace('NO-', 'Missing '),
-      });
+    setStats({
+      total: mockViolations.length,
+      thisWeek: weekViolations.length,
+      thisMonth: monthViolations.length,
+      mostCommon: mostCommon.replace('NO-', 'Missing '),
+    });
 
-      setError(null);
-    } catch (err) {
-      setError('Failed to load violations');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
   const getViolationColor = (type: string) => {
@@ -121,10 +170,30 @@ export default function MyViolationsPage() {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-stone-800">My Violations</h1>
-          <p className="text-stone-500 mt-1">Track and learn from your PPE compliance history</p>
+        {/* Header with Filter */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-stone-800">My Violations</h1>
+            <p className="text-stone-500 mt-1">Track and learn from your PPE compliance history</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-stone-400" />
+            <div className="flex bg-stone-100 rounded-lg p-1">
+              {(['all', 'week', 'month'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => { setFilter(f); setPage(0); }}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    filter === f
+                      ? 'bg-white text-orange-600 shadow-sm'
+                      : 'text-stone-600 hover:text-stone-800'
+                  }`}
+                >
+                  {f === 'all' ? 'All Time' : f === 'week' ? 'This Week' : 'This Month'}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Stats */}
@@ -190,19 +259,18 @@ export default function MyViolationsPage() {
               <div className="flex items-center justify-center py-12">
                 <Spinner size="lg" />
               </div>
-            ) : error ? (
-              <div className="text-center py-12 text-red-500">{error}</div>
             ) : (
               <>
                 <div className="space-y-4">
                   {violations.map((violation) => (
-                    <div
+                    <button
                       key={violation.id}
-                      className="p-4 bg-stone-50 rounded-xl border border-stone-100"
+                      onClick={() => setSelectedViolation(violation)}
+                      className="w-full p-4 bg-stone-50 rounded-xl border border-stone-100 hover:border-orange-200 hover:bg-orange-50/30 transition-all text-left group"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-red-200 transition-colors">
                             <AlertTriangle className="w-5 h-5 text-red-600" />
                           </div>
                           <div>
@@ -234,11 +302,14 @@ export default function MyViolationsPage() {
                             </div>
                           </div>
                         </div>
-                        <span className="text-xs px-2 py-1 bg-stone-200 text-stone-600 rounded-full capitalize">
-                          {violation.shift}
-                        </span>
+                        <div className="flex flex-col items-end gap-2">
+                          <span className="text-xs px-2 py-1 bg-stone-200 text-stone-600 rounded-full capitalize">
+                            {violation.shift}
+                          </span>
+                          <Eye className="w-4 h-4 text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
 
@@ -312,6 +383,145 @@ export default function MyViolationsPage() {
             </div>
           </div>
         </Card>
+
+        {/* Violation Detail Modal */}
+        {selectedViolation && (
+          <div
+            className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4"
+            onClick={() => setSelectedViolation(null)}
+          >
+            <div
+              className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto animate-slide-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white border-b border-stone-200 p-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-stone-800">Violation Details</h3>
+                <button
+                  onClick={() => setSelectedViolation(null)}
+                  className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4 space-y-4">
+                {/* Violation Types */}
+                <div className="bg-red-50 rounded-xl p-4 border border-red-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                      <AlertTriangle className="w-6 h-6 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-red-600 font-medium">PPE Violation Detected</p>
+                      <p className="text-xs text-red-500">
+                        {new Date(selectedViolation.timestamp).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedViolation.violations.map((type, i) => (
+                      <span
+                        key={i}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium ${getViolationColor(type)}`}
+                      >
+                        {type.replace('NO-', 'Missing ')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-stone-50 rounded-xl p-3">
+                    <div className="flex items-center gap-2 text-stone-500 mb-1">
+                      <Clock className="w-4 h-4" />
+                      <span className="text-xs font-medium">Time</span>
+                    </div>
+                    <p className="text-sm font-semibold text-stone-800">
+                      {new Date(selectedViolation.timestamp).toLocaleTimeString()}
+                    </p>
+                  </div>
+                  <div className="bg-stone-50 rounded-xl p-3">
+                    <div className="flex items-center gap-2 text-stone-500 mb-1">
+                      <Calendar className="w-4 h-4" />
+                      <span className="text-xs font-medium">Shift</span>
+                    </div>
+                    <p className="text-sm font-semibold text-stone-800 capitalize">
+                      {selectedViolation.shift}
+                    </p>
+                  </div>
+                  <div className="bg-stone-50 rounded-xl p-3">
+                    <div className="flex items-center gap-2 text-stone-500 mb-1">
+                      <MapPin className="w-4 h-4" />
+                      <span className="text-xs font-medium">Gate</span>
+                    </div>
+                    <p className="text-sm font-semibold text-stone-800">
+                      {selectedViolation.gate_name || 'Unknown'}
+                    </p>
+                  </div>
+                  <div className="bg-stone-50 rounded-xl p-3">
+                    <div className="flex items-center gap-2 text-stone-500 mb-1">
+                      <Shield className="w-4 h-4" />
+                      <span className="text-xs font-medium">Zone</span>
+                    </div>
+                    <p className="text-sm font-semibold text-stone-800">
+                      {selectedViolation.zone || 'General Area'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl">
+                  <span className="text-sm text-stone-600">Acknowledgment Status</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    selectedViolation.acknowledged
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {selectedViolation.acknowledged ? 'Acknowledged' : 'Pending'}
+                  </span>
+                </div>
+
+                {/* Safety Reminder */}
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <Shield className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-orange-800 text-sm">Safety Reminder</p>
+                      <p className="text-xs text-orange-700 mt-1">
+                        {selectedViolation.violations.includes('NO-HELMET') &&
+                          'Always wear your safety helmet before entering any work zone. It protects against head injuries from falling objects.'}
+                        {selectedViolation.violations.includes('NO-VEST') &&
+                          'High-visibility vests are essential for being seen by equipment operators and ensuring your safety in all areas.'}
+                        {selectedViolation.violations.includes('NO-GLOVES') &&
+                          'Safety gloves protect your hands from cuts, burns, and chemical exposure. Always wear appropriate gloves for the task.'}
+                        {selectedViolation.violations.includes('NO-BOOTS') &&
+                          'Steel-toe boots protect against heavy falling objects and provide stability on uneven surfaces.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="sticky bottom-0 bg-white border-t border-stone-200 p-4">
+                <button
+                  onClick={() => setSelectedViolation(null)}
+                  className="w-full py-3 bg-orange-500 text-white rounded-xl font-semibold hover:bg-orange-600 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

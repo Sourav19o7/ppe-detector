@@ -197,8 +197,7 @@ export default function WorkersPage() {
       for (let i = 0; i < files.length; i++) {
         await employeeApi.registerFace(
           selectedWorker.employee_id,
-          files[i],
-          i === 0 ? undefined : `angle_${i}` // Only first is primary
+          files[i]
         );
       }
       setMessage({
