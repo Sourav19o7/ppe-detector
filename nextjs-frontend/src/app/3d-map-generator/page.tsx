@@ -62,6 +62,7 @@ export default function Map3DGeneratorPage() {
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const minimapCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Three.js refs
   const sceneRef = useRef<any>(null);
@@ -267,6 +268,12 @@ export default function Map3DGeneratorPage() {
 
       // Extract mine data
       const mineData = extractMineDataFn(lines, contours, originalCanvas.width, originalCanvas.height);
+      console.log('Extracted mine data:', {
+        wallCount: mineData.walls.length,
+        roomCount: mineData.rooms.length,
+        bounds: mineData.bounds,
+        sampleWalls: mineData.walls.slice(0, 3)
+      });
       setProcessedData(mineData);
 
       // Set up processed canvas dimensions
@@ -312,6 +319,20 @@ export default function Map3DGeneratorPage() {
     }
   }, [cvReady, threshold, uploadedImage, extractMineDataFn, createFallbackMineData]);
 
+  // Check if scripts are already loaded on mount
+  useEffect(() => {
+    // Check if Three.js is already available
+    if (window.THREE && !threeReady) {
+      setThreeReady(true);
+      console.log('Three.js already available');
+    }
+    // Check if OpenCV is already available
+    if (window.cv && window.cv.Mat && !cvReady) {
+      setCvReady(true);
+      console.log('OpenCV already available');
+    }
+  }, [threeReady, cvReady]);
+
   // Draw original image on canvas
   useEffect(() => {
     if (uploadedImage && originalCanvasRef.current) {
@@ -346,6 +367,85 @@ export default function Map3DGeneratorPage() {
       processImage();
     }
   }, [threshold, scale, showPreview, cvReady, uploadedImage, processImage]);
+
+  // Update minimap
+  const updateMinimap = useCallback((camera: any, mineData: MineData) => {
+    const canvas = minimapCanvasRef.current;
+    if (!canvas || !mineData.bounds) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const { minX, maxX, minZ, maxZ } = mineData.bounds;
+    const mapWidth = canvas.width;
+    const mapHeight = canvas.height;
+    const padding = 10;
+
+    // Calculate scale to fit the mine in the minimap
+    const mineWidth = maxX - minX;
+    const mineDepth = maxZ - minZ;
+    const scaleX = (mapWidth - padding * 2) / mineWidth;
+    const scaleZ = (mapHeight - padding * 2) / mineDepth;
+    const mapScale = Math.min(scaleX, scaleZ);
+
+    // Helper to convert world coords to minimap coords
+    const toMapX = (x: number) => padding + (x - minX) * mapScale;
+    const toMapZ = (z: number) => padding + (z - minZ) * mapScale;
+
+    // Clear canvas
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(0, 0, mapWidth, mapHeight);
+
+    // Draw walls
+    ctx.strokeStyle = '#4ade80'; // Green
+    ctx.lineWidth = 2;
+    mineData.walls.forEach(wall => {
+      ctx.beginPath();
+      ctx.moveTo(toMapX(wall.start.x), toMapZ(wall.start.z));
+      ctx.lineTo(toMapX(wall.end.x), toMapZ(wall.end.z));
+      ctx.stroke();
+    });
+
+    // Draw rooms as filled areas
+    ctx.fillStyle = 'rgba(74, 222, 128, 0.1)';
+    mineData.rooms.forEach(room => {
+      const rx = toMapX(room.center.x - room.width / 2);
+      const rz = toMapZ(room.center.z - room.depth / 2);
+      const rw = room.width * mapScale;
+      const rd = room.depth * mapScale;
+      ctx.fillRect(rx, rz, rw, rd);
+    });
+
+    // Draw player position
+    const playerX = toMapX(camera.position.x);
+    const playerZ = toMapZ(camera.position.z);
+
+    // Player direction indicator (triangle)
+    ctx.save();
+    ctx.translate(playerX, playerZ);
+    ctx.rotate(-eulerRef.current.y); // Rotate based on camera direction
+
+    ctx.fillStyle = '#f97316'; // Orange
+    ctx.beginPath();
+    ctx.moveTo(0, -8); // Point forward
+    ctx.lineTo(-5, 5);
+    ctx.lineTo(5, 5);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+
+    // Draw player dot
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(playerX, playerZ, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw border
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, mapWidth, mapHeight);
+  }, []);
 
   // Generate 3D environment
   const generate3DEnvironment = useCallback(async () => {
@@ -384,6 +484,12 @@ export default function Map3DGeneratorPage() {
 
     const THREE = window.THREE;
     const mineData = processedData;
+
+    console.log('Initializing 3D scene with mine data:', {
+      wallCount: mineData.walls.length,
+      roomCount: mineData.rooms.length,
+      bounds: mineData.bounds
+    });
 
     // Scene setup
     const scene = new THREE.Scene();
@@ -455,6 +561,9 @@ export default function Map3DGeneratorPage() {
         camera.position.z = Math.max(minZ - 5, Math.min(maxZ + 5, camera.position.z));
       }
 
+      // Update minimap
+      updateMinimap(camera, mineData);
+
       renderer.render(scene, camera);
     };
 
@@ -475,7 +584,7 @@ export default function Map3DGeneratorPage() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [processedData, addDust, addLights]);
+  }, [processedData, addDust, addLights, updateMinimap]);
 
   // Create lighting
   const createLighting = (scene: any, mineData: MineData) => {
@@ -555,7 +664,8 @@ export default function Map3DGeneratorPage() {
       roughness: 0.9,
       metalness: 0.1,
       bumpMap: rockTexture,
-      bumpScale: 0.3
+      bumpScale: 0.3,
+      side: THREE.DoubleSide  // Make walls visible from both sides
     });
 
     const floorMaterial = new THREE.MeshStandardMaterial({
@@ -591,25 +701,36 @@ export default function Map3DGeneratorPage() {
       scene.add(ceiling);
     }
 
-    // Walls
+    // Walls - using PlaneGeometry like ar-min repo for proper wall rendering
     mineData.walls.forEach(wall => {
       const dx = wall.end.x - wall.start.x;
       const dz = wall.end.z - wall.start.z;
       const length = Math.sqrt(dx * dx + dz * dz);
-      const angle = Math.atan2(dx, dz);
 
-      const wallGeom = new THREE.BoxGeometry(0.3, wall.height, length);
+      // Skip walls that are too short
+      if (length < 0.5) return;
+
+      // Calculate angle - atan2(dz, dx) gives angle from X-axis
+      const angle = Math.atan2(dz, dx);
+
+      // Create wall as a plane (like ar-min) - DoubleSide material makes it visible from both sides
+      const wallGeom = new THREE.PlaneGeometry(length, wall.height);
       const wallMesh = new THREE.Mesh(wallGeom, wallMaterial);
 
       const centerX = (wall.start.x + wall.end.x) / 2;
       const centerZ = (wall.start.z + wall.end.z) / 2;
 
       wallMesh.position.set(centerX, wall.height / 2, centerZ);
-      wallMesh.rotation.y = angle;
+      // Rotate the plane to align with the wall direction
+      // PlaneGeometry faces +Z by default, so we rotate to align with the wall vector
+      wallMesh.rotation.y = -angle;
       wallMesh.castShadow = true;
       wallMesh.receiveShadow = true;
       scene.add(wallMesh);
     });
+
+    // Also log wall count for debugging
+    console.log('Created', mineData.walls.length, 'walls in 3D scene');
 
     // Rails
     if (mineData.bounds) {
@@ -866,13 +987,26 @@ export default function Map3DGeneratorPage() {
       {/* Load Three.js */}
       <Script
         src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
-        onLoad={() => setThreeReady(true)}
-        strategy="beforeInteractive"
+        onLoad={() => {
+          console.log('Three.js script loaded');
+          // Check if THREE is available
+          const checkThreeReady = () => {
+            if (window.THREE) {
+              setThreeReady(true);
+              console.log('Three.js is ready');
+            } else {
+              setTimeout(checkThreeReady, 100);
+            }
+          };
+          checkThreeReady();
+        }}
+        strategy="afterInteractive"
       />
       {/* Load OpenCV.js */}
       <Script
         src="https://docs.opencv.org/4.x/opencv.js"
         onLoad={() => {
+          console.log('OpenCV.js script loaded');
           // OpenCV.js loads asynchronously and needs time to initialize
           const checkCvReady = () => {
             if (window.cv && window.cv.Mat) {
@@ -930,6 +1064,20 @@ export default function Map3DGeneratorPage() {
                   <span className="font-medium">{wallCount}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Minimap */}
+            <div className="absolute top-4 right-4 bg-black/50 rounded-xl p-2 shadow-lg">
+              <div className="text-xs font-semibold text-white tracking-wider mb-2 flex items-center gap-2">
+                <Map size={14} />
+                MINIMAP
+              </div>
+              <canvas
+                ref={minimapCanvasRef}
+                width={180}
+                height={180}
+                className="rounded-lg"
+              />
             </div>
 
             {/* Action buttons */}
@@ -1131,9 +1279,18 @@ export default function Map3DGeneratorPage() {
                   className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-semibold text-lg flex items-center justify-center gap-2 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Play size={20} />
-                  Generate 3D Environment
+                  {!threeReady ? 'Loading 3D Engine...' : !processedData ? 'Processing Blueprint...' : 'Generate 3D Environment'}
                   <ChevronRight size={20} />
                 </button>
+
+                {/* Loading status indicator */}
+                {(!threeReady || !cvReady) && (
+                  <p className="text-center text-sm text-stone-400 mt-2">
+                    {!threeReady && !cvReady ? 'Loading Three.js and OpenCV...' :
+                     !threeReady ? 'Loading Three.js...' :
+                     !cvReady ? 'Loading OpenCV...' : ''}
+                  </p>
+                )}
               </div>
             )}
           </div>
