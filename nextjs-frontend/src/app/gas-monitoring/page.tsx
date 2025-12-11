@@ -68,7 +68,7 @@ interface GasStats {
 }
 
 export default function GasMonitoringPage() {
-  const { getMineId } = useAuthStore();
+  const { getMineIds } = useAuthStore();
   const [latestReadings, setLatestReadings] = useState<GasReading[]>([]);
   const [stats, setStats] = useState<GasStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,15 +79,63 @@ export default function GasMonitoringPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const mineId = getMineId();
+      const mineIds = getMineIds();
+      const mineId = mineIds.length > 0 ? mineIds[0] : undefined;
 
-      const [latestData, statsData] = await Promise.all([
-        gasSensorApi.getLatest(mineId || undefined),
-        gasSensorApi.getStats(mineId || undefined, timeRange),
-      ]);
+      const latestData = await gasSensorApi.getLatest(mineId);
 
-      setLatestReadings(latestData.readings || []);
-      setStats(statsData);
+      // Transform latest readings to expected format
+      const readings: GasReading[] = latestData.map((sensor: { sensor_id: string; mine_id: string; latest: { timestamp: string; gas_type: string; value: number; unit: string; status: string } }, index: number) => {
+        const isMethane = sensor.latest?.gas_type?.toLowerCase().includes('methane') || sensor.latest?.gas_type === 'CH4';
+        const status = sensor.latest?.status || 'normal';
+        const severity = status === 'critical' ? 'critical' : status === 'danger' || status === 'high' ? 'high' : status === 'warning' || status === 'medium' ? 'medium' : 'normal';
+
+        return {
+          id: `${sensor.sensor_id}-${index}`,
+          mine_id: sensor.mine_id,
+          mine_name: `Mine ${sensor.mine_id}`,
+          sensor_id: sensor.sensor_id,
+          methane_ppm: isMethane ? (sensor.latest?.value || 0) : 0,
+          co_ppm: !isMethane ? (sensor.latest?.value || 0) : 0,
+          pressure_hpa: 1013,
+          altitude_m: 0,
+          severity: severity as 'normal' | 'medium' | 'high' | 'critical',
+          timestamp: sensor.latest?.timestamp || new Date().toISOString(),
+        };
+      });
+
+      setLatestReadings(readings);
+
+      // Create stats from latest data
+      const dangerCount = readings.filter(r => r.severity === 'high' || r.severity === 'critical').length;
+      const methaneValues = readings.map(r => r.methane_ppm).filter(v => v > 0);
+      const coValues = readings.map(r => r.co_ppm).filter(v => v > 0);
+
+      const getAvgMaxMin = (arr: number[]) => {
+        if (arr.length === 0) return { current: 0, avg: 0, max: 0, min: 0 };
+        return {
+          current: arr[0] || 0,
+          avg: arr.reduce((a, b) => a + b, 0) / arr.length,
+          max: Math.max(...arr),
+          min: Math.min(...arr),
+        };
+      };
+
+      const statsFromReadings: GasStats = {
+        total_readings: readings.length,
+        time_range_hours: timeRange,
+        methane: getAvgMaxMin(methaneValues),
+        co: getAvgMaxMin(coValues),
+        severity_distribution: {
+          normal: readings.filter(r => r.severity === 'normal').length,
+          medium: readings.filter(r => r.severity === 'medium').length,
+          high: readings.filter(r => r.severity === 'high').length,
+          critical: readings.filter(r => r.severity === 'critical').length,
+        },
+        total_alerts: dangerCount,
+        is_safe: dangerCount === 0,
+      };
+      setStats(statsFromReadings);
       setError(null);
     } catch (err) {
       setError('Failed to load gas monitoring data');
@@ -95,7 +143,7 @@ export default function GasMonitoringPage() {
     } finally {
       setLoading(false);
     }
-  }, [getMineId, timeRange]);
+  }, [getMineIds, timeRange]);
 
   useEffect(() => {
     loadData();

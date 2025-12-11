@@ -53,16 +53,14 @@ export default function AttendancePage() {
         ? await attendanceApi.checkIn(capturedFile)
         : await attendanceApi.checkOut(capturedFile);
 
+      // Response is the attendance record - attendance was successful
       setResult({
-        success: response.success,
-        message: response.message,
+        success: true,
+        message: mode === 'check_in' ? 'Check-in successful!' : 'Check-out successful!',
         image: response.image,
-        detections: response.detections,
       });
 
-      if (response.success) {
-        loadTodayAttendance();
-      }
+      loadTodayAttendance();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
       setResult({

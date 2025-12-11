@@ -42,14 +42,14 @@ export default function ReportsPage() {
 
     try {
       if (reportType === 'attendance') {
-        const report = await reportsApi.getAttendanceReport(
+        const report = await reportsApi.getAttendance(
           startDate,
           endDate,
           selectedEmployee || undefined
         );
         setAttendanceReport(report);
       } else {
-        const report = await reportsApi.getViolationsReport(
+        const report = await reportsApi.getViolations(
           startDate,
           endDate,
           selectedEmployee || undefined

@@ -38,10 +38,10 @@ export default function CompliancePage() {
       setLoading(true);
       const [dashboardData, workersData] = await Promise.all([
         dashboardApi.getSafetyOfficer(),
-        workerApi.list({ is_active: true, limit: 100 }),
+        workerApi.getAll({ limit: 100 }),
       ]);
       setData(dashboardData);
-      setWorkers(workersData.workers);
+      setWorkers(workersData);
       setError(null);
     } catch (err) {
       setError('Failed to load compliance data');

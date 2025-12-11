@@ -15,15 +15,15 @@ import WorkerDashboard from '@/components/dashboards/WorkerDashboard';
 import SuperAdminDashboard from '@/components/dashboards/SuperAdminDashboard';
 
 export default function DashboardPage() {
-  const { getRole, isAuthenticated, userType, _hasHydrated } = useAuthStore();
+  const { getRole, isAuthenticated, userType } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Wait for both component mount and Zustand hydration
-  if (!mounted || !_hasHydrated) {
+  // Wait for component mount
+  if (!mounted) {
     return (
       <AppLayout>
         <PageLoading />

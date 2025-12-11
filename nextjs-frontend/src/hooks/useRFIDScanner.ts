@@ -18,13 +18,16 @@ interface UseRFIDScannerOptions {
   mockMode?: boolean; // Enable keyboard shortcuts for testing (fallback if WebSocket fails)
 }
 
-interface RFIDScannerState {
+interface RFIDScannerStateData {
   isConnected: boolean;
   lastScan: RFIDScanEvent | null;
   error: string | null;
   scanning: boolean;
   gateStatus: 'OPEN' | 'CLOSED';
   result: 'WAITING' | 'SCANNING' | 'PASS' | 'FAIL';
+}
+
+interface RFIDScannerState extends RFIDScannerStateData {
   startRFIDScan: () => Promise<boolean>;
 }
 
@@ -53,7 +56,7 @@ interface RFIDBackendState {
  * - Press 'S' to simulate shoes RFID scan
  */
 export function useRFIDScanner({ enabled, onScan, mockMode = false }: UseRFIDScannerOptions): RFIDScannerState {
-  const [state, setState] = useState<RFIDScannerState>({
+  const [state, setState] = useState<RFIDScannerStateData>({
     isConnected: false,
     lastScan: null,
     error: null,

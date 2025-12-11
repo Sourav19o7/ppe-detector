@@ -71,11 +71,11 @@ export default function UsersPage() {
     try {
       setLoading(true);
       const [usersData, minesData] = await Promise.all([
-        userApi.list({ limit: 100 }),
-        mineApi.list({ is_active: true }),
+        userApi.getAll({ limit: 100 }),
+        mineApi.getAll(),
       ]);
-      setUsers(usersData.users);
-      setMines(minesData.mines);
+      setUsers(usersData);
+      setMines(minesData);
       setError(null);
     } catch (err) {
       setError('Failed to load users');

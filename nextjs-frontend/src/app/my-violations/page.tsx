@@ -61,10 +61,10 @@ export default function MyViolationsPage() {
 
     try {
       setLoading(true);
-      const data = await workerApi.getViolations(worker.id, page * limit, limit);
+      const data = await workerApi.getViolations(worker.id);
 
       // Process violations data
-      const processedViolations: Violation[] = (data.violations || []).map((v: any) => ({
+      const processedViolations: Violation[] = (data || []).map((v: any) => ({
         id: v.id || v._id,
         timestamp: v.timestamp,
         gate_name: v.gate_name,
@@ -74,14 +74,14 @@ export default function MyViolationsPage() {
       }));
 
       setViolations(processedViolations);
-      setTotalPages(Math.ceil((data.total || 0) / limit));
+      setTotalPages(Math.ceil((processedViolations.length || 0) / limit));
 
       // Calculate stats
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      const allViolations = data.violations || [];
+      const allViolations = data || [];
       const weekViolations = allViolations.filter((v: any) => new Date(v.timestamp) >= weekAgo);
       const monthViolations = allViolations.filter((v: any) => new Date(v.timestamp) >= monthAgo);
 
@@ -95,7 +95,7 @@ export default function MyViolationsPage() {
       const mostCommon = Object.entries(violationCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
 
       setStats({
-        total: data.total || 0,
+        total: allViolations.length,
         thisWeek: weekViolations.length,
         thisMonth: monthViolations.length,
         mostCommon: mostCommon.replace('NO-', 'Missing '),

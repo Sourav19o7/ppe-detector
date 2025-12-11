@@ -41,7 +41,7 @@ const defaultPPEItems: PPEItem[] = [
 ];
 
 export default function PPEConfigPage() {
-  const { getMineId } = useAuthStore();
+  const { getMineIds } = useAuthStore();
   const [mines, setMines] = useState<Mine[]>([]);
   const [selectedMine, setSelectedMine] = useState<string>('');
   const [selectedZone, setSelectedZone] = useState<string>('all');
@@ -59,14 +59,15 @@ export default function PPEConfigPage() {
   const loadMines = async () => {
     try {
       setLoading(true);
-      const mineId = getMineId();
-      const data = await mineApi.list({ is_active: true });
-      setMines(data.mines);
+      const mineIds = getMineIds();
+      const mineId = mineIds.length > 0 ? mineIds[0] : undefined;
+      const data = await mineApi.getAll();
+      setMines(data);
 
-      if (mineId && data.mines.find(m => m.id === mineId)) {
+      if (mineId && data.find(m => m.id === mineId)) {
         setSelectedMine(mineId);
-      } else if (data.mines.length > 0) {
-        setSelectedMine(data.mines[0].id);
+      } else if (data.length > 0) {
+        setSelectedMine(data[0].id);
       }
     } catch (err) {
       console.error('Failed to load mines:', err);

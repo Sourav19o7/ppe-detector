@@ -74,8 +74,8 @@ export default function MinesPage() {
   const loadMines = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/mines', token);
-      const minesData = response.mines || response || [];
+      const response = await apiClient.get('/mines');
+      const minesData = response.data?.mines || response.data || [];
       setMines(minesData);
     } catch (err) {
       console.error('Failed to load mines:', err);
@@ -152,13 +152,13 @@ export default function MinesPage() {
 
     try {
       if (editingMine) {
-        await apiClient.put(`/mines/${editingMine.mine_id}`, formData, token);
+        await apiClient.put(`/mines/${editingMine.mine_id}`, formData);
         setMines(mines.map(m =>
           m.mine_id === editingMine.mine_id ? { ...m, ...formData } : m
         ));
         setMessage({ type: 'success', text: 'Mine updated successfully' });
       } else {
-        const response = await apiClient.post('/mines', formData, token);
+        const response = await apiClient.post('/mines', formData);
         const newMine = response.data || response || {
           ...formData,
           total_workers: 0,
@@ -197,7 +197,7 @@ export default function MinesPage() {
     if (!confirm(`Are you sure you want to delete ${mine.name}?`)) return;
 
     try {
-      await apiClient.delete(`/mines/${mine.mine_id}`, token);
+      await apiClient.delete(`/mines/${mine.mine_id}`);
       setMines(mines.filter(m => m.mine_id !== mine.mine_id));
       setMessage({ type: 'success', text: 'Mine deleted successfully' });
     } catch (err) {

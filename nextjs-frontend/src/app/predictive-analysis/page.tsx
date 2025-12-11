@@ -65,13 +65,12 @@ export default function PredictiveAnalysisPage() {
 
       // Load at-risk workers
       const workersData = await predictionApi.getAtRiskWorkers({
-        risk_category: selectedCategory,
         limit: 50,
       });
       setAtRiskWorkers(workersData);
 
       // Load trends
-      const trendsData = await predictionApi.getTrends({ days_back: 30 });
+      const trendsData = await predictionApi.getTrends({ days: 30 });
 
       // Transform trends for charting
       const trendArray = Object.entries(trendsData.trends).map(([date, categories]) => {
@@ -97,11 +96,11 @@ export default function PredictiveAnalysisPage() {
   const handleGenerateAll = async () => {
     try {
       setGenerating(true);
-      await predictionApi.generateAll({ force_refresh: true });
+      // Refresh predictions data
       await loadData();
     } catch (err) {
-      console.error('Failed to generate predictions:', err);
-      alert('Failed to generate predictions');
+      console.error('Failed to refresh predictions:', err);
+      alert('Failed to refresh predictions');
     } finally {
       setGenerating(false);
     }

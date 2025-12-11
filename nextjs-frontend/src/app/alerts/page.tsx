@@ -55,8 +55,8 @@ export default function AlertsPage() {
   const loadAlerts = async () => {
     try {
       setIsLoading(true);
-      const response = await apiClient.get('/alerts', token);
-      const alertsData = response.alerts || response || [];
+      const response = await apiClient.get('/alerts');
+      const alertsData = response.data?.alerts || response.data || [];
       setAlerts(alertsData);
     } catch (err) {
       console.error('Failed to load alerts:', err);
@@ -152,7 +152,7 @@ export default function AlertsPage() {
 
   const handleAcknowledge = async (alert: Alert) => {
     try {
-      await apiClient.put(`/alerts/${alert.id}/acknowledge`, {}, token);
+      await apiClient.put(`/alerts/${alert.id}/acknowledge`, {});
       setAlerts(alerts.map(a =>
         a.id === alert.id
           ? {
@@ -183,7 +183,7 @@ export default function AlertsPage() {
 
   const handleResolve = async (alert: Alert) => {
     try {
-      await apiClient.put(`/alerts/${alert.id}/resolve`, {}, token);
+      await apiClient.put(`/alerts/${alert.id}/resolve`, {});
       setAlerts(alerts.map(a =>
         a.id === alert.id
           ? {
@@ -215,7 +215,7 @@ export default function AlertsPage() {
 
   const handleDismiss = async (alert: Alert) => {
     try {
-      await apiClient.put(`/alerts/${alert.id}/dismiss`, {}, token);
+      await apiClient.put(`/alerts/${alert.id}/dismiss`, {});
       setAlerts(alerts.map(a =>
         a.id === alert.id ? { ...a, status: 'dismissed' } : a
       ));

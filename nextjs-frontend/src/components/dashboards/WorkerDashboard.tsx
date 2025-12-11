@@ -50,7 +50,7 @@ export default function WorkerDashboard() {
 
   const handleAcknowledgeNotification = async (id: string) => {
     try {
-      await alertApi.acknowledgeWarning(id);
+      await alertApi.acknowledge(id);
       loadData();
     } catch (err) {
       console.error('Failed to acknowledge:', err);
