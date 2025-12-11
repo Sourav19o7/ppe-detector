@@ -9,6 +9,7 @@ from bson import ObjectId
 
 from database import get_database
 from auth import get_current_user
+from services.sms_service import get_sms_service
 
 router = APIRouter(prefix="/api/sos-alerts", tags=["SOS Alerts"])
 
@@ -108,10 +109,14 @@ async def create_sos_alert(
         {"$set": {"nearby_workers_notified": nearby_count}}
     )
 
+    # Send SMS alerts to safety officers and managers
+    sms_sent = await send_sos_sms_alerts(db, worker, zone_name, mine_id)
+
     return {
         "success": True,
         "alert_id": str(result.inserted_id),
-        "message": "SOS alert created and broadcast to nearby workers"
+        "message": "SOS alert created and broadcast to nearby workers",
+        "sms_sent": sms_sent
     }
 
 
@@ -123,6 +128,67 @@ async def notify_nearby_workers(db, mine_id: str, zone_id: str, exclude_worker_i
 
     count = await db.workers.count_documents(query)
     return max(0, count - 1)  # Exclude the worker who triggered the alert
+
+
+async def send_sos_sms_alerts(db, worker: dict, zone_name: str, mine_id: str) -> int:
+    """
+    Send SMS alerts to safety officers and managers when SOS is triggered.
+    Returns number of SMS sent successfully.
+    """
+    sms_service = get_sms_service()
+
+    if not sms_service.is_configured():
+        print("[SOS] SMS service not configured, skipping SMS alerts")
+        return 0
+
+    # Get mine name
+    mine_name = None
+    if mine_id:
+        mine = await db.mines.find_one({"_id": ObjectId(mine_id)})
+        if mine:
+            mine_name = mine.get("name")
+
+    # Find users to notify (safety officers and managers for this mine)
+    notify_roles = ["safety_officer", "manager", "shift_incharge", "area_safety_officer"]
+    users_query = {
+        "role": {"$in": notify_roles},
+        "is_active": True,
+        "phone": {"$exists": True, "$ne": None, "$ne": ""}
+    }
+
+    # If mine_id is specified, filter by mine assignment
+    if mine_id:
+        users_query["$or"] = [
+            {"mine_ids": ObjectId(mine_id)},
+            {"mine_ids": {"$exists": False}},  # Users not assigned to specific mines (org-wide)
+            {"role": {"$in": ["area_safety_officer", "general_manager"]}}  # Higher roles see all
+        ]
+
+    users_cursor = db.users.find(users_query)
+
+    sms_sent = 0
+    worker_name = worker.get("name", "Unknown Worker")
+    worker_id = worker.get("employee_id", "Unknown")
+
+    async for user in users_cursor:
+        phone = user.get("phone")
+        if phone:
+            try:
+                result = await sms_service.send_sos_alert(
+                    to=phone,
+                    worker_name=worker_name,
+                    worker_id=worker_id,
+                    location=zone_name,
+                    mine_name=mine_name
+                )
+                if result.get("success"):
+                    sms_sent += 1
+                    print(f"[SOS] SMS sent to {user.get('full_name', user.get('username'))} at {phone}")
+            except Exception as e:
+                print(f"[SOS] Failed to send SMS to {phone}: {e}")
+
+    print(f"[SOS] Total SMS sent: {sms_sent}")
+    return sms_sent
 
 
 @router.get("")

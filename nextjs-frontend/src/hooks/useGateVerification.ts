@@ -256,10 +256,6 @@ export function useGateVerification({
 
       if (identifiedFace && !store.identifiedWorker) {
         const employeeId = identifiedFace.employee_id || identifiedFace.name || '';
-        // Prefer entry.worker_name (from DB) over face recognition name
-        const displayName = response.entry?.worker_name || identifiedFace.name || identifiedFace.employee_id || 'Unknown';
-
-        addLog(`Face identified: ${displayName} (ID: ${employeeId}, conf: ${(identifiedFace.confidence * 100).toFixed(1)}%)`);
 
         // Face recognized - update face ML status
         store.updateMLStatus('face', 'passed', identifiedFace.confidence);
@@ -267,12 +263,12 @@ export function useGateVerification({
         // Try to get worker details from entry or create from face data
         let worker: Worker | null = null;
 
-        if (response.entry?.worker_id) {
+        if (response.entry?.worker_id && response.entry?.worker_name) {
           // We have entry data with worker info from backend (includes actual name from DB)
           worker = {
             id: response.entry.worker_id,
             employee_id: response.entry.employee_id || employeeId,
-            name: response.entry.worker_name || displayName,
+            name: response.entry.worker_name,
             mine_id: mineId || '',
             assigned_shift: 'day',
             face_registered: true,
@@ -282,21 +278,53 @@ export function useGateVerification({
             total_violations: 0,
             badges: [],
           };
-        } else {
-          // Create worker from face recognition data (fallback if no entry)
-          worker = {
-            id: '',
-            employee_id: employeeId,
-            name: displayName,
-            mine_id: mineId || '',
-            assigned_shift: 'day',
-            face_registered: true,
-            is_active: true,
-            created_at: new Date().toISOString(),
-            compliance_score: 100,
-            total_violations: 0,
-            badges: [],
-          };
+          addLog(`Face identified: ${worker.name} (ID: ${employeeId}, conf: ${(identifiedFace.confidence * 100).toFixed(1)}%)`);
+        } else if (employeeId) {
+          // No worker_name from entry - fetch worker details from API using employee_id
+          try {
+            addLog(`Fetching worker details for ${employeeId}...`);
+            const workersResponse = await workerApi.list({ search: employeeId, limit: 1 });
+            if (workersResponse.workers && workersResponse.workers.length > 0) {
+              const fetchedWorker = workersResponse.workers[0];
+              worker = {
+                id: fetchedWorker.id,
+                employee_id: fetchedWorker.employee_id,
+                name: fetchedWorker.name,
+                mine_id: fetchedWorker.mine_id || mineId || '',
+                assigned_shift: fetchedWorker.assigned_shift || 'day',
+                face_registered: fetchedWorker.face_registered ?? true,
+                is_active: fetchedWorker.is_active ?? true,
+                created_at: fetchedWorker.created_at || new Date().toISOString(),
+                compliance_score: fetchedWorker.compliance_score ?? 100,
+                total_violations: fetchedWorker.total_violations ?? 0,
+                badges: fetchedWorker.badges || [],
+              };
+              addLog(`Face identified: ${worker.name} (ID: ${employeeId}, conf: ${(identifiedFace.confidence * 100).toFixed(1)}%)`);
+            }
+          } catch (err) {
+            addLog(`Failed to fetch worker details: ${err}`);
+          }
+
+          // Fallback if API call failed or returned empty
+          if (!worker) {
+            const displayName = identifiedFace.name && identifiedFace.name !== employeeId
+              ? identifiedFace.name
+              : employeeId;
+            worker = {
+              id: '',
+              employee_id: employeeId,
+              name: displayName,
+              mine_id: mineId || '',
+              assigned_shift: 'day',
+              face_registered: true,
+              is_active: true,
+              created_at: new Date().toISOString(),
+              compliance_score: 100,
+              total_violations: 0,
+              badges: [],
+            };
+            addLog(`Face identified (fallback): ${displayName} (ID: ${employeeId}, conf: ${(identifiedFace.confidence * 100).toFixed(1)}%)`);
+          }
         }
 
         if (worker) {
@@ -312,27 +340,55 @@ export function useGateVerification({
     // Also check summary for identified persons (fallback if faces array didn't match)
     if (summary?.identified_persons && summary.identified_persons.length > 0 && !store.identifiedWorker) {
       const employeeId = summary.identified_persons[0];
-      // Get display name from identified_names if available
-      const displayName = summary.identified_names?.[0] || employeeId;
 
       if (employeeId && employeeId !== 'Unknown') {
-        addLog(`Person identified (summary): ${displayName} (ID: ${employeeId})`);
-
         store.updateMLStatus('face', 'passed', 0.85);
 
-        const worker: Worker = {
-          id: '',
-          employee_id: employeeId,
-          name: displayName,
-          mine_id: mineId || '',
-          assigned_shift: 'day',
-          face_registered: true,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          compliance_score: 100,
-          total_violations: 0,
-          badges: [],
-        };
+        let worker: Worker | null = null;
+
+        // Try to fetch worker details from API using employee_id
+        try {
+          addLog(`Fetching worker details for ${employeeId} (summary)...`);
+          const workersResponse = await workerApi.list({ search: employeeId, limit: 1 });
+          if (workersResponse.workers && workersResponse.workers.length > 0) {
+            const fetchedWorker = workersResponse.workers[0];
+            worker = {
+              id: fetchedWorker.id,
+              employee_id: fetchedWorker.employee_id,
+              name: fetchedWorker.name,
+              mine_id: fetchedWorker.mine_id || mineId || '',
+              assigned_shift: fetchedWorker.assigned_shift || 'day',
+              face_registered: fetchedWorker.face_registered ?? true,
+              is_active: fetchedWorker.is_active ?? true,
+              created_at: fetchedWorker.created_at || new Date().toISOString(),
+              compliance_score: fetchedWorker.compliance_score ?? 100,
+              total_violations: fetchedWorker.total_violations ?? 0,
+              badges: fetchedWorker.badges || [],
+            };
+            addLog(`Person identified (summary): ${worker.name} (ID: ${employeeId})`);
+          }
+        } catch (err) {
+          addLog(`Failed to fetch worker details (summary): ${err}`);
+        }
+
+        // Fallback if API call failed or returned empty
+        if (!worker) {
+          const displayName = summary.identified_names?.[0] || employeeId;
+          worker = {
+            id: '',
+            employee_id: employeeId,
+            name: displayName,
+            mine_id: mineId || '',
+            assigned_shift: 'day',
+            face_registered: true,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            compliance_score: 100,
+            total_violations: 0,
+            badges: [],
+          };
+          addLog(`Person identified (summary fallback): ${displayName} (ID: ${employeeId})`);
+        }
 
         store.setIdentifiedWorker(worker, 0.85);
         onWorkerIdentified?.(worker);

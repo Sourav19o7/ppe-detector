@@ -360,8 +360,8 @@ async def seed_database():
 
     workers = []
     worker_names = [
-        ("W001", "Raju Prasad", "Extraction", "day", zone1_1["_id"]),
-        ("W002", "Suresh Kumar", "Extraction", "day", zone1_1["_id"]),
+        ("W001", "Stavan Sheth", "Extraction", "day", zone1_1["_id"]),
+        ("W002", "Tanush Maloo", "Extraction", "day", zone1_1["_id"]),
         ("W003", "Mahesh Rao", "Extraction", "afternoon", zone1_1["_id"]),
         ("W004", "Ganesh Sharma", "Processing", "day", zone1_2["_id"]),
         ("W005", "Prakash Verma", "Processing", "afternoon", zone1_2["_id"]),

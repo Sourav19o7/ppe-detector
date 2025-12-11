@@ -41,7 +41,10 @@ from routes.gas_sensors import router as gas_sensors_router
 from routes.predictions import router as predictions_router
 from routes.sos_alerts import router as sos_alerts_router
 from routes.danger_zones import router as danger_zones_router
+from routes.sms import router as sms_router
+from routes.helmet import router as helmet_router
 from reports import reports_router
+from services.helmet_service import start_helmet_reader
 
 load_dotenv()
 
@@ -66,6 +69,13 @@ async def lifespan(app: FastAPI):
             print(f"Warning: Failed to register report scheduler: {e}")
     except Exception as e:
         print(f"Warning: Failed to start ML scheduler: {e}")
+
+    # Start helmet serial reader
+    try:
+        asyncio.create_task(start_helmet_reader())
+        print("Helmet serial reader started")
+    except Exception as e:
+        print(f"Warning: Failed to start helmet reader: {e}")
 
     yield
     await close_mongodb_connection()
@@ -241,6 +251,8 @@ app.include_router(gas_sensors_router)
 app.include_router(predictions_router)
 app.include_router(sos_alerts_router)
 app.include_router(danger_zones_router)
+app.include_router(sms_router)
+app.include_router(helmet_router)
 app.include_router(reports_router)
 
 

@@ -6,7 +6,7 @@ import { useAuthStore } from '@/lib/store';
 import { authApi } from '@/lib/api';
 import { PageLoading } from './Loading';
 
-const publicPaths = ['/login'];
+const publicPaths = ['/login', '/landing'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();

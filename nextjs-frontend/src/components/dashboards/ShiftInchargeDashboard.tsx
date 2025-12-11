@@ -13,11 +13,16 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  HardHat,
+  Battery,
+  Heart,
+  Siren,
 } from 'lucide-react';
 import { Card, StatCard } from '@/components/Card';
 import { Spinner } from '@/components/Loading';
-import { dashboardApi, gateEntryApi, alertApi } from '@/lib/api';
+import { dashboardApi, gateEntryApi, alertApi, helmetApi, HelmetStats, HelmetReading } from '@/lib/api';
 import { formatTime } from '@/lib/utils';
+import Link from 'next/link';
 import type { ShiftInchargeDashboard as DashboardType, GateEntry } from '@/types';
 
 export default function ShiftInchargeDashboard() {
@@ -25,14 +30,24 @@ export default function ShiftInchargeDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [helmetStats, setHelmetStats] = useState<HelmetStats | null>(null);
+  const [helmetReadings, setHelmetReadings] = useState<HelmetReading[]>([]);
 
   const loadData = useCallback(async (showRefresh = false) => {
     try {
       if (showRefresh) setRefreshing(true);
       else setLoading(true);
 
-      const dashboardData = await dashboardApi.getShiftIncharge();
+      // Load dashboard data and helmet data in parallel
+      const [dashboardData, helmetStatsData, helmetLatest] = await Promise.all([
+        dashboardApi.getShiftIncharge(),
+        helmetApi.getStats().catch(() => null),
+        helmetApi.getLatest().catch(() => ({ readings: [] })),
+      ]);
+
       setData(dashboardData);
+      setHelmetStats(helmetStatsData);
+      setHelmetReadings(helmetLatest.readings || []);
       setError(null);
     } catch (err) {
       setError('Failed to load dashboard data');
@@ -316,6 +331,83 @@ export default function ShiftInchargeDashboard() {
                   }}
                 />
               </div>
+            </div>
+          </Card>
+
+          {/* Helmet Status Widget */}
+          <Card title="Smart Helmet Status" className="mt-4">
+            <div className="space-y-3">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg">
+                  <HardHat className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <p className="text-xs text-stone-500">Active</p>
+                    <p className="font-semibold text-stone-800">{helmetStats?.active_helmets || helmetReadings.length}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                  <Battery className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-xs text-stone-500">Avg Battery</p>
+                    <p className="font-semibold text-stone-800">{helmetStats?.avg_battery_voltage?.toFixed(2) || '0.00'}V</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Helmets List */}
+              {helmetReadings.length === 0 ? (
+                <div className="text-center py-4 text-stone-500">
+                  <HardHat className="w-8 h-8 mx-auto mb-2 text-stone-300" />
+                  <p className="text-sm">No active helmets</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {helmetReadings.slice(0, 3).map((reading, idx) => (
+                    <div key={idx} className={`flex items-center justify-between p-2 rounded-lg border-l-2 ${
+                      reading.sos_active ? 'bg-red-50 border-red-500' :
+                      reading.severity === 'critical' ? 'bg-red-50 border-red-500' :
+                      reading.severity === 'high' ? 'bg-orange-50 border-orange-500' :
+                      reading.battery_low ? 'bg-yellow-50 border-yellow-500' :
+                      'bg-green-50 border-green-500'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm text-stone-700">{reading.worker_name}</span>
+                        {reading.sos_active && (
+                          <Siren className="w-4 h-4 text-red-500 animate-pulse" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-stone-500">
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3 h-3" />
+                          {reading.heart_rate}
+                        </span>
+                        <span className={reading.battery_low ? 'text-red-600' : ''}>
+                          {reading.battery_voltage.toFixed(1)}V
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* SOS Alert Banner */}
+              {helmetStats?.sos_active_count && helmetStats.sos_active_count > 0 && (
+                <div className="flex items-center gap-2 p-2 bg-red-100 rounded-lg animate-pulse">
+                  <Siren className="w-5 h-5 text-red-600" />
+                  <span className="text-sm font-medium text-red-700">
+                    {helmetStats.sos_active_count} SOS Alert{helmetStats.sos_active_count > 1 ? 's' : ''} Active!
+                  </span>
+                </div>
+              )}
+
+              {/* View More Link */}
+              <Link
+                href="/helmet-monitoring"
+                className="block text-center text-sm text-orange-600 hover:text-orange-700 font-medium py-2 border-t border-stone-100"
+              >
+                View All Helmet Data →
+              </Link>
             </div>
           </Card>
         </div>

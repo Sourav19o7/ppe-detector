@@ -111,18 +111,18 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md px-6">
         {/* Logo and Title */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-24 h-24 mb-6">
+        <div className="text-center mb-4">
+          <div className="inline-flex items-center justify-center w-40 h-40 mb-4">
             <Image
               src="/raksham-logo.png"
               alt="Raksham Logo"
-              width={96}
-              height={96}
-              className="object-contain"
+              width={1000}
+              height={1000}
+              className="object-contain drop-shadow-lg"
               priority
             />
           </div>
-          <h1 className="text-4xl font-bold text-slate-800 mb-2.5 tracking-tight">Raksham</h1>
+          {/* <h1 className="text-4xl font-bold text-slate-800 mb-2.5 tracking-tight">Raksham</h1> */}
           <p className="text-slate-500 text-base font-medium">Mine Safety & PPE Compliance System</p>
         </div>
 

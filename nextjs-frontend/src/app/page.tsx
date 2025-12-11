@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import AppLayout from '@/components/AppLayout';
 import { PageLoading } from '@/components/Loading';
@@ -15,20 +16,31 @@ import WorkerDashboard from '@/components/dashboards/WorkerDashboard';
 import SuperAdminDashboard from '@/components/dashboards/SuperAdminDashboard';
 
 export default function DashboardPage() {
-  const { getRole, isAuthenticated, userType } = useAuthStore();
+  const router = useRouter();
+  const { getRole, token } = useAuthStore();
   const [mounted, setMounted] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Wait for component mount
-  if (!mounted) {
-    return (
-      <AppLayout>
-        <PageLoading />
-      </AppLayout>
-    );
+  useEffect(() => {
+    if (mounted) {
+      // Check if user is authenticated
+      const storedToken = localStorage.getItem('token');
+      if (!storedToken && !token) {
+        // Not authenticated, redirect to landing page
+        router.push('/landing');
+      } else {
+        setIsCheckingAuth(false);
+      }
+    }
+  }, [mounted, token, router]);
+
+  // Wait for component mount and auth check
+  if (!mounted || isCheckingAuth) {
+    return <PageLoading />;
   }
 
   const role = getRole();

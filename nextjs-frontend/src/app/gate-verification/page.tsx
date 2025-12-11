@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ScanLine, ChevronDown, Volume2, VolumeX, Maximize2, CheckCircle, Terminal, User } from 'lucide-react';
+import { ScanLine, ChevronDown, Volume2, VolumeX, Maximize2, CheckCircle, Terminal, User, RotateCcw } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import {
   GateVerificationLayout,
@@ -305,6 +305,16 @@ export default function GateVerificationPage() {
               title="Toggle debug log"
             >
               <Terminal size={20} />
+            </button>
+
+            {/* Reset Button */}
+            <button
+              onClick={verification.resetVerification}
+              className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg transition-colors font-medium"
+              title="Reset verification"
+            >
+              <RotateCcw size={18} />
+              Reset
             </button>
           </div>
         </div>

@@ -1244,6 +1244,38 @@ export default function WorkerProfilePage() {
                   ))}
                 </div>
               </Card>
+
+              {/* Smart Helmet Status */}
+              <Card title="Smart Helmet Status" icon={<Shield className="w-5 h-5 text-orange-600" />}>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl border border-green-200">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🪖</span>
+                      <div>
+                        <p className="font-medium text-green-800">Helmet Connected</p>
+                        <p className="text-xs text-green-600">Real-time monitoring active</p>
+                      </div>
+                    </div>
+                    <CheckCircle className="w-6 h-6 text-green-500" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-3 bg-slate-50 rounded-xl text-center">
+                      <p className="text-xs text-slate-500">Battery</p>
+                      <p className="text-lg font-bold text-slate-700">3.8V</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl text-center">
+                      <p className="text-xs text-slate-500">Signal</p>
+                      <p className="text-lg font-bold text-green-600">Strong</p>
+                    </div>
+                  </div>
+                  <a
+                    href="/helmet-monitoring"
+                    className="block text-center text-sm text-orange-600 hover:text-orange-700 font-medium py-2 border-t border-slate-100"
+                  >
+                    View Detailed Helmet Data →
+                  </a>
+                </div>
+              </Card>
             </div>
           </div>
         )}
