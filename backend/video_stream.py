@@ -25,13 +25,11 @@ class VideoStreamProcessor:
     def __init__(
         self,
         api_key: str = "e96XmSjaw1rrek7TBBxu",
-        workspace_name: str = "smart-india-hackathon-dgm5d",
-        workflow_id: str = "small-object-detection-sahi",
+        model_id: str = "ppe-0.3-urmh4/1",
         max_fps: int = 15,
     ):
         self.api_key = api_key
-        self.workspace_name = workspace_name
-        self.workflow_id = workflow_id
+        self.model_id = model_id
         self.max_fps = max_fps
 
         self.pipeline: Optional[InferencePipeline] = None
@@ -293,11 +291,10 @@ class VideoStreamProcessor:
         try:
             self.stop_event.clear()
 
-            # Initialize the pipeline
-            self.pipeline = InferencePipeline.init_with_workflow(
+            # Initialize the pipeline with model_id
+            self.pipeline = InferencePipeline.init(
+                model_id=self.model_id,
                 api_key=self.api_key,
-                workspace_name=self.workspace_name,
-                workflow_id=self.workflow_id,
                 video_reference=video_source,
                 max_fps=self.max_fps,
                 on_prediction=self._process_prediction,
@@ -308,7 +305,7 @@ class VideoStreamProcessor:
             self._pipeline_thread = Thread(target=self._run_pipeline, daemon=True)
             self._pipeline_thread.start()
 
-            print(f"Video pipeline started with source: {video_source}")
+            print(f"Video pipeline started with model: {self.model_id}, source: {video_source}")
             return True
 
         except Exception as e:

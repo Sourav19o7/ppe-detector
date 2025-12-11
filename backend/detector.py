@@ -33,14 +33,13 @@ class PersonDetector:
         print(f"Using device: {self.device}")
 
         # Initialize Roboflow client for PPE detection
-        print("Connecting to Roboflow PPE detection workflow...")
+        print("Connecting to Roboflow PPE detection model...")
         self.roboflow_client = InferenceHTTPClient(
-            api_url="https://serverless.roboflow.com",
+            api_url="https://detect.roboflow.com",
             api_key="e96XmSjaw1rrek7TBBxu"
         )
-        self.roboflow_workspace = "smart-india-hackathon-dgm5d"
-        self.roboflow_workflow_id = "small-object-detection-sahi"
-        print("Roboflow PPE detection workflow connected!")
+        self.roboflow_model_id = "ppe-0.3-urmh4/1"
+        print(f"Roboflow PPE detection model connected: {self.roboflow_model_id}")
 
         # Face Detection Model (arnabdhar/YOLOv8-Face-Detection)
         print("Loading face detection model...")
@@ -276,7 +275,7 @@ class PersonDetector:
         return label.startswith("NO ")
 
     def _run_roboflow_detection(self, image: Image.Image) -> list:
-        """Run PPE detection using Roboflow workflow."""
+        """Run PPE detection using Roboflow model inference."""
         detections = []
 
         try:
@@ -285,64 +284,40 @@ class PersonDetector:
                 image.save(tmp_file.name, format='JPEG', quality=95)
                 tmp_path = tmp_file.name
 
-            # Run Roboflow workflow
-            result = self.roboflow_client.run_workflow(
-                workspace_name=self.roboflow_workspace,
-                workflow_id=self.roboflow_workflow_id,
-                images={"image": tmp_path},
-                use_cache=True
-            )
+            # Run Roboflow model inference
+            result = self.roboflow_client.infer(tmp_path, model_id=self.roboflow_model_id)
 
             # Clean up temp file
             os.unlink(tmp_path)
 
             # Parse Roboflow results
-            if result and len(result) > 0:
-                workflow_result = result[0]
+            if result:
+                # Get predictions from result
+                predictions = result.get('predictions', [])
 
-                # Handle different result structures from Roboflow
-                predictions = None
+                for pred in predictions:
+                    if isinstance(pred, dict):
+                        # Extract bounding box coordinates
+                        # Roboflow returns center coordinates (x, y) and dimensions (width, height)
+                        x = pred.get('x', 0)
+                        y = pred.get('y', 0)
+                        width = pred.get('width', 0)
+                        height = pred.get('height', 0)
 
-                # Check for predictions in various locations
-                if isinstance(workflow_result, dict):
-                    # Try different keys where predictions might be stored
-                    for key in ['predictions', 'output', 'detections', 'results']:
-                        if key in workflow_result:
-                            predictions = workflow_result[key]
-                            break
+                        # Convert center coordinates to corner coordinates
+                        x1 = int(x - width / 2)
+                        y1 = int(y - height / 2)
+                        x2 = int(x + width / 2)
+                        y2 = int(y + height / 2)
 
-                    # If predictions is still None, the result itself might be the predictions
-                    if predictions is None and 'class' in str(workflow_result):
-                        predictions = [workflow_result]
+                        label = pred.get('class', pred.get('label', 'unknown'))
+                        confidence = pred.get('confidence', 0.0)
 
-                if predictions:
-                    # Handle if predictions is wrapped in another structure
-                    if isinstance(predictions, dict) and 'predictions' in predictions:
-                        predictions = predictions['predictions']
-
-                    for pred in predictions if isinstance(predictions, list) else [predictions]:
-                        if isinstance(pred, dict):
-                            # Extract bounding box coordinates
-                            # Roboflow can return different formats
-                            x = pred.get('x', 0)
-                            y = pred.get('y', 0)
-                            width = pred.get('width', 0)
-                            height = pred.get('height', 0)
-
-                            # Convert center coordinates to corner coordinates
-                            x1 = int(x - width / 2)
-                            y1 = int(y - height / 2)
-                            x2 = int(x + width / 2)
-                            y2 = int(y + height / 2)
-
-                            label = pred.get('class', pred.get('label', 'unknown'))
-                            confidence = pred.get('confidence', 0.0)
-
-                            detections.append({
-                                'bbox': [x1, y1, x2, y2],
-                                'label': label,
-                                'confidence': confidence
-                            })
+                        detections.append({
+                            'bbox': [x1, y1, x2, y2],
+                            'label': label,
+                            'confidence': confidence
+                        })
 
                 print(f"Roboflow detected {len(detections)} objects")
 
