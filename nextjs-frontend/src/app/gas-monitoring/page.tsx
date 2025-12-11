@@ -135,7 +135,7 @@ const SEVERITY_COLORS = {
 const PIE_COLORS = ['#10B981', '#F59E0B', '#F97316', '#EF4444'];
 
 export default function GasMonitoringPage() {
-  const { getMineId, token } = useAuthStore();
+  const { getMineId, tokens } = useAuthStore();
   const [latestReadings, setLatestReadings] = useState<GasReading[]>([]);
   const [stats, setStats] = useState<GasStats | null>(null);
   const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
@@ -176,12 +176,30 @@ export default function GasMonitoringPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const mineId = getMineId();
+      const mineIds = getMineIds();
+      const mineId = mineIds.length > 0 ? mineIds[0] : undefined;
 
-      const [latestData, statsData] = await Promise.all([
-        gasSensorApi.getLatest(mineId || undefined),
-        gasSensorApi.getStats(mineId || undefined, timeRange),
-      ]);
+      const latestData = await gasSensorApi.getLatest(mineId);
+
+      // Transform latest readings to expected format
+      const readings: GasReading[] = latestData.map((sensor: { sensor_id: string; mine_id: string; latest: { timestamp: string; gas_type: string; value: number; unit: string; status: string } }, index: number) => {
+        const isMethane = sensor.latest?.gas_type?.toLowerCase().includes('methane') || sensor.latest?.gas_type === 'CH4';
+        const status = sensor.latest?.status || 'normal';
+        const severity = status === 'critical' ? 'critical' : status === 'danger' || status === 'high' ? 'high' : status === 'warning' || status === 'medium' ? 'medium' : 'normal';
+
+        return {
+          id: `${sensor.sensor_id}-${index}`,
+          mine_id: sensor.mine_id,
+          mine_name: `Mine ${sensor.mine_id}`,
+          sensor_id: sensor.sensor_id,
+          methane_ppm: isMethane ? (sensor.latest?.value || 0) : 0,
+          co_ppm: !isMethane ? (sensor.latest?.value || 0) : 0,
+          pressure_hpa: 1013,
+          altitude_m: 0,
+          severity: severity as 'normal' | 'medium' | 'high' | 'critical',
+          timestamp: sensor.latest?.timestamp || new Date().toISOString(),
+        };
+      });
 
       setLatestReadings(latestData.readings || []);
       setStats(statsData);

@@ -63,7 +63,7 @@ export default function PerformancePage() {
       setLoading(true);
       const [dashboardData, minesData] = await Promise.all([
         dashboardApi.getGeneralManager(),
-        mineApi.list({ is_active: true }),
+        mineApi.getAll(),
       ]);
       setData(dashboardData);
       setMines(minesData.mines);

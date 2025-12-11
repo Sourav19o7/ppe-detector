@@ -28,7 +28,7 @@ import { useAuthStore } from '@/lib/store';
 import type { GateEntry, Gate, Mine, LiveEntriesResponse } from '@/types';
 
 export default function GateMonitoringPage() {
-  const { getMineId } = useAuthStore();
+  const { getMineIds } = useAuthStore();
   const [liveData, setLiveData] = useState<LiveEntriesResponse | null>(null);
   const [mines, setMines] = useState<Mine[]>([]);
   const [selectedMine, setSelectedMine] = useState<string>('');
@@ -46,10 +46,10 @@ export default function GateMonitoringPage() {
     entry?: GateEntry;
     image?: string;
     detections?: {
-      ppe: Array<{ label: string; confidence: number; is_violation: boolean }>;
-      faces: Array<{ name: string | null; confidence: number }>;
-      violations: Array<{ label: string }>;
-      summary: {
+      ppe?: Array<{ label: string; confidence: number; is_violation: boolean }>;
+      faces?: Array<{ name: string | null; confidence: number }>;
+      violations?: Array<{ label: string }>;
+      summary?: {
         ppe_detected: Record<string, number>;
         violations: Record<string, number>;
         total_violations: number;
@@ -65,21 +65,22 @@ export default function GateMonitoringPage() {
   useEffect(() => {
     const initializeMines = async () => {
       try {
-        const mineId = getMineId();
-        const minesData = await mineApi.list({ is_active: true });
-        setMines(minesData.mines);
+        const mineIds = getMineIds();
+        const mineId = mineIds.length > 0 ? mineIds[0] : undefined;
+        const minesData = await mineApi.getAll();
+        setMines(minesData);
 
-        if (mineId && minesData.mines.find(m => m.id === mineId)) {
+        if (mineId && minesData.find(m => m.id === mineId)) {
           setSelectedMine(mineId);
-        } else if (minesData.mines.length > 0) {
-          setSelectedMine(minesData.mines[0].id);
+        } else if (minesData.length > 0) {
+          setSelectedMine(minesData[0].id);
         }
       } catch (err) {
         console.error('Failed to load mines:', err);
       }
     };
     initializeMines();
-  }, [getMineId]);
+  }, [getMineIds]);
 
   // Load live data
   const loadLiveData = useCallback(async (showRefresh = false) => {
@@ -89,13 +90,7 @@ export default function GateMonitoringPage() {
       if (showRefresh) setRefreshing(true);
       else setLoading(true);
 
-      const params: { mine_id?: string; gate_id?: string; limit?: number } = {
-        mine_id: selectedMine,
-        limit: 20,
-      };
-      if (selectedGate) params.gate_id = selectedGate;
-
-      const data = await gateEntryApi.getLive(params);
+      const data = await gateEntryApi.getLive(selectedMine, selectedGate || undefined);
       setLiveData(data);
       setError(null);
     } catch (err) {
@@ -360,14 +355,14 @@ export default function GateMonitoringPage() {
                       {/* Identified Person */}
                       <div className="p-3 bg-blue-50 rounded-lg">
                         <h4 className="text-sm font-medium text-blue-800 mb-2">Identified Person</h4>
-                        {detectionResult.detections.summary?.identified_persons?.length > 0 ? (
+                        {(detectionResult.detections.summary?.identified_persons?.length ?? 0) > 0 ? (
                           <div>
                             <p className="text-blue-700 font-semibold">
                               {(detectionResult.detections.summary as any)?.identified_names?.[0] ||
-                               detectionResult.detections.summary.identified_persons[0]}
+                               detectionResult.detections.summary?.identified_persons?.[0]}
                             </p>
                             <p className="text-xs text-blue-500 mt-1">
-                              ID: {detectionResult.detections.summary.identified_persons[0]}
+                              ID: {detectionResult.detections.summary?.identified_persons?.[0]}
                             </p>
                           </div>
                         ) : (

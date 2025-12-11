@@ -31,7 +31,7 @@ interface ShiftStats {
 }
 
 export default function ShiftsPage() {
-  const { getMineId } = useAuthStore();
+  const { getMineIds } = useAuthStore();
   const [data, setData] = useState<ManagerDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
