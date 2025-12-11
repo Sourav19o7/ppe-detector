@@ -82,6 +82,14 @@ async def connect_to_mongodb():
     await db.predictions.create_index("expires_at")
     await db.predictions.create_index("requires_intervention")
 
+    # Health readings collection (from helmet/ear sensors)
+    await db.health_readings.create_index([("worker_id", 1), ("timestamp", -1)])
+    await db.health_readings.create_index([("mine_id", 1), ("timestamp", -1)])
+    await db.health_readings.create_index("timestamp")
+    await db.health_readings.create_index("status")
+    await db.health_readings.create_index("spo2")
+    await db.health_readings.create_index("heart_rate")
+
     # Legacy collections (for backward compatibility)
     await db.employees.create_index("employee_id", unique=True)
     await db.employees.create_index("name")
@@ -154,6 +162,10 @@ async def get_incidents_collection():
 
 async def get_predictions_collection():
     return db.predictions
+
+
+async def get_health_readings_collection():
+    return db.health_readings
 
 
 # Legacy collections

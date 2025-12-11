@@ -355,3 +355,53 @@ select option:hover {
     background-position: 200% 0;
   }
 }
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Safe area padding for PWA */
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  .btn, button {
+    min-height: 44px; /* iOS recommended tap target */
+  }
+}
+
+/* PWA install prompt spacing */
+.pwa-bottom-nav {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+}
+
+/* Slide up animation for modals and prompts */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}

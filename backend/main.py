@@ -39,6 +39,8 @@ from routes.alerts import router as alerts_router
 from routes.dashboards import router as dashboards_router
 from routes.gas_sensors import router as gas_sensors_router
 from routes.predictions import router as predictions_router
+from routes.sos_alerts import router as sos_alerts_router
+from routes.danger_zones import router as danger_zones_router
 
 load_dotenv()
 
@@ -139,6 +141,8 @@ app.include_router(alerts_router)
 app.include_router(dashboards_router)
 app.include_router(gas_sensors_router)
 app.include_router(predictions_router)
+app.include_router(sos_alerts_router)
+app.include_router(danger_zones_router)
 
 
 # ==================== WebSocket Test ====================

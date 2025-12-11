@@ -633,6 +633,104 @@ export interface WorkerPredictionDetail {
   recommendations: string[];
 }
 
+// ==================== Health Monitoring Types ====================
+
+export type HealthStatus = 'normal' | 'warning' | 'critical';
+
+export interface HealthReading {
+  id: string;
+  worker_id: string;
+  worker_name?: string;
+  employee_id?: string;
+  mine_id?: string;
+  mine_name?: string;
+  // Vital signs from sensors
+  spo2: number;           // Blood oxygen saturation (%)
+  systolic_bp: number;    // Systolic blood pressure (mmHg)
+  diastolic_bp: number;   // Diastolic blood pressure (mmHg)
+  heart_rate: number;     // Heart rate (bpm)
+  body_temperature?: number; // Optional: Body temperature (°C)
+  // Metadata
+  timestamp: string;
+  sensor_id?: string;
+  status: HealthStatus;
+  alerts: string[];
+}
+
+export interface WorkerHealthSummary {
+  worker_id: string;
+  worker_name: string;
+  employee_id: string;
+  mine_id?: string;
+  mine_name?: string;
+  department?: string;
+  // Average readings
+  avg_spo2: number;
+  avg_systolic_bp: number;
+  avg_diastolic_bp: number;
+  avg_heart_rate: number;
+  // Latest reading
+  latest_reading?: HealthReading;
+  // Health status
+  overall_status: HealthStatus;
+  readings_count: number;
+  alerts_count: number;
+  last_updated: string;
+}
+
+export interface HealthDashboardStats {
+  total_workers_monitored: number;
+  workers_normal: number;
+  workers_warning: number;
+  workers_critical: number;
+  avg_spo2: number;
+  avg_systolic_bp: number;
+  avg_diastolic_bp: number;
+  avg_heart_rate: number;
+  readings_today: number;
+  alerts_today: number;
+}
+
+export interface HealthTrendPoint {
+  date: string;
+  avg_spo2: number;
+  avg_systolic_bp: number;
+  avg_diastolic_bp: number;
+  avg_heart_rate: number;
+  normal_count: number;
+  warning_count: number;
+  critical_count: number;
+}
+
+export interface MineHealthSummary {
+  mine_id: string;
+  mine_name: string;
+  workers_monitored: number;
+  avg_spo2: number;
+  avg_systolic_bp: number;
+  avg_diastolic_bp: number;
+  avg_heart_rate: number;
+  workers_normal: number;
+  workers_warning: number;
+  workers_critical: number;
+  health_score: number;  // 0-100 overall health score
+}
+
+export interface HealthDashboardResponse {
+  stats: HealthDashboardStats;
+  mine_summaries: MineHealthSummary[];
+  trends: HealthTrendPoint[];
+  at_risk_workers: WorkerHealthSummary[];
+  recent_alerts: {
+    worker_id: string;
+    worker_name: string;
+    alert_type: string;
+    message: string;
+    timestamp: string;
+    severity: HealthStatus;
+  }[];
+}
+
 // ==================== Gate Verification Types ====================
 
 export type VerificationStatus = 'pending' | 'checking' | 'passed' | 'failed' | 'warning';

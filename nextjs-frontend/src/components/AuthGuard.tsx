@@ -25,6 +25,15 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       }
 
       if (token) {
+        // Skip verification for mock tokens (used in development)
+        if (token.startsWith('mock-worker-token-')) {
+          if (pathname === '/login') {
+            router.push('/');
+          }
+          setIsLoading(false);
+          return;
+        }
+
         try {
           const response = await authApi.verify();
           // authApi.verify() returns { valid: boolean, user_type, username, role, mine_id }

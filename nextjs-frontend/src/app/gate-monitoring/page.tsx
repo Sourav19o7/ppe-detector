@@ -181,7 +181,7 @@ export default function GateMonitoringPage() {
     if (!reason) return;
 
     try {
-      await gateEntryApi.override(entryId, { status: 'approved', reason });
+      await gateEntryApi.override(entryId, reason);
       loadLiveData(true);
     } catch (err) {
       console.error('Override failed:', err);

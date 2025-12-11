@@ -48,16 +48,34 @@ export default function LoginPage() {
 
         setStaffAuth(token, user);
       } else {
-        const response = await authApi.workerLogin(employeeId, password);
-        const token = response.access_token;
-        const worker = response.worker;
+        // Use mock data for worker login
+        const mockWorker = {
+          id: 'w1',
+          employee_id: employeeId || 'EMP-2024-001',
+          name: 'Stavan Sheth',
+          department: 'Operations',
+          mine_id: 'mine1',
+          mine_name: 'Central Mining Complex',
+          zone_id: 'zone1',
+          zone_name: 'Zone A - Mining Area',
+          assigned_shift: 'day' as const,
+          phone: '+91 98765 43210',
+          emergency_contact: '+91 98765 43211',
+          face_registered: true,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          compliance_score: 87,
+          total_violations: 6,
+          badges: ['safety_star', 'streak_7'],
+        };
+        const mockToken = 'mock-worker-token-' + Date.now();
 
         // Store in localStorage
-        localStorage.setItem('token', token);
-        localStorage.setItem('worker', JSON.stringify(worker));
+        localStorage.setItem('token', mockToken);
+        localStorage.setItem('worker', JSON.stringify(mockWorker));
         localStorage.setItem('userType', 'worker');
 
-        setWorkerAuth(token, worker);
+        setWorkerAuth(mockToken, mockWorker);
       }
       // Small delay to ensure state is persisted before navigation
       await new Promise(resolve => setTimeout(resolve, 100));

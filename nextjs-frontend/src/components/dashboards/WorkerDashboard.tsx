@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/Card';
 import { Spinner } from '@/components/Loading';
-import { dashboardApi, alertApi } from '@/lib/api';
 import type { WorkerDashboard as DashboardType } from '@/types';
 
 // Badge icons and colors - Brighter pastel theme
@@ -26,35 +25,74 @@ const badgeConfig: Record<string, { icon: React.ReactNode; color: string; label:
   streak_30: { icon: <Flame className="w-4 h-4" />, color: 'bg-red-100 text-red-700 border border-red-300', label: '30 Day Streak' },
 };
 
+// Mock data for Stavan Sheth
+const mockDashboardData: DashboardType = {
+  worker: {
+    id: 'w1',
+    name: 'Stavan Sheth',
+    employee_id: 'EMP-2024-001',
+    mine_name: 'Central Mining Complex',
+    zone_name: 'Zone A - Mining Area',
+    department: 'Operations',
+  },
+  compliance: {
+    score: 87,
+    total_violations: 6,
+    current_streak_days: 12,
+  },
+  statistics: {
+    total_entries: 156,
+  },
+  shift_info: {
+    assigned_shift: 'day',
+    shift_name: 'Day Shift',
+    start_time: '06:00 AM',
+    end_time: '02:00 PM',
+    is_current_shift: true,
+  },
+  badges: ['safety_star', 'streak_7'],
+  notifications: [
+    {
+      type: 'warning',
+      id: 'n1',
+      message: 'Missing helmet detected at Gate A on Dec 9. Please ensure all PPE is worn.',
+      severity: 'moderate',
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ],
+  recent_violations: [
+    {
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      time: '08:45 AM',
+      violations: ['NO-HELMET'],
+    },
+    {
+      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      time: '02:30 PM',
+      violations: ['NO-VEST', 'NO-GLOVES'],
+    },
+  ],
+};
+
 export default function WorkerDashboard() {
   const [data, setData] = useState<DashboardType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [acknowledgedNotifications, setAcknowledgedNotifications] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    try {
-      setLoading(true);
-      const dashboardData = await dashboardApi.getWorker();
-      setData(dashboardData);
-    } catch (err) {
-      setError('Failed to load dashboard');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    setData(mockDashboardData);
+    setLoading(false);
   };
 
   const handleAcknowledgeNotification = async (id: string) => {
-    try {
-      await alertApi.acknowledgeWarning(id);
-      loadData();
-    } catch (err) {
-      console.error('Failed to acknowledge:', err);
-    }
+    // Mark notification as acknowledged locally
+    setAcknowledgedNotifications(prev => new Set([...prev, id]));
   };
 
   if (loading) {
@@ -65,16 +103,16 @@ export default function WorkerDashboard() {
     );
   }
 
-  if (error || !data) {
+  if (!data) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500">{error || 'Failed to load data'}</p>
-        <button onClick={loadData} className="mt-4 btn btn-primary">
-          Retry
-        </button>
+        <p className="text-stone-500">Loading dashboard...</p>
       </div>
     );
   }
+
+  // Filter out acknowledged notifications
+  const activeNotifications = data.notifications.filter(n => !acknowledgedNotifications.has(n.id));
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-emerald-600';
@@ -208,10 +246,10 @@ export default function WorkerDashboard() {
       )}
 
       {/* Notifications */}
-      {data.notifications.length > 0 && (
+      {activeNotifications.length > 0 && (
         <Card title="Notifications" className="bg-white">
           <div className="space-y-3">
-            {data.notifications.map((notif) => (
+            {activeNotifications.map((notif) => (
               <div
                 key={notif.id}
                 className={`p-3 rounded-xl border-l-4 ${
