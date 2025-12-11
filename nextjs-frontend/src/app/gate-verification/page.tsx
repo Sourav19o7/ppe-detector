@@ -32,7 +32,7 @@ export default function GateVerificationPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
-  const [showDebugLog, setShowDebugLog] = useState(false);
+  const [showDebugLog, setShowDebugLog] = useState(true); // Show debug log by default for troubleshooting
   const [attendanceNotification, setAttendanceNotification] = useState<string | null>(null);
 
   // Ref to store current frame for snapshot capture from StatusPanel
@@ -73,9 +73,8 @@ export default function GateVerificationPage() {
 
   // Handler for snapshot capture from StatusPanel
   const handleSnapshotCapture = useCallback(() => {
-    if (currentFrameRef.current) {
-      verification.captureSnapshot(currentFrameRef.current);
-    }
+    // Call captureSnapshot - it will handle error logging if no frame is available
+    verification.captureSnapshot(currentFrameRef.current || undefined);
   }, [verification]);
 
   // Sound effects
@@ -126,10 +125,10 @@ export default function GateVerificationPage() {
 
         setMines(accessibleMines);
 
-        // Auto-select first mine
-        if (accessibleMines.length > 0 && !selectedMineId) {
-          setSelectedMineId(accessibleMines[0].id);
-        }
+        // Don't auto-select - let user choose or use "Any" option
+        // if (accessibleMines.length > 0 && !selectedMineId) {
+        //   setSelectedMineId(accessibleMines[0].id);
+        // }
       } catch (error) {
         console.error('Failed to load mines:', error);
       }
@@ -148,12 +147,12 @@ export default function GateVerificationPage() {
         const activeGates = mine.gates.filter((g) => g.is_active && g.has_camera);
         setGates(activeGates);
 
-        // Auto-select first gate
-        if (activeGates.length > 0) {
-          setSelectedGateId(activeGates[0].id);
-        } else {
-          setSelectedGateId(null);
-        }
+        // Don't auto-select - let user choose or use "Any" option
+        // if (activeGates.length > 0) {
+        //   setSelectedGateId(activeGates[0].id);
+        // } else {
+        //   setSelectedGateId(null);
+        // }
       }
     }
   }, [selectedMineId, mines]);
@@ -228,10 +227,10 @@ export default function GateVerificationPage() {
             <div className="relative">
               <select
                 value={selectedMineId || ''}
-                onChange={(e) => setSelectedMineId(e.target.value)}
+                onChange={(e) => setSelectedMineId(e.target.value || null)}
                 className="appearance-none pl-4 pr-10 py-2 bg-white border border-stone-200 rounded-lg text-sm font-medium text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="" disabled>Select Mine</option>
+                <option value="">Any Mine (Auto)</option>
                 {mines.map((mine) => (
                   <option key={mine.id} value={mine.id}>
                     {mine.name}
@@ -245,11 +244,10 @@ export default function GateVerificationPage() {
             <div className="relative">
               <select
                 value={selectedGateId || ''}
-                onChange={(e) => setSelectedGateId(e.target.value)}
-                disabled={gates.length === 0}
-                className="appearance-none pl-4 pr-10 py-2 bg-white border border-stone-200 rounded-lg text-sm font-medium text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
+                onChange={(e) => setSelectedGateId(e.target.value || null)}
+                className="appearance-none pl-4 pr-10 py-2 bg-white border border-stone-200 rounded-lg text-sm font-medium text-stone-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="" disabled>Select Gate</option>
+                <option value="">Any Gate (Auto)</option>
                 {gates.map((gate) => (
                   <option key={gate.id} value={gate.id}>
                     {gate.name}
@@ -331,7 +329,7 @@ export default function GateVerificationPage() {
                 onOverride={() => setShowOverrideModal(true)}
                 onCaptureSnapshot={handleSnapshotCapture}
                 isCapturingSnapshot={verification.isSnapshotCapturing}
-                disabled={!selectedGateId}
+                disabled={false}  // Gate selection is now optional
               />
             }
           />

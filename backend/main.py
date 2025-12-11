@@ -129,6 +129,96 @@ async def initialize_default_superadmin():
         })
         print("Default super admin created (username: superadmin)")
 
+    # Create test mine and gate if none exists
+    await initialize_test_mine_and_gate(db)
+
+
+async def initialize_test_mine_and_gate(db):
+    """Create a test mine and gate for development/testing."""
+    # Check if any mine exists
+    existing_mine = await db.mines.find_one({})
+    if existing_mine:
+        return  # Already have mines, don't create test data
+
+    print("Creating test mine and gate for development...")
+
+    # Create test mine
+    mine_doc = {
+        "name": "Test Mine",
+        "location": "Development Environment",
+        "description": "A test mine for development and testing purposes",
+        "is_active": True,
+        "created_at": datetime.utcnow(),
+        "created_by": "system",
+    }
+    mine_result = await db.mines.insert_one(mine_doc)
+    mine_id = mine_result.inserted_id
+    print(f"Created test mine: {mine_id}")
+
+    # Create a test zone
+    zone_doc = {
+        "mine_id": mine_id,
+        "name": "Main Zone",
+        "description": "Primary work zone",
+        "risk_level": "normal",
+        "coordinates": {"x": 0, "y": 0, "width": 100, "height": 100},
+        "created_at": datetime.utcnow(),
+        "created_by": "system",
+    }
+    zone_result = await db.zones.insert_one(zone_doc)
+    zone_id = zone_result.inserted_id
+    print(f"Created test zone: {zone_id}")
+
+    # Create test gate
+    gate_doc = {
+        "mine_id": mine_id,
+        "name": "Main Entrance Gate",
+        "gate_type": "both",
+        "zone_id": zone_id,
+        "location": "Main entrance of the test mine",
+        "has_camera": True,
+        "is_active": True,
+        "created_at": datetime.utcnow(),
+        "created_by": "system",
+    }
+    gate_result = await db.gates.insert_one(gate_doc)
+    print(f"Created test gate: {gate_result.inserted_id}")
+
+    # Create a second gate (exit only)
+    gate_doc_2 = {
+        "mine_id": mine_id,
+        "name": "Emergency Exit Gate",
+        "gate_type": "exit",
+        "zone_id": zone_id,
+        "location": "Emergency exit point",
+        "has_camera": True,
+        "is_active": True,
+        "created_at": datetime.utcnow(),
+        "created_by": "system",
+    }
+    gate_result_2 = await db.gates.insert_one(gate_doc_2)
+    print(f"Created test gate 2: {gate_result_2.inserted_id}")
+
+    # Create a test worker
+    worker_doc = {
+        "employee_id": "TEST001",
+        "name": "Test Worker",
+        "password_hash": get_password_hash("worker123"),
+        "mine_id": mine_id,
+        "zone_id": zone_id,
+        "assigned_shift": "day",
+        "face_registered": False,
+        "is_active": True,
+        "compliance_score": 100.0,
+        "total_violations": 0,
+        "badges": [],
+        "created_at": datetime.utcnow(),
+    }
+    worker_result = await db.workers.insert_one(worker_doc)
+    print(f"Created test worker: {worker_result.inserted_id} (employee_id: TEST001)")
+
+    print("Test mine, zone, gates, and worker created successfully!")
+
 
 # ==================== Include Route Modules ====================
 

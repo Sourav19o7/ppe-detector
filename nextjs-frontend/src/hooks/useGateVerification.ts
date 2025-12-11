@@ -152,14 +152,15 @@ export function useGateVerification({
 
   // Start verification session
   const startVerification = useCallback(async () => {
+    // Gate and mine IDs are now optional - will use defaults if not provided
     if (!gateId || !mineId) {
-      console.error('Gate ID and Mine ID are required');
-      return;
+      console.log('[useGateVerification] Starting verification without gate/mine selection - will use defaults');
+      addLog('Starting verification (using default gate)...');
     }
 
     setDetectionLog([]);
     addLog('Verification started');
-    store.startVerification(gateId, mineId);
+    store.startVerification(gateId || 'default', mineId || 'default');
 
     // Trigger RFID scanning via the backend (ESP32)
     if (rfidScanner.startRFIDScan) {
@@ -198,13 +199,10 @@ export function useGateVerification({
 
   // Start ML detection only (without RFID)
   const startMLOnly = useCallback(() => {
-    if (!gateId || !mineId) {
-      console.error('Gate ID and Mine ID are required');
-      return;
-    }
+    // Gate and mine IDs are now optional
     setDetectionLog([]);
     addLog('ML Detection started (RFID manual)');
-    store.startVerification(gateId, mineId);
+    store.startVerification(gateId || 'default', mineId || 'default');
   }, [gateId, mineId, store, addLog]);
 
   // Set current video frame (called from LiveVideoPanel)
@@ -616,24 +614,38 @@ export function useGateVerification({
   }, [store, addLog]);
 
   // Capture snapshot and perform full detection (PPE + face) with attendance marking
-  const captureSnapshot = useCallback(async (frameData: string) => {
-    if (!gateId || !frameData) {
-      addLog('Cannot capture snapshot: missing gate ID or frame data');
+  const captureSnapshot = useCallback(async (frameData?: string) => {
+    // Use provided frameData or fall back to stored frame
+    const frame = frameData || frameRef.current;
+
+    console.log('[useGateVerification] captureSnapshot called', { gateId, hasFrame: !!frame, frameLength: frame?.length });
+
+    // Gate ID is now optional - backend will use default if not provided
+    if (!gateId) {
+      addLog('No gate selected - using default gate');
+      console.log('[useGateVerification] No gate selected, backend will use default');
+    }
+
+    if (!frame) {
+      const msg = 'Cannot capture snapshot: no video frame available. Please start the camera first.';
+      addLog(msg);
+      console.error('[useGateVerification]', msg);
       return null;
     }
 
     setIsSnapshotCapturing(true);
     addLog('Capturing snapshot for detection...');
+    console.log('[useGateVerification] Starting detection with gateId:', gateId || 'default');
 
     try {
       // Store the frame for later use
-      frameRef.current = frameData;
+      frameRef.current = frame;
 
       // Run PPE detection in parallel
       performPPEDetection();
 
       // Convert base64 to File for gate entry detection
-      const fetchResponse = await fetch(frameData);
+      const fetchResponse = await fetch(frame);
       const blob = await fetchResponse.blob();
       const file = new File([blob], 'snapshot.jpg', { type: 'image/jpeg' });
 
@@ -680,7 +692,13 @@ export function useGateVerification({
     } catch (error: any) {
       const errorMessage = error?.response?.data?.detail || error?.message || String(error);
       addLog(`Snapshot detection error: ${errorMessage}`);
-      console.error('Snapshot detection failed:', error);
+      console.error('[useGateVerification] Snapshot detection failed:', error);
+      console.error('[useGateVerification] Error details:', {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        data: error?.response?.data,
+        message: error?.message
+      });
       return null;
     } finally {
       setIsSnapshotCapturing(false);

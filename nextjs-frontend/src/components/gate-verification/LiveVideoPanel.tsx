@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Play, Square, Wifi, WifiOff, Camera, User, CheckCircle, AlertCircle } from 'lucide-react';
+import { Play, Square, Wifi, WifiOff, Camera, User, CheckCircle, AlertCircle, Video } from 'lucide-react';
 import { Spinner } from '../Loading';
 
 interface LiveVideoPanelProps {
@@ -29,8 +29,13 @@ export function LiveVideoPanel({
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentFrame, setCurrentFrame] = useState<string | null>(null);
+  const [useBrowserCamera, setUseBrowserCamera] = useState(false);
+  const [browserCameraActive, setBrowserCameraActive] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   const onFrameCaptureRef = useRef(onFrameCapture);
   onFrameCaptureRef.current = onFrameCapture;
@@ -149,36 +154,141 @@ export function LiveVideoPanel({
   useEffect(() => {
     return () => {
       disconnectWebSocket();
+      // Stop browser camera on unmount
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      }
     };
   }, [disconnectWebSocket]);
 
+  // Browser camera functions
+  const startBrowserCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: 640, height: 480 }
+      });
+      mediaStreamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      setBrowserCameraActive(true);
+      setError(null);
+      console.log('[LiveVideoPanel] Browser camera started');
+    } catch (err) {
+      console.error('[LiveVideoPanel] Failed to start browser camera:', err);
+      setError('Failed to access camera. Please allow camera permissions.');
+    }
+  }, []);
+
+  const stopBrowserCamera = useCallback(() => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current = null;
+    }
+    setBrowserCameraActive(false);
+  }, []);
+
+  const captureBrowserFrame = useCallback((): string | null => {
+    if (!videoRef.current || !canvasRef.current) return null;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) return null;
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    ctx.drawImage(video, 0, 0);
+
+    return canvas.toDataURL('image/jpeg', 0.8);
+  }, []);
+
   const toggleStream = () => {
-    if (isStreaming) {
-      stopStreaming();
+    if (useBrowserCamera) {
+      if (browserCameraActive) {
+        stopBrowserCamera();
+        setIsStreaming(false);
+      } else {
+        startBrowserCamera();
+        setIsStreaming(true);
+      }
     } else {
-      startStreaming();
+      if (isStreaming) {
+        stopStreaming();
+      } else {
+        startStreaming();
+      }
     }
   };
 
   // Handle snapshot capture
-  const handleSnapshotCapture = useCallback(() => {
-    if (currentFrame && onSnapshotCapture) {
-      onSnapshotCapture(currentFrame);
+  const handleSnapshotCapture = useCallback(async () => {
+    let frameToCapture = currentFrame;
+
+    // If using browser camera, capture frame from video element
+    if (useBrowserCamera && browserCameraActive) {
+      frameToCapture = captureBrowserFrame();
+      if (frameToCapture) {
+        setCurrentFrame(frameToCapture);
+      }
     }
-  }, [currentFrame, onSnapshotCapture]);
+
+    if (frameToCapture && onSnapshotCapture) {
+      console.log('[LiveVideoPanel] Capturing snapshot with frame data, size:', frameToCapture.length);
+      try {
+        // Call the snapshot handler (may be async)
+        await onSnapshotCapture(frameToCapture);
+      } catch (err) {
+        console.error('[LiveVideoPanel] Snapshot capture error:', err);
+        setError(`Detection failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    } else {
+      console.log('[LiveVideoPanel] Cannot capture snapshot:', {
+        hasFrame: !!frameToCapture,
+        hasCallback: !!onSnapshotCapture,
+        useBrowserCamera,
+        browserCameraActive
+      });
+      // Show error to user
+      if (!frameToCapture) {
+        setError('No video frame available. Please start the camera first.');
+      }
+    }
+  }, [currentFrame, onSnapshotCapture, useBrowserCamera, browserCameraActive, captureBrowserFrame]);
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Hidden canvas for browser camera capture */}
+      <canvas ref={canvasRef} className="hidden" />
+
       {/* Video Display */}
       <div className="relative aspect-video bg-stone-900 rounded-xl overflow-hidden">
-        {/* Video Frame */}
-        {currentFrame ? (
+        {/* Browser Camera Video Element */}
+        {useBrowserCamera && (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`w-full h-full object-cover ${browserCameraActive ? 'block' : 'hidden'}`}
+          />
+        )}
+
+        {/* WebSocket Frame Display */}
+        {!useBrowserCamera && currentFrame ? (
           <img
             src={currentFrame}
             alt="Live video feed"
             className="w-full h-full object-cover"
           />
-        ) : (
+        ) : null}
+
+        {/* Placeholder when no video */}
+        {!browserCameraActive && !currentFrame && (
           <div className="absolute inset-0 flex items-center justify-center">
             {isStreaming ? (
               <div className="text-center text-white">
@@ -195,20 +305,20 @@ export function LiveVideoPanel({
         )}
 
         {/* Overlays */}
-        {isStreaming && (
+        {(isStreaming || browserCameraActive) && (
           <>
             {/* Live badge */}
             <div className="absolute top-3 left-3 flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium">
               <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              LIVE
+              LIVE {useBrowserCamera ? '(Browser)' : '(Server)'}
             </div>
 
             {/* Connection Status */}
             <div className={`absolute top-3 right-3 flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-              isConnected ? 'bg-green-600/90 text-white' : 'bg-yellow-600/90 text-white'
+              (useBrowserCamera ? browserCameraActive : isConnected) ? 'bg-green-600/90 text-white' : 'bg-yellow-600/90 text-white'
             }`}>
-              {isConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
-              {isConnected ? 'Connected' : 'Reconnecting...'}
+              {(useBrowserCamera ? browserCameraActive : isConnected) ? <Wifi size={14} /> : <WifiOff size={14} />}
+              {(useBrowserCamera ? browserCameraActive : isConnected) ? 'Connected' : 'Reconnecting...'}
             </div>
           </>
         )}
@@ -251,17 +361,54 @@ export function LiveVideoPanel({
         )}
       </div>
 
+      {/* Camera Mode Toggle */}
+      <div className="flex gap-2 p-1 bg-stone-100 rounded-lg">
+        <button
+          onClick={() => {
+            if (!useBrowserCamera) return; // Already on server mode
+            stopBrowserCamera();
+            setCurrentFrame(null);
+            setUseBrowserCamera(false);
+          }}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            !useBrowserCamera
+              ? 'bg-white text-orange-600 shadow-sm'
+              : 'text-stone-600 hover:text-stone-800'
+          }`}
+        >
+          <Wifi size={16} />
+          Server Camera
+        </button>
+        <button
+          onClick={() => {
+            if (useBrowserCamera) return; // Already on browser mode
+            disconnectWebSocket();
+            setIsStreaming(false);
+            setCurrentFrame(null);
+            setUseBrowserCamera(true);
+          }}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            useBrowserCamera
+              ? 'bg-white text-orange-600 shadow-sm'
+              : 'text-stone-600 hover:text-stone-800'
+          }`}
+        >
+          <Video size={16} />
+          Browser Camera
+        </button>
+      </div>
+
       {/* Controls */}
       <div className="flex gap-2">
         <button
           onClick={toggleStream}
           className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-            isStreaming
+            (isStreaming || browserCameraActive)
               ? 'bg-red-600 text-white hover:bg-red-700'
               : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600'
           }`}
         >
-          {isStreaming ? (
+          {(isStreaming || browserCameraActive) ? (
             <>
               <Square size={18} />
               Stop Camera
@@ -274,11 +421,11 @@ export function LiveVideoPanel({
           )}
         </button>
 
-        {/* Snapshot Button - only show when streaming and showSnapshotButton is true */}
-        {showSnapshotButton && isStreaming && currentFrame && (
+        {/* Snapshot Button - show when streaming/browser camera active */}
+        {showSnapshotButton && (isStreaming || browserCameraActive) && (
           <button
             onClick={handleSnapshotCapture}
-            disabled={isCapturing || !currentFrame}
+            disabled={isCapturing}
             className={`py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
               isCapturing
                 ? 'bg-stone-400 text-white cursor-not-allowed'
