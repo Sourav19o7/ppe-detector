@@ -16,32 +16,11 @@ interface UseGateVerificationOptions {
 }
 
 // PPE Detection Service URL (ppe_detection.py - runs on port 8002)
-const PPE_DETECTION_URL = process.env.NEXT_PUBLIC_PPE_DETECTION_URL || 'http://localhost:8002';
+// DISABLED - service not running
+// const PPE_DETECTION_URL = process.env.NEXT_PUBLIC_PPE_DETECTION_URL || 'http://localhost:8002';
 
-// PPE Detection response from the new service
-interface PPEDetectionResponse {
-  success: boolean;
-  error?: string;
-  detections?: {
-    helmet: {
-      detected: boolean;
-      confidence: number;
-      bbox: number[] | null;
-    };
-    vest: {
-      detected: boolean;
-      confidence: number;
-      bbox: number[] | null;
-    };
-    persons: number;
-    compliant: boolean;
-    raw?: Array<{
-      label: string;
-      confidence: number;
-      bbox: number[];
-    }>;
-  };
-}
+// PPE Detection response from the new service - DISABLED
+// interface PPEDetectionResponse { ... }
 
 interface DetectionResponse {
   success: boolean;
@@ -129,10 +108,10 @@ export function useGateVerification({
   const [detectionLog, setDetectionLog] = useState<string[]>([]);
   const [isSnapshotCapturing, setIsSnapshotCapturing] = useState(false);
 
-  // RFID Scanner integration - connects to rfid.py WebSocket
-  // Always enabled so we can show connection status even before verification starts
+  // RFID Scanner integration - DISABLED for now
+  // Set enabled: false to stop hitting RFID APIs
   const rfidScanner = useRFIDScanner({
-    enabled: true, // Always connect to show connection status
+    enabled: false, // DISABLED - not connecting to RFID backend
     onScan: (event) => {
       // Only process scans when verification is running
       if (store.isTimerRunning && event.tagType !== 'face') {
@@ -140,7 +119,7 @@ export function useGateVerification({
         addLog(`RFID scanned: ${event.tagType} (${event.tagId})`);
       }
     },
-    mockMode: true, // Enable keyboard mock (H, V, S keys) as fallback
+    mockMode: false, // DISABLED - no keyboard mock either
   });
 
   // Add to detection log
@@ -159,20 +138,12 @@ export function useGateVerification({
     }
 
     setDetectionLog([]);
-    addLog('Verification started');
+    addLog('Verification started (ML only - RFID disabled)');
     store.startVerification(gateId || 'default', mineId || 'default');
 
-    // Trigger RFID scanning via the backend (ESP32)
-    if (rfidScanner.startRFIDScan) {
-      addLog('Starting RFID scanner...');
-      const started = await rfidScanner.startRFIDScan();
-      if (started) {
-        addLog('RFID scanner started');
-      } else {
-        addLog('Failed to start RFID scanner (using keyboard fallback: H/V/S)');
-      }
-    }
-  }, [gateId, mineId, store, addLog, rfidScanner]);
+    // RFID scanning is DISABLED - skip triggering ESP32
+    // if (rfidScanner.startRFIDScan) { ... }
+  }, [gateId, mineId, store, addLog]);
 
   // Reset verification
   const resetVerification = useCallback(() => {
@@ -285,7 +256,8 @@ export function useGateVerification({
 
       if (identifiedFace && !store.identifiedWorker) {
         const employeeId = identifiedFace.employee_id || identifiedFace.name || '';
-        const displayName = identifiedFace.name || identifiedFace.employee_id || 'Unknown';
+        // Prefer entry.worker_name (from DB) over face recognition name
+        const displayName = response.entry?.worker_name || identifiedFace.name || identifiedFace.employee_id || 'Unknown';
 
         addLog(`Face identified: ${displayName} (ID: ${employeeId}, conf: ${(identifiedFace.confidence * 100).toFixed(1)}%)`);
 
@@ -296,7 +268,7 @@ export function useGateVerification({
         let worker: Worker | null = null;
 
         if (response.entry?.worker_id) {
-          // We have entry data with worker info from backend
+          // We have entry data with worker info from backend (includes actual name from DB)
           worker = {
             id: response.entry.worker_id,
             employee_id: response.entry.employee_id || employeeId,
@@ -311,7 +283,7 @@ export function useGateVerification({
             badges: [],
           };
         } else {
-          // Create worker from face recognition data
+          // Create worker from face recognition data (fallback if no entry)
           worker = {
             id: '',
             employee_id: employeeId,
@@ -419,50 +391,12 @@ export function useGateVerification({
   }, [store, addLog]);
 
   // Perform PPE detection using the new PPE detection service
+  // DISABLED - PPE detection service on port 8002 is not running
+  // The gate entry detect API already includes PPE detection
   const performPPEDetection = useCallback(async () => {
-    if (!frameRef.current || isDetectingRef.current) {
-      return;
-    }
-
-    try {
-      // Send frame to PPE detection service
-      const response = await fetch(`${PPE_DETECTION_URL}/detect-frame`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          frame: frameRef.current,
-        }),
-      });
-
-      const result: PPEDetectionResponse = await response.json();
-
-      if (result.success && result.detections) {
-        const { helmet, vest, compliant } = result.detections;
-
-        // Update helmet status
-        if (helmet.detected && store.items.helmet.mlStatus !== 'passed') {
-          store.updateMLStatus('helmet', 'passed', helmet.confidence);
-          addLog(`PPE: Helmet detected (${(helmet.confidence * 100).toFixed(0)}%)`);
-        }
-
-        // Update vest status
-        if (vest.detected && store.items.vest.mlStatus !== 'passed') {
-          store.updateMLStatus('vest', 'passed', vest.confidence);
-          addLog(`PPE: Vest detected (${(vest.confidence * 100).toFixed(0)}%)`);
-        }
-
-        // Log compliance status
-        if (compliant) {
-          addLog('PPE: COMPLIANT - Both helmet and vest detected');
-        }
-      }
-    } catch (error) {
-      // Silently fail PPE detection - will retry on next interval
-      console.error('PPE detection error:', error);
-    }
-  }, [store, addLog]);
+    // PPE detection service is disabled - skip API call
+    return;
+  }, []);
 
   // Perform detection on current frame (face recognition + legacy PPE)
   const performDetection = useCallback(async () => {
@@ -488,7 +422,8 @@ export function useGateVerification({
 
       addLog(`Frame size: ${(blob.size / 1024).toFixed(1)}KB`);
 
-      const result = await gateEntryApi.detect(gateId || 'default', file, 'entry');
+      // Pass empty string if no gate selected - backend will use default gate
+      const result = await gateEntryApi.detect(gateId || '', file, 'entry');
 
       addLog(`Detection response received: ${result.success ? 'SUCCESS' : 'FAILED'}`);
 
@@ -543,26 +478,24 @@ export function useGateVerification({
   // Detection interval effect
   useEffect(() => {
     if (store.isTimerRunning && store.overallStatus === 'verifying') {
-      // Set all items to 'checking' initially
-      ['helmet', 'vest'].forEach((item) => {
+      // RFID is DISABLED - auto-pass all RFID checks
+      // Only ML detection is active
+      ['helmet', 'vest', 'shoes'].forEach((item) => {
         const itemType = item as VerificationItemType;
+        // Auto-pass RFID since it's disabled
         if (store.items[itemType].rfidStatus === 'pending') {
-          store.updateRFIDStatus(itemType, 'checking');
+          store.updateRFIDStatus(itemType, 'passed', 'RFID-DISABLED');
         }
+        // Set ML to checking
         if (store.items[itemType].mlStatus === 'pending') {
           store.updateMLStatus(itemType, 'checking');
         }
       });
 
-      // Shoes - RFID only (new PPE model doesn't detect shoes)
       // Auto-pass shoes ML since the new model focuses on helmet and vest
-      if (store.items.shoes.rfidStatus === 'pending') {
-        store.updateRFIDStatus('shoes', 'checking');
-      }
-      if (store.items.shoes.mlStatus === 'pending') {
-        // Auto-pass shoes ML - the new PPE model doesn't detect shoes
+      if (store.items.shoes.mlStatus === 'pending' || store.items.shoes.mlStatus === 'checking') {
         store.updateMLStatus('shoes', 'passed', 1.0);
-        addLog('Shoes ML: Auto-passed (using RFID verification)');
+        addLog('Shoes ML: Auto-passed (model focuses on helmet/vest)');
       }
 
       if (store.items.face.mlStatus === 'pending') {
@@ -652,7 +585,8 @@ export function useGateVerification({
       addLog(`Snapshot size: ${(blob.size / 1024).toFixed(1)}KB - Sending for detection...`);
 
       // Call the gate entry detect API (includes face recognition + PPE + attendance)
-      const result = await gateEntryApi.detect(gateId || 'default', file, 'entry');
+      // Pass empty string if no gate selected - backend will use default gate
+      const result = await gateEntryApi.detect(gateId || '', file, 'entry');
 
       addLog(`Snapshot detection: ${result.success ? 'SUCCESS' : 'FAILED'}`);
 

@@ -81,7 +81,7 @@ export default function PWAInstallPrompt() {
             <Smartphone className="w-7 h-7 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-slate-800 text-lg">Install Kavach</h3>
+            <h3 className="font-bold text-slate-800 text-lg">Install Raksham</h3>
             <p className="text-sm text-slate-500 mt-1">
               Install the app for quick access and offline support
             </p>
@@ -123,7 +123,7 @@ export default function PWAInstallPrompt() {
             <Smartphone className="w-7 h-7 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-slate-800 text-lg">Install Kavach</h3>
+            <h3 className="font-bold text-slate-800 text-lg">Install Raksham</h3>
             <p className="text-sm text-slate-500 mt-1">
               Add to your home screen for the best experience
             </p>

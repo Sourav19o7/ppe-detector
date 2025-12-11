@@ -30,7 +30,7 @@ export default function OfflinePage() {
 
         <div className="mt-12 p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
           <p className="text-sm text-slate-600">
-            <strong className="text-slate-700">Kavach</strong> - Mine Safety System
+            <strong className="text-slate-700">Raksham</strong> - Mine Safety System
           </p>
           <p className="text-xs text-slate-400 mt-1">
             Some features may be available offline

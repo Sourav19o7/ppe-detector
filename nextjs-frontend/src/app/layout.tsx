@@ -3,26 +3,26 @@ import './globals.css';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 export const metadata: Metadata = {
-  title: 'Kavach - Mine Safety System',
+  title: 'Raksham - Mine Safety System',
   description: 'PPE Compliance & Worker Safety Management System',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Kavach',
+    title: 'Raksham',
   },
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: 'website',
-    siteName: 'Kavach',
-    title: 'Kavach - Mine Safety System',
+    siteName: 'Raksham',
+    title: 'Raksham - Mine Safety System',
     description: 'PPE Compliance & Worker Safety Management System',
   },
   twitter: {
     card: 'summary',
-    title: 'Kavach - Mine Safety System',
+    title: 'Raksham - Mine Safety System',
     description: 'PPE Compliance & Worker Safety Management System',
   },
 };
@@ -49,7 +49,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Kavach" />
+        <meta name="apple-mobile-web-app-title" content="Raksham" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#f97316" />
         <meta name="msapplication-tap-highlight" content="no" />

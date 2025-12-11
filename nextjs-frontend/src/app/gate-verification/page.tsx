@@ -45,6 +45,8 @@ export default function GateVerificationPage() {
     onVerificationComplete: (success, worker) => {
       if (success) {
         playSound('success');
+        // Play gate-open sound when verification is successful
+        setTimeout(() => playSound('gate-open'), 300);
         setShowSuccessAnimation(true);
         setTimeout(() => setShowSuccessAnimation(false), 3000);
       } else {
@@ -52,7 +54,8 @@ export default function GateVerificationPage() {
       }
     },
     onGateOpen: () => {
-      // Gate open signal would go here
+      // Gate open signal - play gate-open sound
+      playSound('gate-open');
       console.log('Gate opening...');
     },
     onWorkerIdentified: (worker) => {
@@ -78,8 +81,20 @@ export default function GateVerificationPage() {
   }, [verification]);
 
   // Sound effects
-  const playSound = useCallback((type: 'success' | 'error' | 'scan') => {
+  const playSound = useCallback((type: 'success' | 'error' | 'scan' | 'gate-open') => {
     if (!soundEnabled) return;
+
+    // Play gate-open.mp3 for gate opening sound
+    if (type === 'gate-open') {
+      try {
+        const audio = new Audio('/gate-open.mp3');
+        audio.volume = 0.7;
+        audio.play().catch(e => console.log('Audio play failed:', e));
+      } catch (e) {
+        console.log('Gate open sound not available');
+      }
+      return;
+    }
 
     // Using Web Audio API for simple beeps
     try {

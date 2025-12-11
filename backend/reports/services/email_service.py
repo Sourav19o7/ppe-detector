@@ -167,6 +167,13 @@ class EmailService:
         self.from_email = os.getenv("FROM_EMAIL", "reports@minesafety.com")
         self.from_name = os.getenv("FROM_NAME", "Mine Safety Reports")
 
+        # Log configuration (without password)
+        print(f"[EmailService] Initialized with:")
+        print(f"  - SMTP Host: {self.smtp_host}:{self.smtp_port}")
+        print(f"  - SMTP User: {self.smtp_user if self.smtp_user else 'NOT CONFIGURED'}")
+        print(f"  - SMTP Password: {'***' if self.smtp_password else 'NOT CONFIGURED'}")
+        print(f"  - From: {self.from_name} <{self.from_email}>")
+
         # Initialize Jinja2 environment
         self.jinja_env = Environment(loader=BaseLoader())
 
@@ -194,8 +201,11 @@ class EmailService:
             True if email sent successfully, False otherwise
         """
         if not self.smtp_user or not self.smtp_password:
-            print("Warning: SMTP credentials not configured. Email not sent.")
+            print("[EmailService] Warning: SMTP credentials not configured. Email not sent.")
+            print(f"[EmailService] SMTP_USER: {self.smtp_user}, SMTP_PASSWORD: {'set' if self.smtp_password else 'not set'}")
             return False
+
+        print(f"[EmailService] Sending report '{report_name}' to {len(recipients)} recipients...")
 
         try:
             # Create message

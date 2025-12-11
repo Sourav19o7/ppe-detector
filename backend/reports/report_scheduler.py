@@ -278,7 +278,6 @@ def register_report_scheduler(scheduler, db):
         scheduler: APScheduler instance
         db: MongoDB database instance
     """
-    @scheduler.scheduled_job('interval', minutes=5, id='check_report_schedules')
     async def check_and_run_schedules():
         """Check for due report schedules and execute them."""
         now = datetime.utcnow()
@@ -293,18 +292,39 @@ def register_report_scheduler(scheduler, db):
             }).to_list(length=50)
 
             if not due_schedules:
+                print(f"[{now}] No due schedules found")
                 return
 
-            print(f"Found {len(due_schedules)} due schedules")
+            print(f"[{now}] Found {len(due_schedules)} due schedules")
 
             for schedule in due_schedules:
                 try:
                     await run_single_schedule(db, schedule)
                 except Exception as e:
-                    print(f"Error running schedule {schedule.get('name')}: {e}")
+                    print(f"[{now}] Error running schedule {schedule.get('name')}: {e}")
+                    import traceback
+                    traceback.print_exc()
 
         except Exception as e:
-            print(f"Error checking report schedules: {e}")
+            print(f"[{now}] Error checking report schedules: {e}")
+            import traceback
+            traceback.print_exc()
+
+    # Remove existing job if it exists (for restarts)
+    try:
+        scheduler.remove_job('check_report_schedules')
+    except:
+        pass
+
+    # Add job using add_job instead of decorator (works better after scheduler started)
+    scheduler.add_job(
+        check_and_run_schedules,
+        'interval',
+        minutes=5,
+        id='check_report_schedules',
+        replace_existing=True
+    )
 
     print("Report scheduler registered successfully")
     print("  - Checking for due schedules every 5 minutes")
+    print("  - Next check in 5 minutes")

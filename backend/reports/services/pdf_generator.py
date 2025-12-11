@@ -8,6 +8,7 @@ from io import BytesIO
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 import os
+from pathlib import Path
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, letter
@@ -18,6 +19,15 @@ from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
     Image, PageBreak, KeepTogether
 )
+
+# Logo paths - CSR first (leftmost), then Ministry, Coal India, CMPDIL
+ASSETS_DIR = Path(__file__).parent.parent.parent / "assets" / "logos"
+LOGO_FILES = [
+    "csr-logo-removebg-preview.png",
+    "ministry-of-coal-removebg-preview.png",
+    "coal-india-removebg-preview.png",
+    "cmpdil-removebg-preview.png",
+]
 from reportlab.graphics.shapes import Drawing
 from reportlab.graphics.charts.barcharts import VerticalBarChart
 from reportlab.graphics.charts.piecharts import Pie
@@ -202,9 +212,58 @@ class PDFGenerator:
 
         return elements
 
+    def _build_logo_header(self) -> List:
+        """Build the logo header with coal ministry logos."""
+        elements = []
+
+        logo_images = []
+        for logo_file in LOGO_FILES:
+            logo_path = ASSETS_DIR / logo_file
+            if logo_path.exists():
+                try:
+                    # CSR logo needs to be larger as it's less visible
+                    if "csr" in logo_file.lower():
+                        img = Image(str(logo_path), width=45*mm, height=22*mm)
+                    else:
+                        # Other logos at standard size
+                        img = Image(str(logo_path), width=35*mm, height=18*mm)
+                    img.hAlign = 'CENTER'
+                    logo_images.append(img)
+                except Exception as e:
+                    print(f"Error loading logo {logo_file}: {e}")
+
+        if logo_images:
+            # Calculate column widths based on number of logos
+            total_width = 170*mm  # Total available width
+            col_width = total_width / len(logo_images)
+
+            # Create a table with all logos in a row
+            logo_table = Table([logo_images], colWidths=[col_width] * len(logo_images))
+            logo_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ]))
+            elements.append(logo_table)
+            elements.append(Spacer(1, 8))
+
+            # Add separator line
+            separator = Table([['']], colWidths=[170*mm])
+            separator.setStyle(TableStyle([
+                ('LINEBELOW', (0, 0), (-1, -1), 2, self.COLORS['primary']),
+            ]))
+            elements.append(separator)
+            elements.append(Spacer(1, 12))
+
+        return elements
+
     def _build_header(self, section: Dict, data: Dict, template) -> List:
         """Build report header."""
         elements = []
+
+        # Add logo header first
+        elements.extend(self._build_logo_header())
 
         # Title
         title = section.get("title", template.report_name)
@@ -260,18 +319,49 @@ class PDFGenerator:
                 "color": self.COLORS.get(color, self.COLORS["blue"])
             })
 
-        # Create table for metrics
+        # Create table for metrics - use nested tables for proper layout
         table_data = [[]]
-        for m in metric_data:
-            cell_content = [
-                Paragraph(f"<font size='20' color='{m['color'].hexval()}'><b>{m['value']}</b></font>",
-                         self.styles['Normal']),
-                Paragraph(f"<font size='9' color='gray'>{m['label']}</font>",
-                         self.styles['Normal'])
-            ]
-            table_data[0].append(cell_content)
+        col_width = 170*mm / len(metric_data)
 
-        col_width = 450 / len(metric_data)
+        for m in metric_data:
+            # Create a nested table for each metric cell with value on top, label below
+            value_style = ParagraphStyle(
+                'MetricValueInline',
+                parent=self.styles['Normal'],
+                fontSize=18,
+                alignment=TA_CENTER,
+                leading=22,
+                spaceAfter=4,
+            )
+            label_style = ParagraphStyle(
+                'MetricLabelInline',
+                parent=self.styles['Normal'],
+                fontSize=8,
+                alignment=TA_CENTER,
+                textColor=self.COLORS['gray'],
+                leading=10,
+            )
+
+            # Create nested table with value and label in separate rows
+            inner_table = Table(
+                [
+                    [Paragraph(f"<font color='{m['color'].hexval()}'><b>{m['value']}</b></font>", value_style)],
+                    [Paragraph(m['label'], label_style)]
+                ],
+                colWidths=[col_width - 10],
+                rowHeights=[28, 16]
+            )
+            inner_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (0, 0), 'BOTTOM'),
+                ('VALIGN', (0, 1), (0, 1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 2),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ]))
+            table_data[0].append(inner_table)
+
         table = Table(table_data, colWidths=[col_width] * len(metric_data))
         table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
@@ -279,8 +369,8 @@ class PDFGenerator:
             ('BOX', (0, 0), (-1, -1), 1, self.COLORS['light']),
             ('INNERGRID', (0, 0), (-1, -1), 0.5, self.COLORS['light']),
             ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-            ('TOPPADDING', (0, 0), (-1, -1), 15),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
         ]))
 
         elements.append(table)
@@ -346,9 +436,10 @@ class PDFGenerator:
 
             table_rows.append(row_data)
 
-        # Calculate column widths
+        # Calculate column widths - use mm units for consistency
         num_cols = len(columns)
-        col_widths = [450 / num_cols] * num_cols
+        total_width = 170*mm
+        col_widths = [total_width / num_cols] * num_cols
 
         table = Table(table_rows, colWidths=col_widths, repeatRows=1)
 
@@ -387,6 +478,27 @@ class PDFGenerator:
 
         return elements
 
+    def _extract_numeric_value(self, value) -> float:
+        """Extract a numeric value from various data types."""
+        if isinstance(value, (int, float)):
+            return float(value)
+        elif isinstance(value, dict):
+            # Try common keys for numeric values
+            for key in ['count', 'value', 'total', 'amount', 'score', 'rate', 'percentage']:
+                if key in value and isinstance(value[key], (int, float)):
+                    return float(value[key])
+            # If no common key found, try to get the first numeric value
+            for v in value.values():
+                if isinstance(v, (int, float)):
+                    return float(v)
+            return 0.0
+        elif isinstance(value, str):
+            try:
+                return float(value.replace('%', '').replace(',', ''))
+            except:
+                return 0.0
+        return 0.0
+
     def _build_chart(self, section: Dict, data: Dict) -> List:
         """Build a chart using ReportLab or matplotlib."""
         elements = []
@@ -409,12 +521,22 @@ class PDFGenerator:
         # Handle dictionary data (for pie charts)
         if isinstance(chart_data, dict):
             labels = list(chart_data.keys())
-            values = list(chart_data.values())
+            raw_values = list(chart_data.values())
         elif isinstance(chart_data, list):
-            labels = [item.get(x_key, str(i)) for i, item in enumerate(chart_data)]
-            values = [item.get(y_key, 0) for item in chart_data]
+            labels = [str(item.get(x_key, i)) if isinstance(item, dict) else str(i) for i, item in enumerate(chart_data)]
+            raw_values = [item.get(y_key, 0) if isinstance(item, dict) else item for item in chart_data]
         else:
             return elements
+
+        # Convert all values to numeric (handles dicts, strings, etc.)
+        values = [self._extract_numeric_value(v) for v in raw_values]
+
+        # Filter out zero values and their labels for pie charts
+        if chart_type == "pie":
+            filtered = [(l, v) for l, v in zip(labels, values) if v > 0]
+            if filtered:
+                labels, values = zip(*filtered)
+                labels, values = list(labels), list(values)
 
         # Use matplotlib if available for better charts
         if MATPLOTLIB_AVAILABLE:
@@ -518,7 +640,7 @@ class PDFGenerator:
             info_data.append([label, str(value) if value else "-"])
 
         if info_data:
-            table = Table(info_data, colWidths=[150, 300])
+            table = Table(info_data, colWidths=[50*mm, 120*mm])
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (0, -1), self.COLORS['light']),
                 ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
@@ -543,7 +665,7 @@ class PDFGenerator:
 
         # Create a table for two-column layout
         table_data = [[left_elements, right_elements]]
-        table = Table(table_data, colWidths=[225, 225])
+        table = Table(table_data, colWidths=[85*mm, 85*mm])
         table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('LEFTPADDING', (0, 0), (-1, -1), 5),
@@ -598,7 +720,8 @@ class PDFGenerator:
             [str(current_value or 0), str(previous_value or 0), f"{change_arrow} {abs(change or 0):.1f}%"]
         ]
 
-        table = Table(table_data, colWidths=[150, 150, 150])
+        col_width = 170*mm / 3
+        table = Table(table_data, colWidths=[col_width, col_width, col_width])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), self.COLORS['primary']),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -624,7 +747,7 @@ class PDFGenerator:
         color = self.COLORS.get(severity, self.COLORS["info"])
 
         table_data = [[f"{title}: {value}"]]
-        table = Table(table_data, colWidths=[450])
+        table = Table(table_data, colWidths=[170*mm])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), color),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
@@ -661,7 +784,8 @@ class PDFGenerator:
             [f"{threshold}%", f"{current:.1f}%", status.upper()]
         ]
 
-        table = Table(table_data, colWidths=[150, 150, 150])
+        col_width = 170*mm / 3
+        table = Table(table_data, colWidths=[col_width, col_width, col_width])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), self.COLORS['dark']),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -695,7 +819,7 @@ class PDFGenerator:
             ["Shift", worker.get("assigned_shift", "-").title()]
         ]
 
-        table = Table(profile_data, colWidths=[100, 350])
+        table = Table(profile_data, colWidths=[40*mm, 130*mm])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (0, -1), self.COLORS['light']),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),

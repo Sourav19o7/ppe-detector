@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { HardHat, UserCog, Shield, Loader2, AlertCircle, KeyRound, User } from 'lucide-react';
+import { HardHat, UserCog, Loader2, AlertCircle, KeyRound, User } from 'lucide-react';
 
 type LoginMode = 'staff' | 'worker';
 
@@ -111,10 +112,17 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md px-6">
         {/* Logo and Title */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-300 via-amber-200 to-orange-300 rounded-3xl mb-6 shadow-lg border border-orange-200">
-            <Shield className="w-10 h-10 text-orange-600" strokeWidth={2.5} />
+          <div className="inline-flex items-center justify-center w-24 h-24 mb-6">
+            <Image
+              src="/raksham-logo.png"
+              alt="Raksham Logo"
+              width={96}
+              height={96}
+              className="object-contain"
+              priority
+            />
           </div>
-          <h1 className="text-4xl font-bold text-slate-800 mb-2.5 tracking-tight">Kavach</h1>
+          <h1 className="text-4xl font-bold text-slate-800 mb-2.5 tracking-tight">Raksham</h1>
           <p className="text-slate-500 text-base font-medium">Mine Safety & PPE Compliance System</p>
         </div>
 
@@ -306,7 +314,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-slate-400 text-sm mt-8">
-          Kavach - Mine Safety System v2.0
+          Raksham - Mine Safety System v2.0
         </p>
       </div>
     </div>

@@ -566,7 +566,8 @@ async def create_employee(
     if file and file.filename:
         contents = await file.read()
         if contents:
-            success = detector.register_face(employee_id, contents)
+            # Pass the worker's actual name as display_name for face recognition
+            success = detector.register_face(employee_id, contents, name)
             if success:
                 employee_data["face_registered"] = True
             else:
@@ -1125,14 +1126,20 @@ async def get_dashboard_stats():
 # ==================== Legacy Face Registration ====================
 
 @app.post("/register-face")
-async def register_face(name: str, file: UploadFile = File(...)):
-    """Register a new face for recognition (legacy endpoint)."""
+async def register_face(name: str, file: UploadFile = File(...), display_name: str = None):
+    """Register a new face for recognition (legacy endpoint).
+
+    Args:
+        name: Employee ID or unique identifier
+        file: Image file with face
+        display_name: Optional actual name to display (defaults to name if not provided)
+    """
     try:
         contents = await file.read()
-        success = detector.register_face(name, contents)
+        success = detector.register_face(name, contents, display_name or name)
 
         if success:
-            return {"success": True, "message": f"Face registered for {name}"}
+            return {"success": True, "message": f"Face registered for {display_name or name} ({name})"}
         else:
             return {"success": False, "message": "No face detected in image"}
     except Exception as e:
