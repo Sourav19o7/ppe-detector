@@ -277,7 +277,7 @@ export default function ReportsPage() {
         {/* Generate Report Tab */}
         {activeTab === 'generate' && (
           <div className="space-y-6">
-            {/* Emergency Incident Report - Quick Access */}
+            {/* Emergency Incident Report - Quick Access
             <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 text-white shadow-lg">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
@@ -323,7 +323,7 @@ export default function ReportsPage() {
                   )}
                 </button>
               </div>
-            </div>
+            </div> */}
 
             <ReportGenerator
               reportTypes={reportTypes}
