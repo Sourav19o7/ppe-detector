@@ -605,10 +605,17 @@ export default function Map3DGeneratorPage() {
 
       const delta = clockRef.current.getDelta();
 
-      // Get current tracking state from store
-      const currentViewMode = trackingStore.viewMode;
-      const workerPos = trackingStore.workerPosition;
-      const workerHeading = trackingStore.workerHeading;
+      // Get FRESH state from store on each frame (critical for real-time updates!)
+      const currentState = useMineTrackingStore.getState();
+      const currentViewMode = currentState.viewMode;
+      const workerPos = currentState.workerPosition;
+      const workerHeading = currentState.workerHeading;
+      const stepCount = currentState.stepCount;
+
+      // Debug log every ~60 frames (1 second at 60fps)
+      if (Math.random() < 0.016) {
+        console.log(`[3D] Worker pos=(${workerPos.x.toFixed(2)}, ${workerPos.z.toFixed(2)}) heading=${(workerHeading * 180 / Math.PI).toFixed(1)}° steps=${stepCount}`);
+      }
 
       // Update worker avatar position and rotation
       if (workerMeshRef.current) {
@@ -986,9 +993,10 @@ export default function Map3DGeneratorPage() {
       ctx.fillRect(rx, rz, rw, rd);
     });
 
-    // Draw entrance marker
-    const entranceX = toMapX(trackingStore.entrancePosition.x);
-    const entranceZ = toMapZ(trackingStore.entrancePosition.z);
+    // Draw entrance marker (get fresh state)
+    const currentEntrance = useMineTrackingStore.getState().entrancePosition;
+    const entranceX = toMapX(currentEntrance.x);
+    const entranceZ = toMapZ(currentEntrance.z);
     ctx.fillStyle = '#22c55e';
     ctx.beginPath();
     ctx.arc(entranceX, entranceZ, 6, 0, Math.PI * 2);
