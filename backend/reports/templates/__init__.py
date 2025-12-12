@@ -9,6 +9,7 @@ from .manager import ManagerTemplate
 from .area_safety_officer import AreaSafetyOfficerTemplate
 from .general_manager import GeneralManagerTemplate
 from .worker import WorkerTemplate
+from .emergency_incident import EmergencyIncidentTemplate
 
 __all__ = [
     "BaseReportTemplate",
@@ -18,4 +19,5 @@ __all__ = [
     "AreaSafetyOfficerTemplate",
     "GeneralManagerTemplate",
     "WorkerTemplate",
+    "EmergencyIncidentTemplate",
 ]

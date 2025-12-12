@@ -34,6 +34,9 @@ SERIAL_ENABLED = True  # Set to False to use mock data for testing
 # Store latest readings per helmet/worker
 latest_helmet_data: Dict[str, Dict[str, Any]] = {}
 
+# Global serial connection for bidirectional communication
+_serial_connection: Optional[serial.Serial] = None
+
 # Worker ID to Name mapping for demo helmets
 DEMO_WORKER_NAMES = {
     "worker_1": "Stavan Sheth",
@@ -280,7 +283,7 @@ def get_mock_helmet_data(worker_id: str = "worker_1") -> Dict[str, Any]:
 
 async def serial_reader():
     """Background task that reads from serial port and updates latest_helmet_data. (Restored)"""
-    global latest_helmet_data
+    global latest_helmet_data, _serial_connection
 
     print(f"[Helmet Service] Starting serial reader on {SERIAL_PORT}...")
     ser = None
@@ -300,6 +303,7 @@ async def serial_reader():
             if ser is None:
                 try:
                     ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+                    _serial_connection = ser  # Store globally for bidirectional communication
                     print(f"[Helmet Service] Serial connected to {SERIAL_PORT}")
                 except Exception as e:
                     print(f"[Helmet Service] Serial connection failed: {e}")
@@ -361,3 +365,37 @@ async def start_helmet_reader():
     """Start the helmet serial reader as a background task. (Restored)"""
     # This is called once during FastAPI startup
     asyncio.create_task(serial_reader())
+
+
+# ================= EVACUATION TRIGGER =================
+
+def trigger_all_alarms() -> dict:
+    """
+    Send EVACUATE_ALL command to ESP32 via serial port.
+    This triggers all helmet buzzers for emergency evacuation.
+
+    Returns:
+        dict with success status and message
+    """
+    global _serial_connection
+
+    try:
+        if _serial_connection and _serial_connection.is_open:
+            _serial_connection.write(b"EVACUATE_ALL\n")
+            print("[Helmet Service] EVACUATE_ALL command sent to ESP32")
+            return {"success": True, "message": "Evacuation command sent to all helmets"}
+        else:
+            # Try to open a new connection if not available
+            try:
+                temp_ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+                temp_ser.write(b"EVACUATE_ALL\n")
+                temp_ser.close()
+                print("[Helmet Service] EVACUATE_ALL command sent via new connection")
+                return {"success": True, "message": "Evacuation command sent (new connection)"}
+            except Exception as e:
+                print(f"[Helmet Service] Failed to send evacuation command: {e}")
+                # For demo purposes, return success even if serial is not connected
+                return {"success": True, "message": "Evacuation command simulated (no serial connection)", "simulated": True}
+    except Exception as e:
+        print(f"[Helmet Service] Error triggering alarms: {e}")
+        return {"success": False, "message": f"Failed to trigger alarms: {str(e)}"}

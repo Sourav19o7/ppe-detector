@@ -485,6 +485,89 @@ export default function HelmetMonitoringPage() {
               />
             </div>
 
+            {/* Active Danger Zones */}
+            <Card
+              title="Active Danger Zones"
+              icon={<AlertTriangle className="w-5 h-5 text-red-500" />}
+              className="border-red-200 bg-gradient-to-r from-red-50 to-orange-50"
+            >
+              <div className="space-y-3">
+                {/* Zone A - Extraction - Active Danger */}
+                <div className="p-4 bg-white border-2 border-red-300 rounded-xl animate-pulse">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                        <AlertTriangle className="w-6 h-6 text-red-600" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-slate-800">Zone A - Extraction</h3>
+                          <span className="px-2 py-0.5 bg-red-600 text-white text-xs font-bold rounded-full animate-pulse">
+                            CRITICAL
+                          </span>
+                        </div>
+                        <p className="text-sm text-red-600 font-medium">High Methane Detected</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-red-600">15,200</p>
+                      <p className="text-xs text-slate-500">PPM</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-red-100 grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <span className="text-slate-500">Threshold:</span>
+                      <span className="ml-2 font-medium text-slate-700">5,000 PPM</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Workers in Zone:</span>
+                      <span className="ml-2 font-medium text-red-600">8</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Status:</span>
+                      <span className="ml-2 font-medium text-orange-600">Evacuating</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Safe Zones */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="p-3 bg-white border border-green-200 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Shield className="w-4 h-4 text-green-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-slate-700 text-sm">Zone B - Storage</h4>
+                          <p className="text-xs text-green-600">Safe - 320 PPM</p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        SAFE
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-white border border-green-200 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Shield className="w-4 h-4 text-green-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-slate-700 text-sm">Zone C - Ventilation</h4>
+                          <p className="text-xs text-green-600">Safe - 180 PPM</p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        SAFE
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Sensor Readings Table */}

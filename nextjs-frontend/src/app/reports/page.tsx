@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Calendar, Download, Users, AlertTriangle, Clock, Settings, Plus } from 'lucide-react';
+import { FileText, Calendar, Download, Users, AlertTriangle, Clock, Settings, Plus, Siren } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import { Card } from '@/components/Card';
 import { Spinner } from '@/components/Loading';
@@ -30,6 +30,9 @@ export default function ReportsPage() {
   const [schedulesLoading, setSchedulesLoading] = useState(true);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<ReportSchedule | undefined>();
+
+  // Emergency report state
+  const [emergencyReportLoading, setEmergencyReportLoading] = useState(false);
 
   // Legacy report state
   const [legacyReportType, setLegacyReportType] = useState<'attendance' | 'violations'>('attendance');
@@ -113,6 +116,38 @@ export default function ReportsPage() {
     } catch (err) {
       console.error('Failed to test schedule:', err);
       alert('Failed to send test report');
+    }
+  };
+
+  // Emergency Incident Report download
+  const downloadEmergencyReport = async () => {
+    setEmergencyReportLoading(true);
+    try {
+      const response = await fetch('/api/reports/emergency-incident', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Emergency_Incident_Report_Dec_12_2024.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download emergency report:', err);
+      alert('Failed to download emergency report. Please try again.');
+    } finally {
+      setEmergencyReportLoading(false);
     }
   };
 
@@ -242,6 +277,54 @@ export default function ReportsPage() {
         {/* Generate Report Tab */}
         {activeTab === 'generate' && (
           <div className="space-y-6">
+            {/* Emergency Incident Report - Quick Access */}
+            <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 text-white shadow-lg">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-white/20 rounded-lg">
+                    <Siren className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Emergency Incident Report</h3>
+                    <p className="text-red-100 mt-1">
+                      Gas Emergency - Methane Spike | Zone A - Extraction | December 12, 2024
+                    </p>
+                    <div className="flex items-center gap-4 mt-3 text-sm">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                        8 Workers Safely Evacuated
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                        Peak: 15,200 PPM
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                        Response: 2 min 34 sec
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={downloadEmergencyReport}
+                  disabled={emergencyReportLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  {emergencyReportLoading ? (
+                    <>
+                      <Spinner size="sm" className="border-red-300 border-t-red-600" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Download size={18} />
+                      Download PDF
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
             <ReportGenerator
               reportTypes={reportTypes}
               mineId={user?.mine_id}

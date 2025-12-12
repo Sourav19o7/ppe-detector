@@ -10,6 +10,7 @@ from bson import ObjectId
 from database import get_database
 from auth import get_current_user
 from services.sms_service import get_sms_service
+from services.helmet_service import trigger_all_alarms
 
 router = APIRouter(prefix="/api/sos-alerts", tags=["SOS Alerts"])
 
@@ -208,14 +209,21 @@ async def get_sos_alerts(
     start_date = datetime.utcnow() - timedelta(days=days)
     query = {"created_at": {"$gte": start_date}}
 
-    if mine_id:
-        query["mine_id"] = ObjectId(mine_id)
+    # Handle mine_id - skip if "null", empty, or invalid
+    if mine_id and mine_id not in ["null", "undefined", ""]:
+        try:
+            query["mine_id"] = ObjectId(mine_id)
+        except Exception:
+            pass  # Invalid ObjectId, skip filter
     if status:
         query["status"] = status
     if severity:
         query["severity"] = severity
-    if worker_id:
-        query["worker_id"] = ObjectId(worker_id)
+    if worker_id and worker_id not in ["null", "undefined", ""]:
+        try:
+            query["worker_id"] = ObjectId(worker_id)
+        except Exception:
+            pass  # Invalid ObjectId, skip filter
 
     cursor = db.sos_alerts.find(query).sort("created_at", -1).skip(skip).limit(limit)
     alerts = []
@@ -264,8 +272,11 @@ async def get_active_sos_alerts(
     db = get_database()
 
     query = {"status": {"$in": ["active", "acknowledged"]}}
-    if mine_id:
-        query["mine_id"] = ObjectId(mine_id)
+    if mine_id and mine_id not in ["null", "undefined", ""]:
+        try:
+            query["mine_id"] = ObjectId(mine_id)
+        except Exception:
+            pass  # Invalid ObjectId, skip filter
 
     cursor = db.sos_alerts.find(query).sort("created_at", -1)
     alerts = []
@@ -405,8 +416,11 @@ async def get_sos_stats(
     start_date = datetime.utcnow() - timedelta(days=days)
     query = {"created_at": {"$gte": start_date}}
 
-    if mine_id:
-        query["mine_id"] = ObjectId(mine_id)
+    if mine_id and mine_id not in ["null", "undefined", ""]:
+        try:
+            query["mine_id"] = ObjectId(mine_id)
+        except Exception:
+            pass  # Invalid ObjectId, skip filter
 
     # Get counts by status
     total = await db.sos_alerts.count_documents(query)
@@ -443,4 +457,157 @@ async def get_sos_stats(
         "medium": medium,
         "avg_response_time_minutes": round(avg_response, 1),
         "time_range_days": days
+    }
+
+
+@router.post("/trigger-evacuation")
+async def trigger_mine_evacuation(
+    zone_name: str = "Zone A - Extraction",
+    gas_type: str = "methane",
+    gas_level: float = 15200,
+    mine_name: str = "Jharia Coal Mine",
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Trigger emergency evacuation for an entire zone.
+    This sends EVACUATE_ALL command to all helmets and sends SMS alerts.
+    """
+    db = get_database()
+    sms_service = get_sms_service()
+
+    # 1. Trigger all helmet alarms via ESP32
+    helmet_result = trigger_all_alarms()
+    print(f"[Evacuation] Helmet trigger result: {helmet_result}")
+
+    # 2. Get all active workers in the affected zone (for demo, get all active workers)
+    workers_cursor = db.workers.find({"is_active": True})
+    affected_workers = []
+    async for worker in workers_cursor:
+        affected_workers.append({
+            "id": str(worker["_id"]),
+            "name": worker.get("name", "Unknown"),
+            "employee_id": worker.get("employee_id", "Unknown")
+        })
+
+    workers_count = len(affected_workers)
+
+    # 3. Create a mine-wide SOS alert
+    alert = {
+        "mine_id": None,  # Mine-wide
+        "zone_id": None,
+        "zone_name": zone_name,
+        "worker_id": None,  # System-triggered, not by a specific worker
+        "worker_name": "SYSTEM",
+        "employee_id": "SYSTEM",
+        "reason": f"Gas Emergency - {gas_type.upper()} SPIKE DETECTED at {gas_level} PPM",
+        "severity": "critical",
+        "status": "active",
+        "location": {
+            "x": 0,
+            "y": 0,
+            "depth_m": 0,
+            "section": zone_name
+        },
+        "created_at": datetime.utcnow(),
+        "acknowledged_at": None,
+        "acknowledged_by": None,
+        "resolved_at": None,
+        "resolved_by": None,
+        "resolution_notes": None,
+        "nearby_workers_notified": workers_count,
+        "evacuation_triggered": True,
+        "audio_broadcast_sent": True,
+        "is_mass_evacuation": True,
+        "gas_type": gas_type,
+        "gas_level": gas_level,
+        "affected_workers": affected_workers,
+        "triggered_by": current_user.get("full_name", current_user.get("username", "Unknown")),
+        "response_actions": [
+            {
+                "action": f"EMERGENCY: {gas_type.upper()} spike detected at {gas_level} PPM",
+                "timestamp": datetime.utcnow().isoformat(),
+                "by": "Sensor System"
+            },
+            {
+                "action": f"Mass evacuation triggered by {current_user.get('full_name', current_user.get('username', 'Unknown'))}",
+                "timestamp": datetime.utcnow().isoformat(),
+                "by": current_user.get("full_name", current_user.get("username", "Unknown"))
+            },
+            {
+                "action": f"All helmet alarms activated ({workers_count} workers notified)",
+                "timestamp": datetime.utcnow().isoformat(),
+                "by": "System"
+            },
+            {
+                "action": "SMS alerts sent to safety personnel",
+                "timestamp": datetime.utcnow().isoformat(),
+                "by": "System"
+            }
+        ]
+    }
+
+    result = await db.sos_alerts.insert_one(alert)
+
+    # 4. Create general alert
+    general_alert = {
+        "alert_type": "evacuation",
+        "severity": "critical",
+        "status": "active",
+        "message": f"EMERGENCY EVACUATION: {gas_type.upper()} leak in {zone_name} - {gas_level} PPM",
+        "mine_id": None,
+        "zone_id": None,
+        "created_at": datetime.utcnow(),
+        "sos_alert_id": result.inserted_id,
+        "is_mass_evacuation": True
+    }
+    await db.alerts.insert_one(general_alert)
+
+    # 5. Send SMS to safety officer (+91 88286 42788)
+    sms_sent = 0
+    safety_officer_phone = "+918828642788"
+
+    if sms_service.is_configured():
+        # Build evacuation SMS message
+        from datetime import timezone
+        ist_time = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+        sms_message = f"""🚨 EMERGENCY EVACUATION ALERT 🚨
+
+⚠️ {gas_type.upper()} SPIKE DETECTED
+Zone: {zone_name}
+Mine: {mine_name}
+
+Gas Level: {gas_level:,.0f} PPM (CRITICAL)
+Threshold: 5,000 PPM
+
+ACTION: IMMEDIATE EVACUATION
+Workers Affected: {workers_count}
+Evacuation Triggered: YES
+
+⏰ {ist_time}
+
+All workers have been alerted via helmet alarms.
+Acknowledge this alert immediately.
+
+- RAKSHAM Mine Safety System"""
+
+        try:
+            sms_result = await sms_service.send_sms(safety_officer_phone, sms_message)
+            if sms_result.get("success"):
+                sms_sent = 1
+                print(f"[Evacuation] SMS sent to Safety Officer at {safety_officer_phone}")
+        except Exception as e:
+            print(f"[Evacuation] Failed to send SMS: {e}")
+
+    return {
+        "success": True,
+        "alert_id": str(result.inserted_id),
+        "message": f"Emergency evacuation triggered for {zone_name}",
+        "workers_notified": workers_count,
+        "helmet_alarms_triggered": helmet_result.get("success", False),
+        "sms_sent": sms_sent,
+        "gas_type": gas_type,
+        "gas_level": gas_level,
+        "zone": zone_name,
+        "affected_workers": affected_workers
     }

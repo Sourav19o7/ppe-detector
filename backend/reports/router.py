@@ -38,7 +38,8 @@ from .services.excel_generator import ExcelGenerator
 from .services.email_service import get_email_service
 from .templates import (
     ShiftInchargeTemplate, SafetyOfficerTemplate, ManagerTemplate,
-    AreaSafetyOfficerTemplate, GeneralManagerTemplate, WorkerTemplate
+    AreaSafetyOfficerTemplate, GeneralManagerTemplate, WorkerTemplate,
+    EmergencyIncidentTemplate
 )
 from .templates.shift_incharge import ShiftHandoverTemplate
 from .templates.safety_officer import ViolationTrendsTemplate, HighRiskWorkersTemplate
@@ -568,6 +569,92 @@ async def get_worker_compliance_card(
     )
 
     return data
+
+
+# ==================== Emergency Incident Report ====================
+
+@router.get("/emergency-incident")
+async def generate_emergency_incident_report(
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Generate an Emergency Incident PDF Report.
+
+    For the demo, this returns a pre-generated report for the
+    Dec 12, 2024 Gas Emergency at Jharia Coal Mine.
+    """
+    from .templates.emergency_incident import EmergencyIncidentTemplate, get_demo_emergency_data
+
+    # Get demo data
+    data = get_demo_emergency_data()
+
+    # Create template (db not needed for demo data)
+    template = EmergencyIncidentTemplate(db=None)
+
+    # Generate PDF
+    generator = PDFGenerator()
+    buffer = await generator.generate(template, data)
+
+    # Return as downloadable PDF
+    filename = "Emergency_Incident_Report_Dec_12_2024.pdf"
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+@router.post("/emergency-incident")
+async def generate_emergency_incident_report_post(
+    incident_date: str = "2024-12-12",
+    zone_name: str = "Zone A - Extraction",
+    gas_type: str = "Methane",
+    gas_level: float = 15200,
+    workers_affected: int = 8,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Generate a customized Emergency Incident PDF Report.
+
+    For the demo, parameters are optional and default to the Dec 12 incident.
+    """
+    from .templates.emergency_incident import EmergencyIncidentTemplate, get_demo_emergency_data
+
+    # Get demo data (in production, this would query actual incident data)
+    data = get_demo_emergency_data()
+
+    # Create template
+    template = EmergencyIncidentTemplate(db=None)
+
+    # Generate PDF
+    generator = PDFGenerator()
+    buffer = await generator.generate(template, data)
+
+    # Generate report ID for caching
+    report_id = str(uuid.uuid4())
+    filename = f"Emergency_Incident_Report_{incident_date.replace('-', '_')}.pdf"
+
+    # Store in cache
+    _report_cache[report_id] = {
+        "buffer": buffer,
+        "filename": filename,
+        "content_type": "application/pdf",
+        "created_at": datetime.utcnow(),
+        "format": "pdf"
+    }
+
+    return GenerateReportResponse(
+        success=True,
+        report_id=report_id,
+        download_url=f"/reports/download/{report_id}",
+        file_name=filename,
+        format=ReportFormat.PDF,
+        generated_at=datetime.utcnow().isoformat(),
+        message="Emergency Incident Report generated successfully"
+    )
 
 
 # ==================== Helper Functions ====================

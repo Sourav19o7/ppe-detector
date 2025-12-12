@@ -143,7 +143,6 @@ const mockComplianceTrend = [
 const mockHealthAnalysis = {
   risk_level: 'low' as const,
   risk_score: 18,
-  fatigue_index: 22,
   stress_indicator: 'normal' as const,
   last_health_check: '2024-12-01',
   next_health_check: '2025-01-01',
@@ -166,6 +165,22 @@ const mockViolationBreakdown = [
   { name: 'Vest', value: 2, color: '#f97316' },
   { name: 'Gloves', value: 1, color: '#eab308' },
   { name: 'Boots', value: 0, color: '#3b82f6' },
+];
+
+const mockEmergencyHistory = [
+  {
+    id: 'sos-001',
+    date: '2024-12-12',
+    time: '10:30 AM',
+    type: 'Gas Emergency',
+    zone: 'Zone A - Extraction',
+    role: 'Evacuated Worker',
+    response_time: '2 min 34 sec',
+    status: 'safely_evacuated' as const,
+    gas_type: 'Methane',
+    gas_level: '15,200 PPM',
+    details: 'Methane spike detected at 15,200 PPM. Successfully evacuated following emergency protocol. All safety procedures followed correctly.',
+  }
 ];
 
 const mockShiftSchedule = [
@@ -827,6 +842,68 @@ export default function WorkerProfilePage() {
                   </div>
                 )}
               </Card>
+
+              {/* Emergency Response History */}
+              <Card
+                title="Emergency Response History"
+                icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
+              >
+                {mockEmergencyHistory.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Shield className="w-16 h-16 text-green-300 mx-auto mb-3" />
+                    <p className="text-slate-600 font-medium">No emergency events</p>
+                    <p className="text-sm text-slate-400">This worker has not been involved in any emergencies</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {mockEmergencyHistory.map((emergency) => (
+                      <div
+                        key={emergency.id}
+                        className="p-4 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <AlertTriangle className="w-6 h-6 text-orange-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold text-slate-800">{emergency.type}</p>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
+                                Safely Evacuated
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600">{emergency.zone}</p>
+                            <p className="text-xs text-slate-500 mt-1">{emergency.date} at {emergency.time}</p>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-orange-200">
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <span className="text-slate-500">Gas Type:</span>
+                              <span className="ml-2 font-medium text-red-600">{emergency.gas_type}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Level:</span>
+                              <span className="ml-2 font-medium text-red-600">{emergency.gas_level}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Response Time:</span>
+                              <span className="ml-2 font-medium text-green-600">{emergency.response_time}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Role:</span>
+                              <span className="ml-2 font-medium text-slate-700">{emergency.role}</span>
+                            </div>
+                          </div>
+                          <p className="mt-3 text-sm text-slate-600 bg-white/50 p-2 rounded-lg">
+                            {emergency.details}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
             </div>
 
             {/* Right Column */}
@@ -1297,13 +1374,13 @@ export default function WorkerProfilePage() {
                     <p className="text-2xl font-bold capitalize">{mockHealthAnalysis.risk_level}</p>
                     <p className="text-xs opacity-70">Score: {mockHealthAnalysis.risk_score}/100</p>
                   </button>
-                  <button className="p-4 rounded-xl border bg-blue-50 border-blue-200 text-blue-600 transition-all active:scale-95">
+                  <button className="p-4 rounded-xl border bg-orange-50 border-orange-200 text-orange-600 transition-all active:scale-95">
                     <div className="flex items-center gap-2 mb-2">
-                      <Zap className="w-5 h-5" />
-                      <span className="font-medium text-sm">Fatigue Index</span>
+                      <AlertTriangle className="w-5 h-5" />
+                      <span className="font-medium text-sm">Emergency Response</span>
                     </div>
-                    <p className="text-2xl font-bold">{mockHealthAnalysis.fatigue_index}%</p>
-                    <p className="text-xs opacity-70">Within normal range</p>
+                    <p className="text-2xl font-bold">1</p>
+                    <p className="text-xs opacity-70">Safely evacuated today</p>
                   </button>
                   <button className="p-4 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-600 transition-all active:scale-95">
                     <div className="flex items-center gap-2 mb-2">

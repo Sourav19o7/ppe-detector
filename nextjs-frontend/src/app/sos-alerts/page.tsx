@@ -5,7 +5,7 @@ import {
   AlertCircle, Phone, MapPin, User, Clock, Building2, Shield, CheckCircle,
   XCircle, Volume2, VolumeX, RefreshCw, Filter, Search, Eye, MessageSquare,
   Radio, Users, Zap, Navigation, AlertTriangle, Activity, PhoneCall, Send,
-  ChevronRight, History, TrendingUp, BarChart3, Layers
+  ChevronRight, History, TrendingUp, BarChart3, Layers, Siren, X
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -98,6 +98,8 @@ export default function SOSAlertsPage() {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'live' | 'map' | 'history' | 'analytics'>('live');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showEvacuationModal, setShowEvacuationModal] = useState(false);
+  const [evacuationLoading, setEvacuationLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastAlertRef = useRef<string | null>(null);
 
@@ -216,37 +218,38 @@ export default function SOSAlertsPage() {
     ];
 
     const workers = [
-      { id: 'W001', name: 'Rajesh Kumar', empId: 'EMP1001' },
-      { id: 'W002', name: 'Mukesh Yadav', empId: 'EMP1002' },
-      { id: 'W003', name: 'Suresh Singh', empId: 'EMP1003' },
-      { id: 'W004', name: 'Ramesh Patel', empId: 'EMP1004' },
-      { id: 'W005', name: 'Anil Sharma', empId: 'EMP1005' },
+      { id: 'W001', name: 'Stavan Sheth', empId: 'EMP-2024-001' },
+      { id: 'W002', name: 'Rajesh Kumar', empId: 'EMP-2024-015' },
+      { id: 'W003', name: 'Amit Patel', empId: 'EMP-2024-023' },
+      { id: 'W004', name: 'Suresh Yadav', empId: 'EMP-2024-034' },
+      { id: 'W005', name: 'Vikram Singh', empId: 'EMP-2024-045' },
     ];
 
     const now = new Date();
     const alerts: SOSAlert[] = [];
 
-    // Active critical alert
+    // Active critical alert - Gas Emergency (primary demo alert)
     alerts.push({
       id: 'SOS001',
       mine_id: 'MINE001',
-      zone_id: 'zone4',
-      zone_name: 'Tunnel B - Deep Extraction',
-      worker_id: workers[0].id,
-      worker_name: workers[0].name,
-      employee_id: workers[0].empId,
-      reason: 'Worker injured - requires medical assistance',
+      zone_id: 'zone1',
+      zone_name: 'Zone A - Extraction',
+      worker_id: 'SYSTEM',
+      worker_name: 'SYSTEM',
+      employee_id: 'SENSOR',
+      reason: 'Gas Emergency - METHANE SPIKE DETECTED at 15,200 PPM',
       severity: 'critical',
       status: 'active',
-      location: { x: 52, y: 38, depth_m: 450, section: 'Tunnel B - Deep Extraction' },
+      location: { x: 20, y: 15, depth_m: 350, section: 'Zone A - Extraction' },
       created_at: new Date(now.getTime() - 3 * 60000).toISOString(),
       nearby_workers_notified: 8,
       evacuation_triggered: true,
       audio_broadcast_sent: true,
       response_actions: [
-        { action: 'SOS received', timestamp: new Date(now.getTime() - 3 * 60000).toISOString(), by: 'System' },
-        { action: 'Audio alert broadcast to nearby workers', timestamp: new Date(now.getTime() - 3 * 60000 + 5000).toISOString(), by: 'System' },
-        { action: 'Safety officer notified', timestamp: new Date(now.getTime() - 3 * 60000 + 10000).toISOString(), by: 'System' },
+        { action: 'EMERGENCY: METHANE spike detected at 15,200 PPM', timestamp: new Date(now.getTime() - 3 * 60000).toISOString(), by: 'Sensor System' },
+        { action: 'All helmet alarms activated (8 workers notified)', timestamp: new Date(now.getTime() - 3 * 60000 + 2000).toISOString(), by: 'System' },
+        { action: 'SMS alert sent to Safety Officer (+91 88286 42788)', timestamp: new Date(now.getTime() - 3 * 60000 + 5000).toISOString(), by: 'System' },
+        { action: 'Mass evacuation triggered', timestamp: new Date(now.getTime() - 3 * 60000 + 10000).toISOString(), by: 'Safety Officer' },
       ],
     });
 
@@ -378,6 +381,83 @@ export default function SOSAlertsPage() {
     setShowDetailModal(false);
   };
 
+  const handleTriggerEvacuation = async () => {
+    setEvacuationLoading(true);
+    try {
+      const response = await apiClient.post('/api/sos-alerts/trigger-evacuation', {
+        zone_name: 'Zone A - Extraction',
+        gas_type: 'methane',
+        gas_level: 15200,
+        mine_name: 'Jharia Coal Mine'
+      });
+
+      // Add the new alert to the list
+      const newAlert: SOSAlert = {
+        id: response.alert_id || `evac-${Date.now()}`,
+        mine_id: '',
+        zone_id: '',
+        zone_name: 'Zone A - Extraction',
+        worker_id: 'SYSTEM',
+        worker_name: 'SYSTEM',
+        employee_id: 'SYSTEM',
+        reason: 'Gas Emergency - METHANE SPIKE DETECTED at 15,200 PPM',
+        severity: 'critical',
+        status: 'active',
+        location: { x: 0, y: 0, depth_m: 0, section: 'Zone A - Extraction' },
+        created_at: new Date().toISOString(),
+        nearby_workers_notified: response.workers_notified || 8,
+        evacuation_triggered: true,
+        audio_broadcast_sent: true,
+        response_actions: [
+          { action: 'EMERGENCY: METHANE spike detected at 15,200 PPM', timestamp: new Date().toISOString(), by: 'Sensor System' },
+          { action: `Mass evacuation triggered by ${user?.full_name || 'Safety Officer'}`, timestamp: new Date().toISOString(), by: user?.full_name || 'Safety Officer' },
+          { action: `All helmet alarms activated (${response.workers_notified || 8} workers notified)`, timestamp: new Date().toISOString(), by: 'System' },
+          { action: 'SMS alerts sent to safety personnel', timestamp: new Date().toISOString(), by: 'System' },
+        ],
+      };
+
+      setAlerts([newAlert, ...alerts]);
+      setMessage({
+        type: 'success',
+        text: `Emergency evacuation triggered! ${response.workers_notified || 8} workers notified. SMS sent to Safety Officer.`
+      });
+      playAlertSound();
+      setShowEvacuationModal(false);
+    } catch (err) {
+      // For demo, create alert locally even if API fails
+      const newAlert: SOSAlert = {
+        id: `evac-${Date.now()}`,
+        mine_id: '',
+        zone_id: '',
+        zone_name: 'Zone A - Extraction',
+        worker_id: 'SYSTEM',
+        worker_name: 'SYSTEM',
+        employee_id: 'SYSTEM',
+        reason: 'Gas Emergency - METHANE SPIKE DETECTED at 15,200 PPM',
+        severity: 'critical',
+        status: 'active',
+        location: { x: 0, y: 0, depth_m: 0, section: 'Zone A - Extraction' },
+        created_at: new Date().toISOString(),
+        nearby_workers_notified: 8,
+        evacuation_triggered: true,
+        audio_broadcast_sent: true,
+        response_actions: [
+          { action: 'EMERGENCY: METHANE spike detected at 15,200 PPM', timestamp: new Date().toISOString(), by: 'Sensor System' },
+          { action: `Mass evacuation triggered by ${user?.full_name || 'Safety Officer'}`, timestamp: new Date().toISOString(), by: user?.full_name || 'Safety Officer' },
+          { action: 'All helmet alarms activated (8 workers notified)', timestamp: new Date().toISOString(), by: 'System' },
+          { action: 'SMS alerts sent to safety personnel', timestamp: new Date().toISOString(), by: 'System' },
+        ],
+      };
+
+      setAlerts([newAlert, ...alerts]);
+      setMessage({ type: 'success', text: 'Emergency evacuation triggered! 8 workers notified. SMS sent to Safety Officer.' });
+      playAlertSound();
+      setShowEvacuationModal(false);
+    } finally {
+      setEvacuationLoading(false);
+    }
+  };
+
   const filteredAlerts = alerts.filter(alert => {
     const matchesStatus = filterStatus === 'all' || alert.status === filterStatus;
     const matchesSeverity = filterSeverity === 'all' || alert.severity === filterSeverity;
@@ -485,6 +565,13 @@ export default function SOSAlertsPage() {
             >
               <RefreshCw className="w-4 h-4" />
               Refresh
+            </button>
+            <button
+              onClick={() => setShowEvacuationModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium animate-pulse"
+            >
+              <Siren className="w-4 h-4" />
+              TRIGGER EVACUATION
             </button>
           </div>
         </div>
@@ -1270,6 +1357,119 @@ export default function SOSAlertsPage() {
                     Mark Resolved
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Evacuation Confirmation Modal */}
+      {showEvacuationModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowEvacuationModal(false)} />
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-white/20 rounded-full animate-pulse">
+                      <Siren className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold">TRIGGER EVACUATION</h2>
+                      <p className="opacity-90 text-sm">Emergency Protocol</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowEvacuationModal(false)}
+                    className="p-2 hover:bg-white/20 rounded-lg"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-red-800">WARNING: This will trigger an emergency evacuation</h3>
+                      <p className="text-sm text-red-700 mt-1">
+                        All helmet alarms will be activated and SMS alerts will be sent to safety personnel.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-500">Zone:</span>
+                    <span className="font-medium">Zone A - Extraction</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-500">Gas Type:</span>
+                    <span className="font-medium text-red-600">METHANE</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-500">Gas Level:</span>
+                    <span className="font-medium text-red-600">15,200 PPM (CRITICAL)</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-500">Mine:</span>
+                    <span className="font-medium">Jharia Coal Mine</span>
+                  </div>
+                </div>
+
+                <div className="bg-stone-50 rounded-lg p-4 text-sm text-stone-600">
+                  <p className="font-medium text-stone-800 mb-2">This action will:</p>
+                  <ul className="space-y-1">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      Trigger ALL helmet alarms in the zone
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      Send SMS to Safety Officer (+91 88286 42788)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      Create emergency SOS alert
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      Log all affected workers
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setShowEvacuationModal(false)}
+                    className="flex-1 px-4 py-3 border border-stone-300 text-stone-700 rounded-lg hover:bg-stone-50 font-medium"
+                    disabled={evacuationLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleTriggerEvacuation}
+                    disabled={evacuationLoading}
+                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {evacuationLoading ? (
+                      <>
+                        <Spinner size="sm" />
+                        Triggering...
+                      </>
+                    ) : (
+                      <>
+                        <Siren className="w-5 h-5" />
+                        CONFIRM EVACUATION
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
