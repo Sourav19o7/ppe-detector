@@ -103,6 +103,13 @@ export default function Map3DGeneratorPage() {
     },
   });
 
+  // Update connection status when isConnecting changes
+  useEffect(() => {
+    if (trackingState.isConnecting) {
+      trackingStore.setConnectionStatus('connecting');
+    }
+  }, [trackingState.isConnecting, trackingStore]);
+
   // Config
   const CONFIG = {
     camera: { height: 1.7, fov: 75, near: 0.1, far: 1000 },
