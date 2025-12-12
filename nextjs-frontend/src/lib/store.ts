@@ -198,8 +198,8 @@ export function getNavigationForRole(role: UserRole | null): {
         { name: 'Workers', href: '/workers', icon: 'HardHat' },
         { name: 'Mines', href: '/mines', icon: 'Mountain' },
         { name: 'Gate Entry', href: '/gate-verification', icon: 'ScanLine' },
-        { name: 'Gate Monitoring', href: '/gate-monitoring', icon: 'DoorOpen' },
-        { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
+        // { name: 'Gate Monitoring', href: '/gate-monitoring', icon: 'DoorOpen' },
+        // { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
         { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
         { name: 'Helmet Monitoring', href: '/helmet-monitoring', icon: 'HardHat' },
         { name: 'SOS Alerts', href: '/sos-alerts', icon: 'AlertCircle' },
@@ -213,8 +213,8 @@ export function getNavigationForRole(role: UserRole | null): {
       return [
         ...baseItems,
         { name: 'Mines Overview', href: '/mines', icon: 'Mountain' },
-        { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
-        { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
+        // { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
+        // { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
         { name: 'Helmet Monitoring', href: '/helmet-monitoring', icon: 'HardHat' },
         { name: 'SOS Alerts', href: '/sos-alerts', icon: 'AlertCircle' },
         { name: 'Performance Tracker', href: '/performance', icon: 'Brain' },
@@ -226,9 +226,9 @@ export function getNavigationForRole(role: UserRole | null): {
       return [
         ...baseItems,
         { name: 'Mines Comparison', href: '/mines', icon: 'Mountain' },
-        { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
+        // { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
         { name: 'Risk Analysis', href: '/risk-analysis', icon: 'AlertTriangle' },
-        { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
+        // { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
         { name: 'Helmet Monitoring', href: '/helmet-monitoring', icon: 'HardHat' },
         { name: 'SOS Alerts', href: '/sos-alerts', icon: 'AlertCircle' },
         { name: 'Performance Tracker', href: '/performance', icon: 'Brain' },
@@ -241,9 +241,9 @@ export function getNavigationForRole(role: UserRole | null): {
         ...baseItems,
         { name: 'Workers', href: '/workers', icon: 'HardHat' },
         { name: 'Gate Entry', href: '/gate-verification', icon: 'ScanLine' },
-        { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
+        // { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
         { name: 'Shift Performance', href: '/shifts', icon: 'Clock' },
-        { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
+        // { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
         { name: 'Helmet Monitoring', href: '/helmet-monitoring', icon: 'HardHat' },
         { name: 'SOS Alerts', href: '/sos-alerts', icon: 'AlertCircle' },
         { name: 'Performance Tracker', href: '/performance', icon: 'Brain' },
@@ -257,9 +257,9 @@ export function getNavigationForRole(role: UserRole | null): {
         { name: 'Compliance', href: '/compliance', icon: 'Shield' },
         { name: 'Workers', href: '/workers', icon: 'HardHat' },
         { name: 'Gate Entry', href: '/gate-verification', icon: 'ScanLine' },
-        { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
-        { name: 'PPE Config', href: '/ppe-config', icon: 'Settings' },
-        { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
+        // { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
+        // { name: 'PPE Config', href: '/ppe-config', icon: 'Settings' },
+        // { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
         { name: 'Helmet Monitoring', href: '/helmet-monitoring', icon: 'HardHat' },
         { name: 'SOS Alerts', href: '/sos-alerts', icon: 'AlertCircle' },
         { name: 'Performance Tracker', href: '/performance', icon: 'Brain' },
@@ -271,9 +271,9 @@ export function getNavigationForRole(role: UserRole | null): {
       return [
         ...baseItems,
         { name: 'Gate Entry', href: '/gate-verification', icon: 'ScanLine' },
-        { name: 'Gate Monitoring', href: '/gate-monitoring', icon: 'DoorOpen' },
-        { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
-        { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
+        // { name: 'Gate Monitoring', href: '/gate-monitoring', icon: 'DoorOpen' },
+        // { name: 'PPE Detection', href: '/ppe-detection', icon: 'Shield' },
+        // { name: 'Gas Monitoring', href: '/gas-monitoring', icon: 'Wind' },
         { name: 'Helmet Monitoring', href: '/helmet-monitoring', icon: 'HardHat' },
         { name: 'SOS Alerts', href: '/sos-alerts', icon: 'AlertCircle' },
         { name: 'Workers', href: '/workers', icon: 'HardHat' },
@@ -508,3 +508,176 @@ export const useGateVerificationStore = create<GateVerificationStore>()((set, ge
     return get().getPassedCount() >= 5;
   },
 }));
+
+// ==================== MINE TRACKING STORE ====================
+
+// Types for mine tracking
+export interface WallData {
+  start: { x: number; z: number };
+  end: { x: number; z: number };
+  height: number;
+  length: number;
+}
+
+export interface RoomData {
+  center: { x: number; z: number };
+  width: number;
+  depth: number;
+  area: number;
+}
+
+export interface MineData {
+  walls: WallData[];
+  rooms: RoomData[];
+  bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
+  wallHeight: number;
+  imageWidth?: number;
+  imageHeight?: number;
+}
+
+export interface Position3D {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface MineTrackingState {
+  // Mine data (persisted to localStorage)
+  mineData: MineData | null;
+  entrancePosition: { x: number; z: number };
+  mineName: string;
+
+  // Worker tracking (session only - not persisted)
+  workerPosition: Position3D;
+  workerHeading: number; // radians
+  isTracking: boolean;
+  stepCount: number;
+
+  // View mode
+  viewMode: 'track' | 'explore';
+
+  // Connection status
+  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'simulating';
+
+  // Actions
+  setMineData: (data: MineData, name?: string) => void;
+  setEntrancePosition: (pos: { x: number; z: number }) => void;
+  updateWorkerPosition: (pos: Position3D, heading: number) => void;
+  incrementStepCount: () => void;
+  setViewMode: (mode: 'track' | 'explore') => void;
+  setConnectionStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'simulating') => void;
+  setIsTracking: (tracking: boolean) => void;
+  resetWorkerPosition: () => void;
+  clearMineData: () => void;
+}
+
+// Calculate default entrance position from mine bounds
+function calculateDefaultEntrance(bounds: MineData['bounds']): { x: number; z: number } {
+  // Place entrance at center of max-Z edge (typically the mine entrance)
+  return {
+    x: (bounds.minX + bounds.maxX) / 2,
+    z: bounds.maxZ + 2, // Slightly outside the max boundary
+  };
+}
+
+export const useMineTrackingStore = create<MineTrackingState>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      mineData: null,
+      entrancePosition: { x: 0, z: 0 },
+      mineName: 'Untitled Mine',
+      workerPosition: { x: 0, y: 1.7, z: 0 },
+      workerHeading: 0,
+      isTracking: false,
+      stepCount: 0,
+      viewMode: 'explore',
+      connectionStatus: 'disconnected',
+
+      // Set mine data and calculate default entrance
+      setMineData: (data: MineData, name?: string) => {
+        const entrance = calculateDefaultEntrance(data.bounds);
+        set({
+          mineData: data,
+          mineName: name || 'Untitled Mine',
+          entrancePosition: entrance,
+          workerPosition: { x: entrance.x, y: 1.7, z: entrance.z },
+        });
+      },
+
+      // Set custom entrance position
+      setEntrancePosition: (pos: { x: number; z: number }) => {
+        set({
+          entrancePosition: pos,
+          workerPosition: { x: pos.x, y: 1.7, z: pos.z },
+        });
+      },
+
+      // Update worker position and heading (called from tracking hook)
+      updateWorkerPosition: (pos: Position3D, heading: number) => {
+        set({
+          workerPosition: pos,
+          workerHeading: heading,
+        });
+      },
+
+      // Increment step count
+      incrementStepCount: () => {
+        set((state) => ({ stepCount: state.stepCount + 1 }));
+      },
+
+      // Set view mode (track worker or explore freely)
+      setViewMode: (mode: 'track' | 'explore') => {
+        set({ viewMode: mode });
+      },
+
+      // Set connection status
+      setConnectionStatus: (status) => {
+        set({ connectionStatus: status });
+      },
+
+      // Set tracking enabled/disabled
+      setIsTracking: (tracking: boolean) => {
+        set({ isTracking: tracking });
+      },
+
+      // Reset worker position to entrance
+      resetWorkerPosition: () => {
+        const state = get();
+        set({
+          workerPosition: {
+            x: state.entrancePosition.x,
+            y: 1.7,
+            z: state.entrancePosition.z,
+          },
+          workerHeading: 0,
+          stepCount: 0,
+        });
+      },
+
+      // Clear all mine data
+      clearMineData: () => {
+        set({
+          mineData: null,
+          entrancePosition: { x: 0, z: 0 },
+          mineName: 'Untitled Mine',
+          workerPosition: { x: 0, y: 1.7, z: 0 },
+          workerHeading: 0,
+          isTracking: false,
+          stepCount: 0,
+          viewMode: 'explore',
+          connectionStatus: 'disconnected',
+        });
+      },
+    }),
+    {
+      name: 'mine-tracking-storage',
+      // Only persist mine data and entrance, not worker position
+      partialize: (state) => ({
+        mineData: state.mineData,
+        entrancePosition: state.entrancePosition,
+        mineName: state.mineName,
+      }),
+    }
+  )
+);

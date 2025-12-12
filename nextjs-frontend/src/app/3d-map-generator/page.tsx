@@ -2,32 +2,16 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Upload, ChevronRight, Settings2, Play, ArrowLeft, Maximize2, Download, Flashlight, Map } from 'lucide-react';
+import { Upload, ChevronRight, Settings2, Play, ArrowLeft, Maximize2, Download, Flashlight, Map, User, Navigation, Eye, Radio, RotateCcw, Wifi, WifiOff } from 'lucide-react';
 import Script from 'next/script';
+import { useHelmetTracking, Position } from '@/hooks/useHelmetTracking';
+import { useMineTrackingStore, MineData, WallData, RoomData } from '@/lib/store';
 
-// Types for mine data
-interface WallData {
-  start: { x: number; z: number };
-  end: { x: number; z: number };
-  height: number;
-  length: number;
-}
+// Note: WallData, RoomData, MineData types are imported from store.ts
 
-interface RoomData {
-  center: { x: number; z: number };
-  width: number;
-  depth: number;
-  area: number;
-}
-
-interface MineData {
-  walls: WallData[];
-  rooms: RoomData[];
-  bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
-  wallHeight: number;
-  imageWidth?: number;
-  imageHeight?: number;
-}
+// Camera follow settings
+const CAMERA_FOLLOW_OFFSET = { x: 0, y: 4, z: 8 }; // Behind and above worker
+const CAMERA_LERP_FACTOR = 0.05; // Smooth camera follow
 
 // Declare THREE and cv as global
 declare global {
@@ -38,7 +22,10 @@ declare global {
 }
 
 export default function Map3DGeneratorPage() {
-  // State
+  // ==================== TRACKING STORE ====================
+  const trackingStore = useMineTrackingStore();
+
+  // ==================== STATE ====================
   const [cvReady, setCvReady] = useState(false);
   const [threeReady, setThreeReady] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<HTMLImageElement | null>(null);
@@ -48,6 +35,7 @@ export default function Map3DGeneratorPage() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [showViewer, setShowViewer] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showModeSelection, setShowModeSelection] = useState(false); // New: mode selection screen
 
   // Settings
   const [threshold, setThreshold] = useState(100);
@@ -71,6 +59,12 @@ export default function Map3DGeneratorPage() {
   const clockRef = useRef<any>(null);
   const animationFrameRef = useRef<number | null>(null);
 
+  // Worker tracking refs
+  const workerMeshRef = useRef<any>(null);
+  const entranceMarkerRef = useRef<any>(null);
+  const targetCameraPositionRef = useRef({ x: 0, y: 4, z: 8 });
+  const targetCameraLookAtRef = useRef({ x: 0, y: 1.7, z: 0 });
+
   // Movement state
   const moveStateRef = useRef({
     forward: false,
@@ -83,6 +77,31 @@ export default function Map3DGeneratorPage() {
   const isPointerLockedRef = useRef(false);
   const flashlightRef = useRef<any>(null);
   const isFlashlightOnRef = useRef(true);
+
+  // ==================== HELMET TRACKING HOOK ====================
+  const trackingState = useHelmetTracking({
+    enabled: trackingStore.isTracking,
+    initialPosition: {
+      x: trackingStore.entrancePosition.x,
+      y: 1.7,
+      z: trackingStore.entrancePosition.z,
+    },
+    onPositionUpdate: (position, heading) => {
+      trackingStore.updateWorkerPosition(position, heading);
+    },
+    onConnectionChange: (connected, simulating) => {
+      if (connected) {
+        trackingStore.setConnectionStatus('connected');
+      } else if (simulating) {
+        trackingStore.setConnectionStatus('simulating');
+      } else {
+        trackingStore.setConnectionStatus('disconnected');
+      }
+    },
+    onStepDetected: () => {
+      trackingStore.incrementStepCount();
+    },
+  });
 
   // Config
   const CONFIG = {
@@ -471,12 +490,40 @@ export default function Map3DGeneratorPage() {
       await new Promise(resolve => setTimeout(resolve, 400));
     }
 
-    setIsProcessing(false);
-    setShowViewer(true);
+    // Save mine data to store
+    trackingStore.setMineData(processedData, 'Generated Mine');
 
-    // Initialize 3D scene after state update
-    setTimeout(() => init3DScene(), 100);
-  }, [processedData, threeReady]);
+    setIsProcessing(false);
+    // Show mode selection instead of directly showing viewer
+    setShowModeSelection(true);
+  }, [processedData, threeReady, trackingStore]);
+
+  // Start 3D viewer with selected mode
+  const startViewer = useCallback((mode: 'track' | 'explore') => {
+    trackingStore.setViewMode(mode);
+    if (mode === 'track') {
+      trackingStore.setIsTracking(true);
+      trackingStore.resetWorkerPosition();
+    } else {
+      trackingStore.setIsTracking(false);
+    }
+    setShowModeSelection(false);
+    setShowViewer(true);
+    // Initialize 3D scene after state update (init3DScene defined below)
+  }, [trackingStore]);
+
+  // Effect to initialize scene when viewer is shown
+  useEffect(() => {
+    if (showViewer && processedData && threeReady) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        if (viewerContainerRef.current) {
+          init3DScene();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showViewer, processedData, threeReady]);
 
   // Initialize Three.js scene
   const init3DScene = useCallback(() => {
@@ -526,7 +573,30 @@ export default function Map3DGeneratorPage() {
     createMineFromData(scene, mineData);
     if (addDust) createDustParticles(scene, mineData);
 
-    // Setup controls
+    // Create entrance marker
+    const entrancePos = trackingStore.entrancePosition;
+    const entranceMarker = createEntranceMarker(entrancePos);
+    scene.add(entranceMarker);
+    entranceMarkerRef.current = entranceMarker;
+
+    // Create worker avatar (only visible in track mode or when tracking is active)
+    const workerAvatar = createWorkerAvatar();
+    workerAvatar.position.set(entrancePos.x, 0, entrancePos.z);
+    scene.add(workerAvatar);
+    workerMeshRef.current = workerAvatar;
+
+    // Set initial camera position based on mode
+    if (trackingStore.viewMode === 'track') {
+      // Position camera behind worker at entrance
+      camera.position.set(
+        entrancePos.x + CAMERA_FOLLOW_OFFSET.x,
+        CAMERA_FOLLOW_OFFSET.y,
+        entrancePos.z + CAMERA_FOLLOW_OFFSET.z
+      );
+      camera.lookAt(entrancePos.x, 1.7, entrancePos.z);
+    }
+
+    // Setup controls (only active in explore mode)
     setupControls(renderer.domElement, camera);
 
     // Animation loop
@@ -535,34 +605,75 @@ export default function Map3DGeneratorPage() {
 
       const delta = clockRef.current.getDelta();
 
-      // Apply movement
-      const moveState = moveStateRef.current;
-      if (moveState.forward || moveState.backward || moveState.left || moveState.right) {
-        const speed = CONFIG.movement.speed * (moveState.running ? CONFIG.movement.runMultiplier : 1);
+      // Get current tracking state from store
+      const currentViewMode = trackingStore.viewMode;
+      const workerPos = trackingStore.workerPosition;
+      const workerHeading = trackingStore.workerHeading;
 
-        const direction = new THREE.Vector3();
-        direction.z = Number(moveState.forward) - Number(moveState.backward);
-        direction.x = Number(moveState.right) - Number(moveState.left);
-        direction.normalize();
-
-        const velocity = new THREE.Vector3(direction.x * speed, 0, direction.z * speed);
-        velocity.applyQuaternion(camera.quaternion);
-        velocity.y = 0;
-        camera.position.add(velocity);
+      // Update worker avatar position and rotation
+      if (workerMeshRef.current) {
+        workerMeshRef.current.position.set(workerPos.x, 0, workerPos.z);
+        workerMeshRef.current.rotation.y = -workerHeading; // Negative because Three.js Y rotation is opposite
       }
 
-      // Keep camera at proper height
-      camera.position.y = CONFIG.camera.height;
+      if (currentViewMode === 'track') {
+        // Track mode: Camera follows worker
+        // Calculate target camera position (behind and above worker based on heading)
+        const offsetX = Math.sin(workerHeading) * CAMERA_FOLLOW_OFFSET.z;
+        const offsetZ = Math.cos(workerHeading) * CAMERA_FOLLOW_OFFSET.z;
+
+        targetCameraPositionRef.current = {
+          x: workerPos.x + offsetX,
+          y: CAMERA_FOLLOW_OFFSET.y,
+          z: workerPos.z + offsetZ
+        };
+        targetCameraLookAtRef.current = {
+          x: workerPos.x,
+          y: 1.7,
+          z: workerPos.z
+        };
+
+        // Smooth camera follow using lerp
+        camera.position.x += (targetCameraPositionRef.current.x - camera.position.x) * CAMERA_LERP_FACTOR;
+        camera.position.y += (targetCameraPositionRef.current.y - camera.position.y) * CAMERA_LERP_FACTOR;
+        camera.position.z += (targetCameraPositionRef.current.z - camera.position.z) * CAMERA_LERP_FACTOR;
+
+        // Make camera look at worker
+        camera.lookAt(
+          targetCameraLookAtRef.current.x,
+          targetCameraLookAtRef.current.y,
+          targetCameraLookAtRef.current.z
+        );
+      } else {
+        // Explore mode: Manual camera control
+        const moveState = moveStateRef.current;
+        if (moveState.forward || moveState.backward || moveState.left || moveState.right) {
+          const speed = CONFIG.movement.speed * (moveState.running ? CONFIG.movement.runMultiplier : 1);
+
+          const direction = new THREE.Vector3();
+          direction.z = Number(moveState.forward) - Number(moveState.backward);
+          direction.x = Number(moveState.right) - Number(moveState.left);
+          direction.normalize();
+
+          const velocity = new THREE.Vector3(direction.x * speed, 0, direction.z * speed);
+          velocity.applyQuaternion(camera.quaternion);
+          velocity.y = 0;
+          camera.position.add(velocity);
+        }
+
+        // Keep camera at proper height in explore mode
+        camera.position.y = CONFIG.camera.height;
+      }
 
       // Bound camera
       if (mineData.bounds) {
         const { minX, maxX, minZ, maxZ } = mineData.bounds;
-        camera.position.x = Math.max(minX - 5, Math.min(maxX + 5, camera.position.x));
-        camera.position.z = Math.max(minZ - 5, Math.min(maxZ + 5, camera.position.z));
+        camera.position.x = Math.max(minX - 10, Math.min(maxX + 10, camera.position.x));
+        camera.position.z = Math.max(minZ - 10, Math.min(maxZ + 10, camera.position.z));
       }
 
-      // Update minimap
-      updateMinimap(camera, mineData);
+      // Update minimap with worker position
+      updateMinimapWithWorker(camera, mineData, workerPos, workerHeading);
 
       renderer.render(scene, camera);
     };
@@ -584,7 +695,9 @@ export default function Map3DGeneratorPage() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [processedData, addDust, addLights, updateMinimap]);
+    // Note: updateMinimapWithWorker is defined below but stable due to useCallback
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processedData, addDust, addLights, trackingStore]);
 
   // Create lighting
   const createLighting = (scene: any, mineData: MineData) => {
@@ -650,6 +763,308 @@ export default function Map3DGeneratorPage() {
     const playerLight = new THREE.PointLight(0xffffee, 0.5, 8);
     camera.add(playerLight);
   };
+
+  // Create entrance marker (gate) - Coal mine worker statue in orange
+  const createEntranceMarker = (position: { x: number; z: number }) => {
+    const THREE = window.THREE;
+
+    // Create a group to hold all entrance marker elements
+    const group = new THREE.Group();
+
+    // === COAL MINE WORKER STATUE ===
+
+    // Boots (dark gray)
+    const bootMat = new THREE.MeshStandardMaterial({ color: 0x1f2937 });
+    const leftBoot = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.3, 0.35), bootMat);
+    leftBoot.position.set(-0.15, 0.15, 0);
+    group.add(leftBoot);
+    const rightBoot = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.3, 0.35), bootMat);
+    rightBoot.position.set(0.15, 0.15, 0);
+    group.add(rightBoot);
+
+    // Legs (dark pants)
+    const pantsMat = new THREE.MeshStandardMaterial({ color: 0x374151 });
+    const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.8, 8), pantsMat);
+    leftLeg.position.set(-0.15, 0.7, 0);
+    group.add(leftLeg);
+    const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.8, 8), pantsMat);
+    rightLeg.position.set(0.15, 0.7, 0);
+    group.add(rightLeg);
+
+    // Torso (orange high-vis vest)
+    const vestMat = new THREE.MeshStandardMaterial({
+      color: 0xf97316, // Orange
+      emissive: 0xf97316,
+      emissiveIntensity: 0.15,
+    });
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.9, 8), vestMat);
+    torso.position.y = 1.55;
+    group.add(torso);
+
+    // Reflective stripes on vest (bright yellow)
+    const stripeMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
+    const stripe1 = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.06, 0.01), stripeMat);
+    stripe1.position.set(0, 1.7, 0.22);
+    group.add(stripe1);
+    const stripe2 = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.06, 0.01), stripeMat);
+    stripe2.position.set(0, 1.4, 0.22);
+    group.add(stripe2);
+
+    // Arms (orange sleeves)
+    const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8), vestMat);
+    leftArm.position.set(-0.35, 1.5, 0);
+    leftArm.rotation.z = 0.3;
+    group.add(leftArm);
+    const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.6, 8), vestMat);
+    rightArm.position.set(0.35, 1.5, 0);
+    rightArm.rotation.z = -0.3;
+    group.add(rightArm);
+
+    // Skin material for neck and head
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xd4a574 });
+
+    // Neck
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.15, 8), skinMat);
+    neck.position.y = 2.07;
+    group.add(neck);
+
+    // Head (face)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), skinMat);
+    head.position.y = 2.25;
+    group.add(head);
+
+    // Hard hat (yellow safety helmet)
+    const helmetMat = new THREE.MeshStandardMaterial({
+      color: 0xfbbf24, // Yellow
+      emissive: 0xfbbf24,
+      emissiveIntensity: 0.2,
+    });
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), helmetMat);
+    helmet.position.y = 2.32;
+    group.add(helmet);
+
+    // Helmet brim
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.03, 16), helmetMat);
+    brim.position.y = 2.2;
+    group.add(brim);
+
+    // Headlamp on helmet
+    const lampMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 8), lampMat);
+    lamp.position.set(0, 2.28, 0.2);
+    lamp.rotation.x = Math.PI / 2;
+    group.add(lamp);
+
+    // === PEDESTAL/BASE ===
+    const pedestalMat = new THREE.MeshStandardMaterial({ color: 0x4b5563 });
+    const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.2, 16), pedestalMat);
+    pedestal.position.y = -0.1;
+    group.add(pedestal);
+
+    // "GATE" sign on pedestal
+    const signMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+    const signBack = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.25, 0.05), signMat);
+    signBack.position.set(0, -0.05, 0.65);
+    group.add(signBack);
+
+    // Glowing ring around base
+    const ringGeom = new THREE.TorusGeometry(0.8, 0.05, 8, 32);
+    const ringMat = new THREE.MeshStandardMaterial({
+      color: 0x22c55e,
+      emissive: 0x22c55e,
+      emissiveIntensity: 0.4,
+    });
+    const ring = new THREE.Mesh(ringGeom, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 0.02;
+    group.add(ring);
+
+    // Point light for visibility
+    const light = new THREE.PointLight(0xfbbf24, 0.8, 8);
+    light.position.y = 2.5;
+    group.add(light);
+
+    group.position.set(position.x, 0, position.z);
+    return group;
+  };
+
+  // Create worker avatar
+  const createWorkerAvatar = () => {
+    const THREE = window.THREE;
+
+    // Create a group for the worker
+    const group = new THREE.Group();
+
+    // Body (capsule-like shape using cylinder + spheres)
+    const bodyGeom = new THREE.CylinderGeometry(0.25, 0.25, 1, 16);
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0xf97316, // Orange
+      emissive: 0xf97316,
+      emissiveIntensity: 0.2,
+    });
+    const body = new THREE.Mesh(bodyGeom, bodyMat);
+    body.position.y = 1;
+    group.add(body);
+
+    // Head (sphere)
+    const headGeom = new THREE.SphereGeometry(0.2, 16, 16);
+    const headMat = new THREE.MeshStandardMaterial({
+      color: 0xfbbf24, // Yellow/amber for helmet
+      emissive: 0xfbbf24,
+      emissiveIntensity: 0.3,
+    });
+    const head = new THREE.Mesh(headGeom, headMat);
+    head.position.y = 1.7;
+    group.add(head);
+
+    // Direction indicator (cone pointing forward)
+    const arrowGeom = new THREE.ConeGeometry(0.15, 0.4, 8);
+    const arrowMat = new THREE.MeshBasicMaterial({ color: 0xef4444 }); // Red
+    const arrow = new THREE.Mesh(arrowGeom, arrowMat);
+    arrow.rotation.x = Math.PI / 2;
+    arrow.position.set(0, 1.2, -0.4);
+    group.add(arrow);
+
+    // Light around worker for visibility
+    const workerLight = new THREE.PointLight(0xf97316, 0.5, 5);
+    workerLight.position.y = 1.5;
+    group.add(workerLight);
+
+    return group;
+  };
+
+  // Enhanced minimap with worker tracking
+  const updateMinimapWithWorker = useCallback((
+    camera: any,
+    mineData: MineData,
+    workerPos: { x: number; y: number; z: number },
+    workerHeading: number
+  ) => {
+    const canvas = minimapCanvasRef.current;
+    if (!canvas || !mineData.bounds) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const { minX, maxX, minZ, maxZ } = mineData.bounds;
+    const mapWidth = canvas.width;
+    const mapHeight = canvas.height;
+    const padding = 10;
+
+    // Calculate scale to fit the mine in the minimap
+    const mineWidth = maxX - minX;
+    const mineDepth = maxZ - minZ;
+    const scaleX = (mapWidth - padding * 2) / mineWidth;
+    const scaleZ = (mapHeight - padding * 2) / mineDepth;
+    const mapScale = Math.min(scaleX, scaleZ) * 0.9; // Slightly smaller to fit entrance
+
+    // Helper to convert world coords to minimap coords
+    const toMapX = (x: number) => padding + (x - minX + 2) * mapScale;
+    const toMapZ = (z: number) => padding + (z - minZ + 2) * mapScale;
+
+    // Clear canvas
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.fillRect(0, 0, mapWidth, mapHeight);
+
+    // Draw walls
+    ctx.strokeStyle = '#4ade80'; // Green
+    ctx.lineWidth = 2;
+    mineData.walls.forEach(wall => {
+      ctx.beginPath();
+      ctx.moveTo(toMapX(wall.start.x), toMapZ(wall.start.z));
+      ctx.lineTo(toMapX(wall.end.x), toMapZ(wall.end.z));
+      ctx.stroke();
+    });
+
+    // Draw rooms as filled areas
+    ctx.fillStyle = 'rgba(74, 222, 128, 0.1)';
+    mineData.rooms.forEach(room => {
+      const rx = toMapX(room.center.x - room.width / 2);
+      const rz = toMapZ(room.center.z - room.depth / 2);
+      const rw = room.width * mapScale;
+      const rd = room.depth * mapScale;
+      ctx.fillRect(rx, rz, rw, rd);
+    });
+
+    // Draw entrance marker
+    const entranceX = toMapX(trackingStore.entrancePosition.x);
+    const entranceZ = toMapZ(trackingStore.entrancePosition.z);
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(entranceX, entranceZ, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 8px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('GATE', entranceX, entranceZ + 15);
+
+    // Draw worker position (pulsing orange dot)
+    const workerX = toMapX(workerPos.x);
+    const workerZ = toMapZ(workerPos.z);
+
+    // Pulsing effect
+    const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
+
+    // Outer glow
+    ctx.fillStyle = `rgba(249, 115, 22, ${0.3 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(workerX, workerZ, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Worker direction indicator (triangle)
+    ctx.save();
+    ctx.translate(workerX, workerZ);
+    ctx.rotate(-workerHeading + Math.PI); // Adjust rotation for map orientation
+
+    ctx.fillStyle = '#f97316'; // Orange
+    ctx.beginPath();
+    ctx.moveTo(0, -10); // Point forward
+    ctx.lineTo(-6, 6);
+    ctx.lineTo(6, 6);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+
+    // Worker center dot
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(workerX, workerZ, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw camera position (only in explore mode)
+    if (trackingStore.viewMode === 'explore') {
+      const camX = toMapX(camera.position.x);
+      const camZ = toMapZ(camera.position.z);
+
+      ctx.save();
+      ctx.translate(camX, camZ);
+      ctx.rotate(-eulerRef.current.y);
+
+      ctx.fillStyle = '#3b82f6'; // Blue
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.lineTo(-5, 5);
+      ctx.lineTo(5, 5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // Draw border
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, mapWidth, mapHeight);
+
+    // Connection status indicator
+    const statusColor = trackingStore.connectionStatus === 'connected' ? '#22c55e' :
+                        trackingStore.connectionStatus === 'simulating' ? '#fbbf24' : '#ef4444';
+    ctx.fillStyle = statusColor;
+    ctx.beginPath();
+    ctx.arc(mapWidth - 12, 12, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }, [trackingStore]);
 
   // Create mine geometry
   const createMineFromData = (scene: any, mineData: MineData) => {
@@ -1038,6 +1453,83 @@ export default function Map3DGeneratorPage() {
         </div>
       )}
 
+      {/* Mode Selection Screen */}
+      {showModeSelection && (
+        <div className="fixed inset-0 bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900 z-50 flex items-center justify-center">
+          <div className="text-center max-w-2xl mx-auto px-6">
+            {/* Header */}
+            <div className="mb-8">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-400 mb-6">
+                <Map className="w-10 h-10 text-white" />
+              </div>
+              <h1 className="text-3xl font-bold text-white mb-3">3D Mine Ready</h1>
+              <p className="text-stone-400">Choose how you want to explore the generated mine environment</p>
+            </div>
+
+            {/* Mode Selection Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {/* Track Worker Mode */}
+              <button
+                onClick={() => startViewer('track')}
+                className="group bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-6 text-left hover:bg-orange-500/20 hover:border-orange-400 transition-all duration-300"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 rounded-xl bg-orange-500/20 flex items-center justify-center group-hover:bg-orange-500/30 transition-colors">
+                    <User className="w-7 h-7 text-orange-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">Track Worker</h3>
+                    <p className="text-sm text-orange-400">Real-time tracking mode</p>
+                  </div>
+                </div>
+                <p className="text-stone-400 text-sm mb-4">
+                  Camera automatically follows the worker as they move through the mine. Position is tracked using helmet IMU sensors.
+                </p>
+                <div className="flex items-center gap-2 text-orange-400 text-sm">
+                  <Radio className="w-4 h-4" />
+                  <span>Live helmet connection</span>
+                </div>
+              </button>
+
+              {/* Explore Mode */}
+              <button
+                onClick={() => startViewer('explore')}
+                className="group bg-white/10 backdrop-blur border border-white/20 rounded-2xl p-6 text-left hover:bg-blue-500/20 hover:border-blue-400 transition-all duration-300"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
+                    <Eye className="w-7 h-7 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">Explore Mine</h3>
+                    <p className="text-sm text-blue-400">Free camera mode</p>
+                  </div>
+                </div>
+                <p className="text-stone-400 text-sm mb-4">
+                  Freely explore the 3D mine environment using keyboard and mouse controls. Great for inspecting the layout.
+                </p>
+                <div className="flex items-center gap-2 text-blue-400 text-sm">
+                  <Navigation className="w-4 h-4" />
+                  <span>WASD + Mouse controls</span>
+                </div>
+              </button>
+            </div>
+
+            {/* Back Button */}
+            <button
+              onClick={() => {
+                setShowModeSelection(false);
+                setShowPreview(true);
+              }}
+              className="text-stone-400 hover:text-white transition-colors text-sm flex items-center gap-2 mx-auto"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Blueprint Settings
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 3D Viewer */}
       {showViewer ? (
         <div className="fixed inset-0 bg-stone-900 z-40">
@@ -1064,6 +1556,81 @@ export default function Map3DGeneratorPage() {
                   <span className="font-medium">{wallCount}</span>
                 </div>
               </div>
+
+              {/* Tracking Status */}
+              <div className="mt-4 pt-3 border-t border-stone-200">
+                <h4 className="text-xs font-semibold text-orange-600 tracking-wider mb-2">
+                  WORKER TRACKING
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between gap-4 items-center">
+                    <span className="text-stone-500">Mode:</span>
+                    <span className={`font-medium flex items-center gap-1 ${
+                      trackingStore.viewMode === 'track' ? 'text-orange-600' : 'text-blue-600'
+                    }`}>
+                      {trackingStore.viewMode === 'track' ? (
+                        <><User size={12} /> Track</>
+                      ) : (
+                        <><Eye size={12} /> Explore</>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4 items-center">
+                    <span className="text-stone-500">Connection:</span>
+                    <span className={`font-medium flex items-center gap-1 ${
+                      trackingStore.connectionStatus === 'connected' ? 'text-green-600' :
+                      trackingStore.connectionStatus === 'simulating' ? 'text-yellow-600' : 'text-red-500'
+                    }`}>
+                      {trackingStore.connectionStatus === 'connected' ? (
+                        <><Wifi size={12} /> Live</>
+                      ) : trackingStore.connectionStatus === 'simulating' ? (
+                        <><Radio size={12} /> Simulating</>
+                      ) : (
+                        <><WifiOff size={12} /> Offline</>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-stone-500">Steps:</span>
+                    <span className="font-medium">{trackingStore.stepCount}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-stone-500">Position:</span>
+                    <span className="font-medium font-mono text-xs">
+                      ({trackingStore.workerPosition.x.toFixed(1)}, {trackingStore.workerPosition.z.toFixed(1)})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mode Toggle and Reset */}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => {
+                      const newMode = trackingStore.viewMode === 'track' ? 'explore' : 'track';
+                      trackingStore.setViewMode(newMode);
+                      trackingStore.setIsTracking(newMode === 'track');
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      trackingStore.viewMode === 'track'
+                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                        : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                    }`}
+                  >
+                    {trackingStore.viewMode === 'track' ? (
+                      <><Eye size={12} /> Switch to Explore</>
+                    ) : (
+                      <><User size={12} /> Switch to Track</>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => trackingStore.resetWorkerPosition()}
+                    className="flex items-center justify-center gap-1 px-3 py-1.5 bg-stone-100 text-stone-700 rounded-lg text-xs font-medium hover:bg-stone-200 transition-colors"
+                    title="Reset worker to entrance"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Minimap */}
@@ -1078,6 +1645,23 @@ export default function Map3DGeneratorPage() {
                 height={180}
                 className="rounded-lg"
               />
+              {/* Legend */}
+              <div className="mt-2 flex items-center justify-between text-xs text-white/70">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                  <span>Worker</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span>Gate</span>
+                </div>
+                {trackingStore.viewMode === 'explore' && (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span>Camera</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Action buttons */}
@@ -1105,15 +1689,21 @@ export default function Map3DGeneratorPage() {
               </button>
             </div>
 
-            {/* Controls help */}
+            {/* Controls help - changes based on mode */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-lg text-xs text-stone-500">
-              WASD/Arrow Keys: Move | Mouse: Look | Shift: Run | F: Flashlight | Click to start
+              {trackingStore.viewMode === 'track' ? (
+                'Camera follows worker | F: Flashlight | Worker position from helmet IMU'
+              ) : (
+                'WASD/Arrow Keys: Move | Mouse: Look | Shift: Run | F: Flashlight | Click to start'
+              )}
             </div>
 
-            {/* Crosshair */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl text-orange-500 opacity-70">
-              +
-            </div>
+            {/* Crosshair - only in explore mode */}
+            {trackingStore.viewMode === 'explore' && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl text-orange-500 opacity-70">
+                +
+              </div>
+            )}
           </div>
         </div>
       ) : (

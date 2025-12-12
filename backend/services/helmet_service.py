@@ -1,6 +1,7 @@
 """
 Smart Helmet Service - Serial Reader and Data Processing
 Reads sensor data from ESP32 helmet via serial port and provides REST API access.
+Updated for SIH1_BIDIRECTIONAL_SENSOR.ino
 """
 import serial
 import asyncio
@@ -8,14 +9,28 @@ import re
 import random
 from datetime import datetime
 from typing import Dict, Optional, Any
-from database import get_database
+# Assuming 'database' module exists and provides get_database
+try:
+    from database import get_database
+except ImportError:
+    # Mocking for standalone testing if database.py is not provided
+    print("[WARN] 'database' module not found. Alert storage will be disabled.")
+    def get_database():
+        class MockDB:
+            async def insert_one(self, doc):
+                # Mock result object with inserted_id
+                return type('MockResult', (object,), {'inserted_id': 'mock_id_' + str(random.randint(1000, 9999))})()
+            async def __aenter__(self): return self
+            async def __aexit__(self, exc_type, exc_val, exc_tb): pass
+        return MockDB()
+
 
 # ================= CONFIGURATION =================
-SERIAL_PORT = "COM5"  # Change to your ESP32 port
+SERIAL_PORT = "/dev/ttyACM0"  # Change to your ESP32 port
 BAUD_RATE = 115200
 SERIAL_ENABLED = True  # Set to False to use mock data for testing
 
-# ================= GLOBAL STATE =================
+# ================= GLOBAL STATE (Restored) =================
 # Store latest readings per helmet/worker
 latest_helmet_data: Dict[str, Dict[str, Any]] = {}
 
@@ -31,9 +46,9 @@ _fake_hr_value = 90
 _fake_spo2_direction = 1
 _fake_spo2_value = 91.0
 
-# ================= ALERT THRESHOLDS =================
+# ================= ALERT THRESHOLDS (Updated to match Arduino ALARM_PPM) =================
 THRESHOLDS = {
-    "methane_ppm": {"high": 4000, "severity": "critical"},
+    "methane_ppm": {"high": 1000, "severity": "critical"}, 
     "battery_voltage": {"low": 3.32, "severity": "high"},
     "heart_rate_low": {"low": 50, "severity": "medium"},
     "heart_rate_high": {"high": 120, "severity": "medium"},
@@ -43,7 +58,7 @@ THRESHOLDS = {
 
 def get_fake_vitals() -> tuple:
     """
-    Generate fake heart rate and SpO2 values that oscillate.
+    Generate fake heart rate and SpO2 values that oscillate. (Restored)
     Heart rate: oscillates between 88-94 BPM
     SpO2: oscillates between 90.0-92.5%
     """
@@ -69,73 +84,93 @@ def get_fake_vitals() -> tuple:
 def parse_arduino_array(arr: list) -> Optional[Dict[str, Any]]:
     """
     Converts the raw integer list from Arduino into a named dictionary.
-    Applies the math logic found in the Arduino code.
+    
+    New Packet Structure (Index 0 to 20):
+    [0]sdMillis, [1-3]Acc, [4-6]Gyro, [7-9]RPY, [10]CH4*10, [11]CH4%*1e4, [12]Batt*1000, 
+    [13]FSR, [14]FSRSt, [15]State, [16]SOS, [17]Man, [18]HR*10, [19]SpO2*10, [20]MQ7, [21]Dout
     """
-    if len(arr) < 20:
+    if len(arr) < 21:
         return None
 
-    # Get fake vitals
-    heart_rate, spo2 = get_fake_vitals()
-
-    # Calculate battery voltage and check if low
-    battery_voltage = round(arr[11] / 1000.0, 2)
+    # --- Power ---
+    # Index 12: Battery (mV -> divide by 1000)
+    battery_voltage = round(arr[12] / 1000.0, 2)
     battery_low = battery_voltage < THRESHOLDS["battery_voltage"]["low"]
 
-    # Get methane value
-    methane_ppm = round(arr[9] / 10.0, 1)
+    # --- Gas ---
+    # Index 10: CH4 (ppm * 10 -> divide by 10)
+    methane_ppm = round(arr[10] / 10.0, 1)
 
-    # Determine SOS status
-    sos_active = arr[15] == 1
+    # --- Vitals ---
+    # Index 18: Heart Rate (val * 10 -> divide by 10)
+    # Index 19: SpO2 (val * 10 -> divide by 10)
+    raw_hr = arr[18] / 10.0
+    raw_spo2 = arr[19] / 10.0
+    
+    # Use real data if > 0, otherwise use faked data for stability in UI
+    if raw_hr <= 0 or raw_spo2 <= 0:
+        heart_rate, spo2 = get_fake_vitals()
+    else:
+        heart_rate = raw_hr
+        spo2 = raw_spo2
 
-    # Determine severity
+    # --- Status ---
+    # Index 16: SOS Latched (0 or 1)
+    sos_active = arr[16] == 1
+    system_state = arr[15]
+
+    # --- Determine severity (Restored logic) ---
     severity = "normal"
-    if sos_active:
+    if sos_active or system_state == 5: # State 5 is SOS
         severity = "critical"
-    elif methane_ppm > THRESHOLDS["methane_ppm"]["high"]:
+    elif methane_ppm > THRESHOLDS["methane_ppm"]["high"] or system_state == 2: # State 2 is Methane
         severity = "critical"
-    elif battery_low:
+    elif battery_low or system_state == 3: # State 3 is Low Power
+        severity = "high"
+    elif spo2 < THRESHOLDS["spo2"]["low"]:
         severity = "high"
     elif heart_rate < THRESHOLDS["heart_rate_low"]["low"] or heart_rate > THRESHOLDS["heart_rate_high"]["high"]:
         severity = "medium"
-    elif spo2 < THRESHOLDS["spo2"]["low"]:
-        severity = "high"
-
+    
     data_dict = {
+        # Metadata
+        "timestamp_ms": arr[0], # Arduino millis
+        
         # Motion data
-        "accel_x": arr[0],
-        "accel_y": arr[1],
-        "accel_z": arr[2],
-        "gyro_x": arr[3],
-        "gyro_y": arr[4],
-        "gyro_z": arr[5],
+        "accel_x": arr[1],
+        "accel_y": arr[2],
+        "accel_z": arr[3],
+        "gyro_x": arr[4],
+        "gyro_y": arr[5],
+        "gyro_z": arr[6],
 
-        # Orientation
-        "roll": round(arr[6] / 100.0, 2),
-        "pitch": round(arr[7] / 100.0, 2),
-        "yaw": round(arr[8] / 100.0, 2),
+        # Orientation (centi-degrees -> divide by 100)
+        "roll": round(arr[7] / 100.0, 2),
+        "pitch": round(arr[8] / 100.0, 2),
+        "yaw": round(arr[9] / 100.0, 2),
 
         # Gas sensors
         "methane_ppm": methane_ppm,
-        "co_raw": arr[19],
+        "co_raw": arr[20], # MQ7 Raw
 
         # Power
         "battery_voltage": battery_voltage,
         "battery_low": battery_low,
 
         # FSR sensor
-        "fsr_force": arr[12],
-        "fsr_state": "Touch" if arr[13] == 2 else "None",
+        "fsr_force": arr[13],
+        "fsr_state": "Touch" if arr[14] == 2 else "None",
 
         # Status
-        "system_state": arr[14],
+        "system_state": system_state,
         "sos_active": sos_active,
-        "manual_override": arr[16] == 1,
+        "manual_override": arr[17] == 1,
 
-        # Health vitals (faked)
+        # Health vitals (faked/real)
         "heart_rate": heart_rate,
         "spo2": spo2,
 
-        # Metadata
+        # API Metadata
         "severity": severity,
         "timestamp": datetime.utcnow(),
     }
@@ -145,15 +180,14 @@ def parse_arduino_array(arr: list) -> Optional[Dict[str, Any]]:
 
 async def check_and_store_alerts(worker_id: str, data: Dict[str, Any], db) -> bool:
     """
-    Check if any thresholds are exceeded and store alert in database.
-    Returns True if an alert was created.
+    Check if any thresholds are exceeded and store alert in database. (Restored)
     """
     alert_messages = []
     severity = "normal"
 
     # Check methane
     if data["methane_ppm"] > THRESHOLDS["methane_ppm"]["high"]:
-        alert_messages.append(f"CRITICAL: Methane level {data['methane_ppm']} PPM exceeds threshold (4000 PPM)")
+        alert_messages.append(f"CRITICAL: Methane level {data['methane_ppm']} PPM exceeds threshold ({THRESHOLDS['methane_ppm']['high']} PPM)")
         severity = "critical"
 
     # Check SOS
@@ -163,28 +197,24 @@ async def check_and_store_alerts(worker_id: str, data: Dict[str, Any], db) -> bo
 
     # Check battery
     if data["battery_low"]:
-        alert_messages.append(f"WARNING: Low battery ({data['battery_voltage']}V < 3.32V)")
-        if severity == "normal":
-            severity = "high"
+        alert_messages.append(f"WARNING: Low battery ({data['battery_voltage']}V < {THRESHOLDS['battery_voltage']['low']}V)")
+        if severity == "normal": severity = "high"
 
     # Check SpO2
     if data["spo2"] < THRESHOLDS["spo2"]["low"]:
-        alert_messages.append(f"WARNING: Low oxygen saturation ({data['spo2']}% < 90%)")
-        if severity == "normal":
-            severity = "high"
+        alert_messages.append(f"WARNING: Low oxygen saturation ({data['spo2']}% < {THRESHOLDS['spo2']['low']}%)")
+        if severity == "normal": severity = "high"
 
     # Check heart rate
     if data["heart_rate"] < THRESHOLDS["heart_rate_low"]["low"]:
-        alert_messages.append(f"CAUTION: Low heart rate ({data['heart_rate']} BPM < 50)")
-        if severity == "normal":
-            severity = "medium"
+        alert_messages.append(f"CAUTION: Low heart rate ({data['heart_rate']} BPM < {THRESHOLDS['heart_rate_low']['low']})")
+        if severity == "normal": severity = "medium"
     elif data["heart_rate"] > THRESHOLDS["heart_rate_high"]["high"]:
-        alert_messages.append(f"CAUTION: High heart rate ({data['heart_rate']} BPM > 120)")
-        if severity == "normal":
-            severity = "medium"
+        alert_messages.append(f"CAUTION: High heart rate ({data['heart_rate']} BPM > {THRESHOLDS['heart_rate_high']['high']})")
+        if severity == "normal": severity = "medium"
 
     if alert_messages:
-        # Store helmet reading in database (only when threshold exceeded)
+        # Store helmet reading in database
         reading_doc = {
             "worker_id": worker_id,
             "timestamp": data["timestamp"],
@@ -217,11 +247,12 @@ async def check_and_store_alerts(worker_id: str, data: Dict[str, Any], db) -> bo
 
 
 def get_mock_helmet_data(worker_id: str = "worker_1") -> Dict[str, Any]:
-    """Generate mock helmet data for testing without hardware."""
-    heart_rate, spo2 = get_fake_vitals()
-
+    """Generate mock helmet data for testing without hardware. (Restored)"""
+    hr, spo2 = get_fake_vitals()
+    
     return {
         "worker_id": worker_id,
+        "timestamp_ms": 0,
         "accel_x": random.randint(-100, 100),
         "accel_y": random.randint(-100, 100),
         "accel_z": random.randint(900, 1100),
@@ -231,7 +262,7 @@ def get_mock_helmet_data(worker_id: str = "worker_1") -> Dict[str, Any]:
         "roll": round(random.uniform(-5, 5), 2),
         "pitch": round(random.uniform(-5, 5), 2),
         "yaw": round(random.uniform(0, 360), 2),
-        "methane_ppm": round(random.uniform(100, 500), 1),  # Normal range
+        "methane_ppm": round(random.uniform(100, 500), 1),
         "co_raw": random.randint(50, 150),
         "battery_voltage": round(random.uniform(3.5, 4.2), 2),
         "battery_low": False,
@@ -240,7 +271,7 @@ def get_mock_helmet_data(worker_id: str = "worker_1") -> Dict[str, Any]:
         "system_state": 1,
         "sos_active": False,
         "manual_override": False,
-        "heart_rate": heart_rate,
+        "heart_rate": hr,
         "spo2": spo2,
         "severity": "normal",
         "timestamp": datetime.utcnow(),
@@ -248,23 +279,18 @@ def get_mock_helmet_data(worker_id: str = "worker_1") -> Dict[str, Any]:
 
 
 async def serial_reader():
-    """
-    Background task that reads from serial port and updates latest_helmet_data.
-    Stores alerts in database when thresholds are exceeded.
-    """
+    """Background task that reads from serial port and updates latest_helmet_data. (Restored)"""
     global latest_helmet_data
 
     print(f"[Helmet Service] Starting serial reader on {SERIAL_PORT}...")
     ser = None
 
     # For demo: currently hardcoded to worker_1
-    # In future: RFID integration will determine worker_id
     current_worker_id = "worker_1"
 
     while True:
         try:
             if not SERIAL_ENABLED:
-                # Use mock data when serial is disabled
                 mock_data = get_mock_helmet_data(current_worker_id)
                 mock_data["worker_id"] = current_worker_id
                 latest_helmet_data[current_worker_id] = mock_data
@@ -303,6 +329,7 @@ async def serial_reader():
                             # Check thresholds and store alerts if needed
                             try:
                                 db = get_database()
+                                # Only store alerts if it's the right worker ID or if the system needs it
                                 await check_and_store_alerts(current_worker_id, parsed_data, db)
                             except Exception as e:
                                 print(f"[Helmet Service] DB error: {e}")
@@ -318,21 +345,19 @@ async def serial_reader():
 
 
 def get_latest_helmet_data(worker_id: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Get the latest helmet data.
-    If worker_id is provided, returns data for that worker only.
-    Otherwise returns all helmet data.
-    """
+    """Get the latest helmet data. (Restored)"""
     if worker_id:
         return latest_helmet_data.get(worker_id, {})
+    # For NextJS page, usually returns all worker data
     return latest_helmet_data
 
 
 def get_all_helmet_data() -> list:
-    """Get latest data from all helmets as a list."""
+    """Get latest data from all helmets as a list. (Restored)"""
     return list(latest_helmet_data.values())
 
 
 async def start_helmet_reader():
-    """Start the helmet serial reader as a background task."""
-    await serial_reader()
+    """Start the helmet serial reader as a background task. (Restored)"""
+    # This is called once during FastAPI startup
+    asyncio.create_task(serial_reader())

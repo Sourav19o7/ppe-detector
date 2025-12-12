@@ -150,16 +150,73 @@ export function LiveVideoPanel({
     }
   }, [isActive, isStreaming, startStreaming]);
 
+  // Cleanup function that stops all camera/stream resources
+  const cleanupAllResources = useCallback(() => {
+    console.log('[LiveVideoPanel] Cleaning up all resources...');
+
+    // Clear any pending reconnect
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
+    // Close WebSocket
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    // Stop browser camera - this is the critical part!
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => {
+        console.log('[LiveVideoPanel] Stopping track:', track.kind, track.label);
+        track.stop();
+      });
+      mediaStreamRef.current = null;
+    }
+
+    // Clear video element source
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
+    // Handle page unload/refresh - ensures camera stops even if component doesn't unmount cleanly
+    const handleBeforeUnload = () => {
+      cleanupAllResources();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
-      disconnectWebSocket();
-      // Stop browser camera on unmount
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanupAllResources();
+    };
+  }, [cleanupAllResources]);
+
+  // Also cleanup when navigating away (Next.js router)
+  useEffect(() => {
+    const handleRouteChange = () => {
+      cleanupAllResources();
+    };
+
+    // Listen for visibility change (tab switch, minimize)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Optional: stop camera when tab is hidden to save resources
+        // Uncomment if you want this behavior:
+        // cleanupAllResources();
       }
     };
-  }, [disconnectWebSocket]);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [cleanupAllResources]);
 
   // Browser camera functions
   const startBrowserCamera = useCallback(async () => {
@@ -184,9 +241,17 @@ export function LiveVideoPanel({
   }, []);
 
   const stopBrowserCamera = useCallback(() => {
+    console.log('[LiveVideoPanel] Stopping browser camera...');
     if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
+      mediaStreamRef.current.getTracks().forEach(track => {
+        console.log('[LiveVideoPanel] Stopping track:', track.kind, track.label);
+        track.stop();
+      });
       mediaStreamRef.current = null;
+    }
+    // Clear the video element source
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setBrowserCameraActive(false);
   }, []);

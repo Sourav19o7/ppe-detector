@@ -131,7 +131,7 @@ export default function ReportsPage() {
         );
         setAttendanceReport(report);
       } else {
-        const report = await reportsApi.getViolations(
+        const report = await reportsApi.getViolationsReport(
           startDate,
           endDate,
           selectedEmployee || undefined
