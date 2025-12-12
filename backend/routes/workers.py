@@ -372,9 +372,6 @@ async def register_worker_face(
 
     Multiple angles improve face recognition accuracy.
     """
-    # Import detector here to avoid circular imports
-    from detector import PersonDetector
-
     db = get_database()
 
     # Find worker
@@ -393,7 +390,15 @@ async def register_worker_face(
         raise HTTPException(status_code=403, detail="No access to this worker")
 
     contents = await file.read()
-    detector = PersonDetector()
+
+    # Import and use the global detector from main to ensure faces are in sync
+    try:
+        from main import detector as main_detector
+        local_detector = main_detector
+    except ImportError:
+        # Fallback: create local detector if main import fails
+        from detector import PersonDetector
+        local_detector = PersonDetector()
 
     # Determine the face registration key
     # Primary registration uses employee_id, angles use employee_id_angle_N
@@ -404,10 +409,18 @@ async def register_worker_face(
         face_key = worker["employee_id"]
         display_name = worker["name"]
 
-    success = detector.register_face(face_key, contents, display_name)
+    success = local_detector.register_face(face_key, contents, display_name)
 
     if not success:
         raise HTTPException(status_code=400, detail="No face detected in image")
+
+    # Reload faces in the main detector to ensure new face is available for detection
+    try:
+        from main import detector as main_detector
+        main_detector.reload_faces()
+        print(f"Main detector now has {len(main_detector.known_faces)} faces registered")
+    except Exception as e:
+        print(f"Warning: Could not reload main detector faces: {e}")
 
     # Update worker's face registration status
     update_data = {"face_registered": True}

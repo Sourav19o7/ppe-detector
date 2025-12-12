@@ -106,6 +106,12 @@ class PersonDetector:
                 return pickle.load(f)
         return {}
 
+    def reload_faces(self):
+        """Reload known faces from disk. Call this after new face registration."""
+        if FACE_RECOGNITION_AVAILABLE:
+            self.known_faces = self._load_known_faces()
+            print(f"Reloaded {len(self.known_faces)} known faces from disk")
+
     def _save_known_faces(self):
         """Save known face embeddings to disk."""
         with open(self.known_faces_file, 'wb') as f:

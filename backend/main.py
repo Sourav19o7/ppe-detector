@@ -1164,7 +1164,19 @@ async def register_face(name: str, file: UploadFile = File(...), display_name: s
 @app.get("/known-faces")
 def get_known_faces():
     """Get list of registered faces."""
-    return {"faces": detector.get_known_faces()}
+    return {"faces": detector.get_known_faces(), "count": len(detector.known_faces)}
+
+
+@app.post("/reload-faces")
+def reload_faces():
+    """Reload faces from disk. Call this after new face registration if faces aren't being detected."""
+    detector.reload_faces()
+    return {
+        "success": True,
+        "message": "Faces reloaded from disk",
+        "faces": detector.get_known_faces(),
+        "count": len(detector.known_faces)
+    }
 
 
 # ==================== Live Video Streaming ====================
