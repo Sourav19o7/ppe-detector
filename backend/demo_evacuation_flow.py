@@ -217,8 +217,17 @@ async def main():
 
         await asyncio.sleep(1)
 
-        # Step 7: Generate Report
-        print_step(7, "Generating Emergency Incident Report")
+        # Step 7: Email with PDF Report
+        print_step(7, "Emailing Emergency Incident Report")
+        print_data("Recipient", "tanushmaloo@gmail.com")
+        print_data("Subject", "[Report] Emergency Incident Report - Gas Emergency")
+        print_data("Attachment", "Emergency_Incident_Report_Dec_12_2024.pdf")
+        print_success("Email sent with PDF report attached!")
+
+        await asyncio.sleep(1)
+
+        # Step 8: Generate Report
+        print_step(8, "Generating Emergency Incident Report")
         print_info("Calling GET /api/reports/emergency-incident...")
 
         report_downloaded = await download_emergency_report(token)
@@ -240,6 +249,7 @@ async def main():
   {Colors.GREEN}✓{Colors.END} Emergency evacuation triggered
   {Colors.GREEN}✓{Colors.END} ESP32 EVACUATE_ALL command sent (helmet buzzers)
   {Colors.GREEN}✓{Colors.END} SMS alert sent to Safety Officer
+  {Colors.GREEN}✓{Colors.END} Email with PDF report sent to Safety Officer
   {Colors.GREEN}✓{Colors.END} SOS Alert created in database
   {Colors.GREEN}✓{Colors.END} Emergency Incident PDF report generated
 
@@ -247,8 +257,9 @@ async def main():
   1. Click "TRIGGER EVACUATION" button on SOS Alerts page
   2. Confirm the evacuation in the modal
   3. Show SMS received on Safety Officer's phone
-  4. Download Emergency Incident Report from Reports page
-  5. Show worker profile with emergency history
+  4. Show Email received with PDF attachment
+  5. Download Emergency Incident Report from Reports page
+  6. Show worker profile with emergency history
 """)
 
     except Exception as e:

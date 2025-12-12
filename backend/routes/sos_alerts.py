@@ -11,6 +11,10 @@ from database import get_database
 from auth import get_current_user
 from services.sms_service import get_sms_service
 from services.helmet_service import trigger_all_alarms
+from reports.services.email_service import get_email_service
+from reports.services.pdf_generator import PDFGenerator
+from reports.templates.emergency_incident import EmergencyIncidentTemplate, get_demo_emergency_data
+from reports.schemas import EmailRecipient
 
 router = APIRouter(prefix="/api/sos-alerts", tags=["SOS Alerts"])
 
@@ -599,6 +603,59 @@ Acknowledge this alert immediately.
         except Exception as e:
             print(f"[Evacuation] Failed to send SMS: {e}")
 
+    # 6. Generate Emergency Incident PDF and send via email
+    email_sent = False
+    email_service = get_email_service()
+
+    try:
+        # Generate PDF
+        print("[Evacuation] Generating Emergency Incident PDF...")
+        data = get_demo_emergency_data()
+        template = EmergencyIncidentTemplate(db=None)
+        generator = PDFGenerator()
+        pdf_buffer = await generator.generate(template, data)
+
+        # Send email with PDF attachment
+        recipients = [
+            EmailRecipient(email="tanushmaloo@gmail.com", name="Tanush Maloo (Safety Officer)", type="to"),
+        ]
+
+        summary_metrics = [
+            {"label": "Severity", "value": "CRITICAL", "color": "red"},
+            {"label": "Workers Affected", "value": str(workers_count), "color": "orange"},
+            {"label": "Response Time", "value": "3 min 25 sec", "color": "blue"},
+        ]
+
+        highlights = [
+            f"Gas Emergency - {gas_type.upper()} spike at {gas_level:,.0f} PPM in {zone_name}",
+            f"All {workers_count} workers safely evacuated",
+            "ESP32 EVACUATE_ALL command sent to all helmets",
+            "SMS alert delivered to Safety Officer"
+        ]
+
+        attachments = [{
+            "filename": "Emergency_Incident_Report_Dec_12_2024.pdf",
+            "data": pdf_buffer.getvalue(),
+            "content_type": "application/pdf",
+            "format": "PDF"
+        }]
+
+        email_result = await email_service.send_report(
+            recipients=recipients,
+            report_name="Emergency Incident Report",
+            date_range=f"Gas Emergency - {datetime.utcnow().strftime('%B %d, %Y')}",
+            attachments=attachments,
+            summary_metrics=summary_metrics,
+            highlights=highlights
+        )
+
+        if email_result:
+            email_sent = True
+            print(f"[Evacuation] Emergency report emailed to Safety Officer")
+
+    except Exception as e:
+        print(f"[Evacuation] Failed to send email with PDF: {e}")
+
     return {
         "success": True,
         "alert_id": str(result.inserted_id),
@@ -606,6 +663,7 @@ Acknowledge this alert immediately.
         "workers_notified": workers_count,
         "helmet_alarms_triggered": helmet_result.get("success", False),
         "sms_sent": sms_sent,
+        "email_sent": email_sent,
         "gas_type": gas_type,
         "gas_level": gas_level,
         "zone": zone_name,

@@ -103,13 +103,6 @@ export default function Map3DGeneratorPage() {
     },
   });
 
-  // Update connection status when isConnecting changes
-  useEffect(() => {
-    if (trackingState.isConnecting) {
-      trackingStore.setConnectionStatus('connecting');
-    }
-  }, [trackingState.isConnecting, trackingStore]);
-
   // Config
   const CONFIG = {
     camera: { height: 1.7, fov: 75, near: 0.1, far: 1000 },
@@ -1066,21 +1059,11 @@ export default function Map3DGeneratorPage() {
 
     // Connection status indicator
     const statusColor = trackingStore.connectionStatus === 'connected' ? '#22c55e' :
-                        trackingStore.connectionStatus === 'connecting' ? '#3b82f6' :
                         trackingStore.connectionStatus === 'simulating' ? '#fbbf24' : '#ef4444';
     ctx.fillStyle = statusColor;
     ctx.beginPath();
     ctx.arc(mapWidth - 12, 12, 5, 0, Math.PI * 2);
     ctx.fill();
-
-    // Add pulsing effect for connecting state
-    if (trackingStore.connectionStatus === 'connecting') {
-      ctx.strokeStyle = '#3b82f6';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(mapWidth - 12, 12, 8, 0, Math.PI * 2);
-      ctx.stroke();
-    }
   }, [trackingStore]);
 
   // Create mine geometry
@@ -1596,13 +1579,10 @@ export default function Map3DGeneratorPage() {
                     <span className="text-stone-500">Connection:</span>
                     <span className={`font-medium flex items-center gap-1 ${
                       trackingStore.connectionStatus === 'connected' ? 'text-green-600' :
-                      trackingStore.connectionStatus === 'connecting' ? 'text-blue-600' :
                       trackingStore.connectionStatus === 'simulating' ? 'text-yellow-600' : 'text-red-500'
                     }`}>
                       {trackingStore.connectionStatus === 'connected' ? (
                         <><Wifi size={12} /> Live (Real Data)</>
-                      ) : trackingStore.connectionStatus === 'connecting' ? (
-                        <><Radio size={12} className="animate-pulse" /> Connecting...</>
                       ) : trackingStore.connectionStatus === 'simulating' ? (
                         <><Radio size={12} /> Simulating</>
                       ) : (

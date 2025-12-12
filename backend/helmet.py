@@ -6,6 +6,7 @@ import json
 import time # Added for throttling logic
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 # ================= CONFIGURATION =================
@@ -15,6 +16,15 @@ BAUD_RATE = 115200
 BROADCAST_INTERVAL_MS = 500
 
 app = FastAPI()
+
+# Add CORS middleware for REST API endpoints
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 # ================= HTML DASHBOARD (No change needed) =================
 html = """
@@ -87,8 +97,16 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# Store latest sensor data for REST API
+latest_sensor_data = {}
+
 @app.get("/")
 async def get(): return HTMLResponse(html)
+
+@app.get("/api/sensor-data")
+async def get_sensor_data():
+    """REST endpoint to get latest helmet sensor data"""
+    return latest_sensor_data
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -172,6 +190,9 @@ async def serial_reader():
                         current_time_ms = time.time() * 1000
                         
                         if current_time_ms - last_broadcast_time >= BROADCAST_INTERVAL_MS:
+                            # Store latest data for REST API
+                            global latest_sensor_data
+                            latest_sensor_data = final_data
                             # Broadcast the latest data to all connected WebSockets
                             await manager.broadcast(json.dumps(final_data))
                             last_broadcast_time = current_time_ms

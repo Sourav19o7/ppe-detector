@@ -557,7 +557,7 @@ interface MineTrackingState {
   viewMode: 'track' | 'explore';
 
   // Connection status
-  connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'simulating';
+  connectionStatus: 'disconnected' | 'connected' | 'simulating';
 
   // Actions
   setMineData: (data: MineData, name?: string) => void;
@@ -565,7 +565,7 @@ interface MineTrackingState {
   updateWorkerPosition: (pos: Position3D, heading: number) => void;
   incrementStepCount: () => void;
   setViewMode: (mode: 'track' | 'explore') => void;
-  setConnectionStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'simulating') => void;
+  setConnectionStatus: (status: 'disconnected' | 'connected' | 'simulating') => void;
   setIsTracking: (tracking: boolean) => void;
   resetWorkerPosition: () => void;
   clearMineData: () => void;

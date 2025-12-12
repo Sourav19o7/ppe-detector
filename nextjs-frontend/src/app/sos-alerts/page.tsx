@@ -417,15 +417,16 @@ export default function SOSAlertsPage() {
         response_actions: [
           { action: 'EMERGENCY: METHANE spike detected at 15,200 PPM', timestamp: new Date().toISOString(), by: 'Sensor System' },
           { action: `Mass evacuation triggered by ${user?.full_name || 'Safety Officer'}`, timestamp: new Date().toISOString(), by: user?.full_name || 'Safety Officer' },
-          { action: `All helmet alarms activated (${response.workers_notified || 8} workers notified)`, timestamp: new Date().toISOString(), by: 'System' },
+          { action: `All helmet alarms activated (${response.workers_notified || 2} workers notified)`, timestamp: new Date().toISOString(), by: 'System' },
           { action: 'SMS alerts sent to safety personnel', timestamp: new Date().toISOString(), by: 'System' },
+          { action: 'Emergency Incident PDF report emailed to Safety Officer', timestamp: new Date().toISOString(), by: 'System' },
         ],
       };
 
       setAlerts([newAlert, ...alerts]);
       setMessage({
         type: 'success',
-        text: `Emergency evacuation triggered! ${response.workers_notified || 8} workers notified. SMS sent to Safety Officer.`
+        text: `Emergency evacuation triggered! ${response.workers_notified || 2} workers notified. SMS & Email with PDF sent to Safety Officer.`
       });
       playAlertSound();
       setShowEvacuationModal(false);
@@ -444,19 +445,20 @@ export default function SOSAlertsPage() {
         status: 'active',
         location: { x: 0, y: 0, depth_m: 0, section: 'Zone A - Extraction' },
         created_at: new Date().toISOString(),
-        nearby_workers_notified: 8,
+        nearby_workers_notified: 2,
         evacuation_triggered: true,
         audio_broadcast_sent: true,
         response_actions: [
           { action: 'EMERGENCY: METHANE spike detected at 15,200 PPM', timestamp: new Date().toISOString(), by: 'Sensor System' },
           { action: `Mass evacuation triggered by ${user?.full_name || 'Safety Officer'}`, timestamp: new Date().toISOString(), by: user?.full_name || 'Safety Officer' },
-          { action: 'All helmet alarms activated (8 workers notified)', timestamp: new Date().toISOString(), by: 'System' },
+          { action: 'All helmet alarms activated (2 workers notified)', timestamp: new Date().toISOString(), by: 'System' },
           { action: 'SMS alerts sent to safety personnel', timestamp: new Date().toISOString(), by: 'System' },
+          { action: 'Emergency Incident PDF report emailed to Safety Officer', timestamp: new Date().toISOString(), by: 'System' },
         ],
       };
 
       setAlerts([newAlert, ...alerts]);
-      setMessage({ type: 'success', text: 'Emergency evacuation triggered! 8 workers notified. SMS sent to Safety Officer.' });
+      setMessage({ type: 'success', text: 'Emergency evacuation triggered! 2 workers notified. SMS & Email with PDF sent to Safety Officer.' });
       playAlertSound();
       setShowEvacuationModal(false);
     } finally {
