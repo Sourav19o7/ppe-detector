@@ -6,7 +6,6 @@ import json
 import time # Added for throttling logic
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 # ================= CONFIGURATION =================
@@ -16,15 +15,6 @@ BAUD_RATE = 115200
 BROADCAST_INTERVAL_MS = 500
 
 app = FastAPI()
-
-# Add CORS middleware to allow connections from frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ================= HTML DASHBOARD (No change needed) =================
 html = """
