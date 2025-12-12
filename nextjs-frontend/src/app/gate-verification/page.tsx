@@ -346,10 +346,7 @@ export default function GateVerificationPage() {
                 totalChecks={verification.totalChecks}
                 canOverride={canOverride && verification.canOverride}
                 attendanceMarked={verification.attendanceMarked}
-                rfidConnected={verification.rfidConnected}
                 onStart={verification.startVerification}
-                onStartRFID={verification.startRFIDOnly}
-                onStartML={verification.startMLOnly}
                 onReset={verification.resetVerification}
                 onOverride={() => setShowOverrideModal(true)}
                 onCaptureSnapshot={handleSnapshotCapture}
@@ -381,13 +378,6 @@ export default function GateVerificationPage() {
           totalChecks={verification.totalChecks}
         />
 
-        {/* Keyboard Shortcuts Help */}
-        {verification.isTimerRunning && (
-          <div className="fixed bottom-4 left-4 bg-stone-800/90 text-white text-xs px-4 py-2 rounded-lg">
-            <p className="font-semibold mb-1">RFID Simulation (Keyboard)</p>
-            <p>H = Helmet | V = Vest | S = Shoes</p>
-          </div>
-        )}
 
         {/* Debug Log Panel */}
         {/* {showDebugLog && (

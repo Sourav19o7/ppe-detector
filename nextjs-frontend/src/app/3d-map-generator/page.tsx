@@ -40,7 +40,7 @@ export default function Map3DGeneratorPage() {
   // Settings
   const [threshold, setThreshold] = useState(100);
   const [wallHeight, setWallHeight] = useState(4);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(0.1);  // Much smaller scale - 10% of original
   const [addLights, setAddLights] = useState(true);
   const [addDust, setAddDust] = useState(true);
 

@@ -2,7 +2,6 @@
 
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useGateVerificationStore } from '@/lib/store';
-import { useRFIDScanner } from './useRFIDScanner';
 import { gateEntryApi, attendanceApi, workerApi } from '@/lib/api';
 import type { VerificationItemType, Worker } from '@/types';
 
@@ -108,20 +107,6 @@ export function useGateVerification({
   const [detectionLog, setDetectionLog] = useState<string[]>([]);
   const [isSnapshotCapturing, setIsSnapshotCapturing] = useState(false);
 
-  // RFID Scanner integration - DISABLED for now
-  // Set enabled: false to stop hitting RFID APIs
-  const rfidScanner = useRFIDScanner({
-    enabled: false, // DISABLED - not connecting to RFID backend
-    onScan: (event) => {
-      // Only process scans when verification is running
-      if (store.isTimerRunning && event.tagType !== 'face') {
-        store.updateRFIDStatus(event.tagType, 'passed', event.tagId);
-        addLog(`RFID scanned: ${event.tagType} (${event.tagId})`);
-      }
-    },
-    mockMode: false, // DISABLED - no keyboard mock either
-  });
-
   // Add to detection log
   const addLog = useCallback((message: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -129,7 +114,7 @@ export function useGateVerification({
     console.log(`[GateVerification] ${message}`);
   }, []);
 
-  // Start verification session
+  // Start verification session (ML-based only)
   const startVerification = useCallback(async () => {
     // Gate and mine IDs are now optional - will use defaults if not provided
     if (!gateId || !mineId) {
@@ -138,11 +123,8 @@ export function useGateVerification({
     }
 
     setDetectionLog([]);
-    addLog('Verification started (ML only - RFID disabled)');
+    addLog('Verification started (ML-based)');
     store.startVerification(gateId || 'default', mineId || 'default');
-
-    // RFID scanning is DISABLED - skip triggering ESP32
-    // if (rfidScanner.startRFIDScan) { ... }
   }, [gateId, mineId, store, addLog]);
 
   // Reset verification
@@ -152,29 +134,6 @@ export function useGateVerification({
     setDetectionLog([]);
     addLog('Verification reset');
   }, [store, addLog]);
-
-  // Start RFID scanning only (sends "1" to ESP32)
-  const startRFIDOnly = useCallback(async () => {
-    addLog('Triggering RFID scanner...');
-    if (rfidScanner.startRFIDScan) {
-      const started = await rfidScanner.startRFIDScan();
-      if (started) {
-        addLog('RFID scanner triggered - sent "1" to ESP32');
-      } else {
-        addLog('Failed to trigger RFID scanner');
-      }
-      return started;
-    }
-    return false;
-  }, [rfidScanner, addLog]);
-
-  // Start ML detection only (without RFID)
-  const startMLOnly = useCallback(() => {
-    // Gate and mine IDs are now optional
-    setDetectionLog([]);
-    addLog('ML Detection started (RFID manual)');
-    store.startVerification(gateId || 'default', mineId || 'default');
-  }, [gateId, mineId, store, addLog]);
 
   // Set current video frame (called from LiveVideoPanel)
   const setCurrentFrame = useCallback((frame: string) => {
@@ -593,15 +552,6 @@ export function useGateVerification({
     }
   }, [store.overallStatus, store.identifiedWorker, onVerificationComplete, onGateOpen, addLog]);
 
-  // Manual trigger for RFID (for UI buttons)
-  const triggerRFIDScan = useCallback((itemType: VerificationItemType) => {
-    if (itemType !== 'face') {
-      const tagId = `${itemType.toUpperCase()}-${Math.random().toString(36).substring(2, 8)}`;
-      store.updateRFIDStatus(itemType, 'passed', tagId);
-      addLog(`Manual RFID trigger: ${itemType}`);
-    }
-  }, [store, addLog]);
-
   // Capture snapshot and perform full detection (PPE + face) with attendance marking
   const captureSnapshot = useCallback(async (frameData?: string) => {
     // Use provided frameData or fall back to stored frame
@@ -710,9 +660,6 @@ export function useGateVerification({
     totalChecks: store.getTotalChecks(),
     canOverride: store.canOverride(),
 
-    // RFID status
-    rfidConnected: rfidScanner.isConnected,
-
     // Debug
     detectionLog,
 
@@ -720,9 +667,6 @@ export function useGateVerification({
     startVerification,
     resetVerification,
     setCurrentFrame,
-    triggerRFIDScan,
-    startRFIDOnly,
-    startMLOnly,
     determineOutcome: store.determineOutcome,
     markAttendance,
     captureSnapshot,

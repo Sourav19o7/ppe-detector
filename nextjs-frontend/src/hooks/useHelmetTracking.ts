@@ -44,9 +44,10 @@ const HELMET_API_URL = 'http://localhost:8000/api/helmet/imu-data';
 const POLL_INTERVAL = 200; // ms
 
 // Step detection parameters (tuned for walking)
-const STEP_THRESHOLD = 1150;      // mg - acceleration magnitude threshold
-const STEP_COOLDOWN = 280;        // ms - minimum time between steps
-const STEP_LENGTH = 0.65;         // meters per step
+const STEP_THRESHOLD = 1050;      // mg - lowered for real data sensitivity
+const STEP_COOLDOWN = 350;        // ms - minimum time between steps
+const STEP_LENGTH = 2.0;          // meters per step - increased for visibility
+const VARIANCE_THRESHOLD = 150;   // mg - detect steps via acceleration variance
 
 // Smoothing filter parameters (EMA - Exponential Moving Average)
 const HEADING_FILTER_ALPHA = 0.08;   // Lower = smoother heading
@@ -122,6 +123,8 @@ export function useHelmetTracking({
   const stepCountRef = useRef<number>(0);
   const lastAccelMagnitudeRef = useRef<number>(1000);
   const wasAboveThresholdRef = useRef<boolean>(false);
+  const accelHistoryRef = useRef<number[]>([]);  // For variance calculation
+  const logCounterRef = useRef<number>(0);
 
   // Callbacks refs (to avoid stale closures)
   const onPositionUpdateRef = useRef(onPositionUpdate);
@@ -152,19 +155,38 @@ export function useHelmetTracking({
     // Calculate acceleration magnitude for step detection
     const accelMag = calculateAccelMagnitude(imu.accelX, imu.accelY, imu.accelZ);
 
-    // Step detection using peak detection
-    // Detect rising edge crossing threshold (step impact)
+    // Log every 10th reading to see values
+    logCounterRef.current += 1;
+    if (logCounterRef.current % 10 === 0) {
+      console.log(`[IMU] mag=${accelMag.toFixed(0)} yaw=${imu.yaw.toFixed(1)} ax=${imu.accelX} ay=${imu.accelY} az=${imu.accelZ}`);
+    }
+
+    // Update acceleration history for variance detection
+    accelHistoryRef.current.push(accelMag);
+    if (accelHistoryRef.current.length > 10) {
+      accelHistoryRef.current.shift();
+    }
+
+    // Calculate variance in recent readings
+    const avgMag = accelHistoryRef.current.reduce((a, b) => a + b, 0) / accelHistoryRef.current.length;
+    const variance = accelHistoryRef.current.reduce((sum, val) => sum + Math.abs(val - avgMag), 0) / accelHistoryRef.current.length;
+
+    // Step detection: either magnitude spike OR high variance
     const isAboveThreshold = accelMag > STEP_THRESHOLD;
+    const hasHighVariance = variance > VARIANCE_THRESHOLD;
     const timeSinceLastStep = now - lastStepTimeRef.current;
 
-    if (
-      isAboveThreshold &&
-      !wasAboveThresholdRef.current &&
-      timeSinceLastStep > STEP_COOLDOWN
-    ) {
+    const stepDetected = (
+      (isAboveThreshold && !wasAboveThresholdRef.current) ||
+      (hasHighVariance && timeSinceLastStep > STEP_COOLDOWN * 1.5)
+    ) && timeSinceLastStep > STEP_COOLDOWN;
+
+    if (stepDetected) {
       // Step detected!
       lastStepTimeRef.current = now;
       stepCountRef.current += 1;
+
+      console.log(`[STEP] #${stepCountRef.current} mag=${accelMag.toFixed(0)} var=${variance.toFixed(0)} yaw=${imu.yaw.toFixed(1)}`);
 
       // Update position based on heading
       const heading = filteredHeadingRef.current;
@@ -176,6 +198,9 @@ export function useHelmetTracking({
 
       // Notify step detected
       onStepDetectedRef.current?.();
+
+      // Reset variance tracking after step
+      accelHistoryRef.current = [];
     }
 
     wasAboveThresholdRef.current = isAboveThreshold;
