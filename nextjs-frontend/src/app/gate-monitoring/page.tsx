@@ -67,7 +67,7 @@ export default function GateMonitoringPage() {
       try {
         const mineIds = getMineIds();
         const mineId = mineIds.length > 0 ? mineIds[0] : undefined;
-        const minesData = await mineApi.getAll();
+        const { mines: minesData } = await mineApi.list();
         setMines(minesData);
 
         if (mineId && minesData.find(m => m.id === mineId)) {
@@ -90,7 +90,7 @@ export default function GateMonitoringPage() {
       if (showRefresh) setRefreshing(true);
       else setLoading(true);
 
-      const data = await gateEntryApi.getLive(selectedMine, selectedGate || undefined);
+      const data = await gateEntryApi.getLive({ mine_id: selectedMine, gate_id: selectedGate || undefined });
       setLiveData(data);
       setError(null);
     } catch (err) {

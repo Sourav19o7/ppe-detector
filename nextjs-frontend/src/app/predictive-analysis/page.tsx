@@ -70,7 +70,7 @@ export default function PredictiveAnalysisPage() {
       setAtRiskWorkers(workersData);
 
       // Load trends
-      const trendsData = await predictionApi.getTrends({ days: 30 });
+      const trendsData = await predictionApi.getTrends({ days_back: 30 });
 
       // Transform trends for charting
       const trendArray = Object.entries(trendsData.trends).map(([date, categories]) => {

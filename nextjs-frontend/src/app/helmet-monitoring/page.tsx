@@ -276,7 +276,7 @@ export default function HelmetMonitoringPage() {
   const loadData = useCallback(async () => {
     try {
       setError(null);
-      const mineId = getMineId();
+      const mineId = getMineId() || undefined;
 
       // Fetch all data in parallel
       const [latestRes, statsRes, alertsRes] = await Promise.all([
@@ -488,7 +488,7 @@ export default function HelmetMonitoringPage() {
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Sensor Readings Table */}
-              <Card header={{ title: 'Live Sensor Readings', icon: <Activity className="w-5 h-5 text-orange-500" /> }}>
+              <Card title="Live Sensor Readings" icon={<Activity className="w-5 h-5 text-orange-500" />}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -542,7 +542,7 @@ export default function HelmetMonitoringPage() {
               </Card>
 
               {/* Severity Distribution */}
-              <Card header={{ title: 'Alert Distribution', icon: <AlertCircle className="w-5 h-5 text-orange-500" /> }}>
+              <Card title="Alert Distribution" icon={<AlertCircle className="w-5 h-5 text-orange-500" />}>
                 {severityData.length > 0 ? (
                   <div className="flex items-center justify-center h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -576,7 +576,7 @@ export default function HelmetMonitoringPage() {
 
             {/* Motion Data */}
             {readings.length > 0 && (
-              <Card header={{ title: 'Motion & Orientation Data', icon: <TrendingUp className="w-5 h-5 text-orange-500" /> }}>
+              <Card title="Motion & Orientation Data" icon={<TrendingUp className="w-5 h-5 text-orange-500" />}>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                   {readings[0] && (
                     <>
@@ -658,7 +658,7 @@ export default function HelmetMonitoringPage() {
         {/* History Tab */}
         {activeTab === 'history' && (
           <div className="space-y-6">
-            <Card header={{ title: 'Historical Readings (Threshold Breaches)', icon: <History className="w-5 h-5 text-orange-500" /> }}>
+            <Card title="Historical Readings (Threshold Breaches)" icon={<History className="w-5 h-5 text-orange-500" />}>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>

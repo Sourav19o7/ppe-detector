@@ -61,7 +61,7 @@ export default function PPEConfigPage() {
       setLoading(true);
       const mineIds = getMineIds();
       const mineId = mineIds.length > 0 ? mineIds[0] : undefined;
-      const data = await mineApi.getAll();
+      const { mines: data } = await mineApi.list();
       setMines(data);
 
       if (mineId && data.find(m => m.id === mineId)) {

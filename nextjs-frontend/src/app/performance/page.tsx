@@ -61,12 +61,12 @@ export default function PerformancePage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [dashboardData, minesData] = await Promise.all([
+      const [dashboardData, minesResult] = await Promise.all([
         dashboardApi.getGeneralManager(),
-        mineApi.getAll(),
+        mineApi.list(),
       ]);
       setData(dashboardData);
-      setMines(minesData.mines);
+      setMines(minesResult.mines);
 
       // Load health data
       try {
@@ -75,7 +75,7 @@ export default function PerformancePage() {
       } catch (healthErr) {
         console.log('Health data not available yet:', healthErr);
         // Generate mock health data if API not ready - pass mines directly since state may not be updated yet
-        setHealthData(generateMockHealthData(minesData.mines));
+        setHealthData(generateMockHealthData(minesResult.mines));
       }
 
       setError(null);

@@ -136,9 +136,9 @@ export default function MyViolationsPage() {
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      const allViolations = data.violations || [];
-      const weekViolations = allViolations.filter((v: any) => new Date(v.timestamp) >= weekAgo);
-      const monthViolations = allViolations.filter((v: any) => new Date(v.timestamp) >= monthAgo);
+    const allViolations = mockViolations || [];
+    const weekViolations = allViolations.filter((v) => new Date(v.timestamp) >= weekAgo);
+    const monthViolations = allViolations.filter((v) => new Date(v.timestamp) >= monthAgo);
 
     // Find most common violation type
     const violationCounts: Record<string, number> = {};

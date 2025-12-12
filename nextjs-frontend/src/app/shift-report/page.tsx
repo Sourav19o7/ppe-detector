@@ -39,16 +39,16 @@ export default function ShiftReportPage() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [dashboardData, entriesData] = await Promise.all([
+      const [dashboardData, entriesResult] = await Promise.all([
         dashboardApi.getShiftIncharge(),
-        gateEntryApi.getAll({
+        gateEntryApi.list({
           start_date: selectedDate,
           end_date: selectedDate,
           limit: 100,
         }),
       ]);
       setData(dashboardData);
-      setEntries(entriesData);
+      setEntries(entriesResult.entries);
       setError(null);
     } catch (err) {
       setError('Failed to load shift report data');

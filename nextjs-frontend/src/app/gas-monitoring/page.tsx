@@ -135,7 +135,7 @@ const SEVERITY_COLORS = {
 const PIE_COLORS = ['#10B981', '#F59E0B', '#F97316', '#EF4444'];
 
 export default function GasMonitoringPage() {
-  const { getMineId, tokens } = useAuthStore();
+  const { getMineIds } = useAuthStore();
   const [latestReadings, setLatestReadings] = useState<GasReading[]>([]);
   const [stats, setStats] = useState<GasStats | null>(null);
   const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
@@ -179,10 +179,13 @@ export default function GasMonitoringPage() {
       const mineIds = getMineIds();
       const mineId = mineIds.length > 0 ? mineIds[0] : undefined;
 
-      const latestData = await gasSensorApi.getLatest(mineId);
+      const [latestData, statsData] = await Promise.all([
+        gasSensorApi.getLatest(mineId),
+        gasSensorApi.getStats(mineId, timeRange).catch(() => null),
+      ]);
 
       // Transform latest readings to expected format
-      const readings: GasReading[] = latestData.map((sensor: { sensor_id: string; mine_id: string; latest: { timestamp: string; gas_type: string; value: number; unit: string; status: string } }, index: number) => {
+      const readings: GasReading[] = (Array.isArray(latestData) ? latestData : []).map((sensor: { sensor_id: string; mine_id: string; latest: { timestamp: string; gas_type: string; value: number; unit: string; status: string } }, index: number) => {
         const isMethane = sensor.latest?.gas_type?.toLowerCase().includes('methane') || sensor.latest?.gas_type === 'CH4';
         const status = sensor.latest?.status || 'normal';
         const severity = status === 'critical' ? 'critical' : status === 'danger' || status === 'high' ? 'high' : status === 'warning' || status === 'medium' ? 'medium' : 'normal';
@@ -201,16 +204,18 @@ export default function GasMonitoringPage() {
         };
       });
 
-      setLatestReadings(latestData.readings || []);
-      setStats(statsData);
+      setLatestReadings(readings);
+      if (statsData) {
+        setStats(statsData);
+      }
 
       // Check for critical alerts and play sound
-      const hasCritical = (latestData.readings || []).some(
+      const hasCritical = readings.some(
         (r: GasReading) => r.severity === 'critical' || r.severity === 'high'
       );
 
       if (hasCritical) {
-        const criticalIds = (latestData.readings || [])
+        const criticalIds = readings
           .filter((r: GasReading) => r.severity === 'critical')
           .map((r: GasReading) => r.id)
           .join(',');
@@ -280,7 +285,7 @@ export default function GasMonitoringPage() {
     } finally {
       setLoading(false);
     }
-  }, [getMineId, timeRange, playAlertSound]);
+  }, [getMineIds, timeRange, playAlertSound]);
 
   useEffect(() => {
     loadData();

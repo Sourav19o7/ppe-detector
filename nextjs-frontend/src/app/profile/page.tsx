@@ -93,7 +93,7 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       if (userType === 'worker' && worker) {
-        const data = await workerApi.getById(worker.id);
+        const data = await workerApi.get(worker.id);
         setWorkerData(data);
         setEditForm({
           phone: data.phone || '',
