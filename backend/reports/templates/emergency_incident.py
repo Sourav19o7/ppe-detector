@@ -215,8 +215,8 @@ def get_demo_emergency_data() -> Dict[str, Any]:
     """
     return {
         "mine_name": "Jharia Coal Mine",
-        "date_range": "December 12, 2024",
-        "generated_at": datetime(2024, 12, 12, 11, 0, 0),
+        "date_range": "December 12, 2025",
+        "generated_at": datetime(2025, 12, 12, 4, 0, 0),
 
         "incident_summary": {
             "type": "Gas Emergency - Methane Spike",
@@ -231,12 +231,12 @@ def get_demo_emergency_data() -> Dict[str, Any]:
             "response_time": "3 min 25 sec",
             "outcome": "Zero Casualties",
             "incident_date": "December 12, 2024",
-            "incident_time": "10:30 AM IST"
+            "incident_time": "3:30 AM IST"
         },
 
         "incident_details": [
             {"field": "Incident Type", "value": "Gas Emergency - Methane Spike"},
-            {"field": "Date & Time", "value": "December 12, 2024, 10:30 AM IST"},
+            {"field": "Date & Time", "value": "December 12, 2024, 3:30 AM IST"},
             {"field": "Location", "value": "Zone A - Extraction, Jharia Coal Mine"},
             {"field": "Gas Detected", "value": "Methane (CH4)"},
             {"field": "Peak Reading", "value": "15,200 PPM (CRITICAL)"},
@@ -244,24 +244,24 @@ def get_demo_emergency_data() -> Dict[str, Any]:
             {"field": "Sensor ID", "value": "HELMET-001 (Worker: Stavan Sheth)"},
             {"field": "Detection Method", "value": "Smart Helmet MQ-4 Sensor"},
             {"field": "Alarm Triggered", "value": "Automatic + Manual Evacuation"},
-            {"field": "Evacuation Complete", "value": "10:33 AM IST"},
-            {"field": "All Clear Given", "value": "11:15 AM IST"},
+            {"field": "Evacuation Complete", "value": "3:33 AM IST"},
+            {"field": "All Clear Given", "value": "4:15 AM IST"},
         ],
 
         "gas_readings": [
-            {"time": "10:25", "ppm": 800},
-            {"time": "10:26", "ppm": 1200},
-            {"time": "10:27", "ppm": 2500},
-            {"time": "10:28", "ppm": 5800},
-            {"time": "10:29", "ppm": 9200},
-            {"time": "10:30", "ppm": 15200},
-            {"time": "10:31", "ppm": 14500},
-            {"time": "10:32", "ppm": 12000},
-            {"time": "10:33", "ppm": 8500},
-            {"time": "10:35", "ppm": 5000},
-            {"time": "10:40", "ppm": 2800},
-            {"time": "10:50", "ppm": 1200},
-            {"time": "11:00", "ppm": 600},
+            {"time": "3:25", "ppm": 800},
+            {"time": "3:26", "ppm": 1200},
+            {"time": "3:27", "ppm": 2500},
+            {"time": "3:28", "ppm": 5800},
+            {"time": "3:29", "ppm": 9200},
+            {"time": "3:30", "ppm": 15200},
+            {"time": "3:31", "ppm": 14500},
+            {"time": "3:32", "ppm": 12000},
+            {"time": "3:33", "ppm": 8500},
+            {"time": "3:35", "ppm": 5000},
+            {"time": "3:40", "ppm": 2800},
+            {"time": "3:50", "ppm": 1200},
+            {"time": "4:00", "ppm": 600},
         ],
 
         "affected_workers": [
@@ -270,18 +270,18 @@ def get_demo_emergency_data() -> Dict[str, Any]:
         ],
 
         "timeline": [
-            {"time": "10:25 AM", "event": "Elevated methane levels detected", "action": "Monitoring initiated"},
-            {"time": "10:28 AM", "event": "Methane exceeds warning threshold (5,000 PPM)", "action": "Alert generated to Safety Officer"},
-            {"time": "10:29 AM", "event": "Helmet sensor confirms gas spike", "action": "Worker Stavan Sheth notified via helmet alarm"},
-            {"time": "10:30 AM", "event": "CRITICAL: Methane reaches 15,200 PPM", "action": "Mass evacuation triggered by Safety Officer"},
-            {"time": "10:30 AM", "event": "All 2 helmet buzzers activated", "action": "ESP32 EVACUATE_ALL command sent"},
-            {"time": "10:30 AM", "event": "SMS alert sent to Safety Officer", "action": "Emergency notification delivered"},
-            {"time": "10:31 AM", "event": "Workers begin evacuation", "action": "Real-time tracking initiated"},
-            {"time": "10:33 AM", "event": "All 2 workers evacuated from Zone A", "action": "Headcount verified at assembly point"},
-            {"time": "10:35 AM", "event": "Ventilation systems activated", "action": "Gas dispersal in progress"},
-            {"time": "10:50 AM", "event": "Methane levels dropping", "action": "Continued monitoring"},
-            {"time": "11:00 AM", "event": "Methane below safe threshold", "action": "Preliminary all-clear assessment"},
-            {"time": "11:15 AM", "event": "Zone declared safe", "action": "Workers cleared to return"},
+            {"time": "3:25 AM", "event": "Elevated methane levels detected", "action": "Monitoring initiated"},
+            {"time": "3:28 AM", "event": "Methane exceeds warning threshold (5,000 PPM)", "action": "Alert generated to Safety Officer"},
+            {"time": "3:29 AM", "event": "Helmet sensor confirms gas spike", "action": "Worker Stavan Sheth notified via helmet alarm"},
+            {"time": "3:30 AM", "event": "CRITICAL: Methane reaches 15,200 PPM", "action": "Mass evacuation triggered by Safety Officer"},
+            {"time": "3:30 AM", "event": "All 2 helmet buzzers activated", "action": "ESP32 EVACUATE_ALL command sent"},
+            {"time": "3:30 AM", "event": "SMS alert sent to Safety Officer", "action": "Emergency notification delivered"},
+            {"time": "3:31 AM", "event": "Workers begin evacuation", "action": "Real-time tracking initiated"},
+            {"time": "3:33 AM", "event": "All 2 workers evacuated from Zone A", "action": "Headcount verified at assembly point"},
+            {"time": "3:35 AM", "event": "Ventilation systems activated", "action": "Gas dispersal in progress"},
+            {"time": "3:50 AM", "event": "Methane levels dropping", "action": "Continued monitoring"},
+            {"time": "4:00 AM", "event": "Methane below safe threshold", "action": "Preliminary all-clear assessment"},
+            {"time": "4:15 AM", "event": "Zone declared safe", "action": "Workers cleared to return"},
         ],
 
         "response_breakdown": {
@@ -292,11 +292,11 @@ def get_demo_emergency_data() -> Dict[str, Any]:
         },
 
         "notifications": [
-            {"recipient": "Safety Officer (Tanush Maloo)", "type": "SMS", "time": "10:30:05 AM", "status": "Delivered"},
-            {"recipient": "Safety Officer (Tanush Maloo)", "type": "Dashboard Alert", "time": "10:30:01 AM", "status": "Acknowledged"},
-            {"recipient": "Mine Manager", "type": "Email", "time": "10:30:15 AM", "status": "Delivered"},
-            {"recipient": "All Zone A Workers (2)", "type": "Helmet Buzzer", "time": "10:30:02 AM", "status": "Activated"},
-            {"recipient": "Emergency Response Team", "type": "Radio Alert", "time": "10:30:20 AM", "status": "Acknowledged"},
+            {"recipient": "Safety Officer (Tanush Maloo)", "type": "SMS", "time": "3:30:05 AM", "status": "Delivered"},
+            {"recipient": "Safety Officer (Tanush Maloo)", "type": "Dashboard Alert", "time": "3:30:01 AM", "status": "Acknowledged"},
+            {"recipient": "Mine Manager", "type": "Email", "time": "3:30:15 AM", "status": "Delivered"},
+            {"recipient": "All Zone A Workers (2)", "type": "Helmet Buzzer", "time": "3:30:02 AM", "status": "Activated"},
+            {"recipient": "Emergency Response Team", "type": "Radio Alert", "time": "3:30:20 AM", "status": "Acknowledged"},
         ],
 
         "recommendations": [

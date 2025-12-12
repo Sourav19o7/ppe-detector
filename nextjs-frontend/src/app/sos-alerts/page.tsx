@@ -389,6 +389,21 @@ export default function SOSAlertsPage() {
 
   const handleTriggerEvacuation = async () => {
     setEvacuationLoading(true);
+
+    // Send SMS via API route (calls Twilio)
+    try {
+      const smsResponse = await fetch('/api/send-evacuation-sms', { method: 'POST' });
+      const smsResult = await smsResponse.json();
+      if (smsResult.success) {
+        console.log('SMS sent successfully via Twilio:', smsResult.messageSid);
+      } else {
+        console.error('SMS sending failed:', smsResult.error);
+      }
+    } catch (smsErr) {
+      console.error('Failed to send SMS:', smsErr);
+      // Continue with evacuation even if SMS fails
+    }
+
     try {
       const response = await apiClient.post('/api/sos-alerts/trigger-evacuation', {
         zone_name: 'Zone A - Extraction',

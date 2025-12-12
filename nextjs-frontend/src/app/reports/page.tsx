@@ -56,7 +56,58 @@ export default function ReportsPage() {
       const data = await reportsApi.getReportTypes();
       setReportTypes(data.report_types);
     } catch (err) {
-      console.error('Failed to load report types:', err);
+      console.error('Failed to load report types, using mock data:', err);
+      // Mock report types when API fails - using valid ReportType values
+      setReportTypes([
+        {
+          id: 'shift_summary',
+          name: 'Shift Summary Report',
+          description: 'Comprehensive shift summary with attendance and compliance data',
+          available_formats: ['pdf', 'excel', 'csv'],
+          min_role: 'shift_incharge',
+          parameters: ['shift', 'date'],
+        },
+        {
+          id: 'weekly_compliance',
+          name: 'Weekly Compliance Report',
+          description: 'Weekly PPE compliance summary across all zones and workers',
+          available_formats: ['pdf', 'excel'],
+          min_role: 'safety_officer',
+          parameters: ['week', 'zone'],
+        },
+        {
+          id: 'violation_trends',
+          name: 'Violation Trends Report',
+          description: 'Analysis of PPE violation patterns and trends over time',
+          available_formats: ['pdf', 'excel', 'csv'],
+          min_role: 'safety_officer',
+          parameters: ['date_range'],
+        },
+        {
+          id: 'daily_operations',
+          name: 'Daily Operations Report',
+          description: 'Daily operational summary including entries, exits, and alerts',
+          available_formats: ['pdf'],
+          min_role: 'manager',
+          parameters: ['date'],
+        },
+        {
+          id: 'executive_summary',
+          name: 'Executive Summary Report',
+          description: 'High-level overview for management with KPIs and compliance metrics',
+          available_formats: ['pdf', 'excel'],
+          min_role: 'general_manager',
+          parameters: ['date_range', 'mine'],
+        },
+        {
+          id: 'critical_incidents',
+          name: 'Critical Incidents Report',
+          description: 'Summary of critical safety incidents and emergency responses',
+          available_formats: ['pdf', 'excel'],
+          min_role: 'area_safety_officer',
+          parameters: ['date_range'],
+        },
+      ]);
     }
   };
 
@@ -66,7 +117,80 @@ export default function ReportsPage() {
       const data = await reportsApi.getSchedules();
       setSchedules(data.schedules);
     } catch (err) {
-      console.error('Failed to load schedules:', err);
+      console.error('Failed to load schedules, using mock data:', err);
+      // Mock schedules when API fails - using correct ReportSchedule structure
+      setSchedules([
+        {
+          id: 'sched-001',
+          name: 'Daily Shift Summary',
+          report_type: 'shift_summary',
+          role_target: 'manager',
+          created_by: 'admin',
+          mine_id: 'mine-001',
+          schedule: {
+            frequency: 'daily',
+            time: '18:00',
+          },
+          recipients: [
+            { email: 'manager@jhariamine.in', name: 'Mine Manager', type: 'to' },
+            { email: 'safety@jhariamine.in', name: 'Safety Officer', type: 'cc' },
+          ],
+          config: {
+            format: ['pdf'],
+            date_range: 'previous_shift',
+          },
+          is_active: true,
+          created_at: '2024-01-15T00:00:00Z',
+          last_run: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          next_run: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'sched-002',
+          name: 'Weekly Compliance Report',
+          report_type: 'weekly_compliance',
+          role_target: 'safety_officer',
+          created_by: 'admin',
+          schedule: {
+            frequency: 'weekly',
+            time: '09:00',
+            day_of_week: 1,
+          },
+          recipients: [
+            { email: 'hr@coalmines.gov.in', name: 'HR Department', type: 'to' },
+          ],
+          config: {
+            format: ['excel'],
+            date_range: 'previous_week',
+          },
+          is_active: true,
+          created_at: '2024-02-01T00:00:00Z',
+          last_run: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          next_run: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        {
+          id: 'sched-003',
+          name: 'Monthly Executive Summary',
+          report_type: 'executive_summary',
+          role_target: 'general_manager',
+          created_by: 'admin',
+          schedule: {
+            frequency: 'monthly',
+            time: '10:00',
+            day_of_month: 1,
+          },
+          recipients: [
+            { email: 'gm@coalmines.gov.in', name: 'General Manager', type: 'to' },
+            { email: 'safety.head@coalmines.gov.in', name: 'Safety Head', type: 'cc' },
+          ],
+          config: {
+            format: ['pdf'],
+            date_range: 'previous_month',
+          },
+          is_active: false,
+          created_at: '2024-03-01T00:00:00Z',
+          next_run: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+      ]);
     } finally {
       setSchedulesLoading(false);
     }
@@ -77,7 +201,18 @@ export default function ReportsPage() {
       const data = await employeeApi.list(0, 100);
       setEmployees(data.employees);
     } catch (err) {
-      console.error('Failed to load employees:', err);
+      console.error('Failed to load employees, using mock data:', err);
+      // Mock employees when API fails
+      setEmployees([
+        { id: 'emp-001', employee_id: 'WRK001', name: 'Rajesh Kumar', department: 'Underground Mining', face_registered: true, created_at: '2024-01-15T00:00:00Z' },
+        { id: 'emp-002', employee_id: 'WRK002', name: 'Suresh Yadav', department: 'Extraction', face_registered: true, created_at: '2024-01-20T00:00:00Z' },
+        { id: 'emp-003', employee_id: 'WRK003', name: 'Mukesh Singh', department: 'Underground Mining', face_registered: true, created_at: '2024-01-25T00:00:00Z' },
+        { id: 'emp-004', employee_id: 'WRK004', name: 'Anil Verma', department: 'Processing', face_registered: true, created_at: '2024-02-01T00:00:00Z' },
+        { id: 'emp-005', employee_id: 'WRK005', name: 'Vikram Tiwari', department: 'Extraction', face_registered: false, created_at: '2024-02-05T00:00:00Z' },
+        { id: 'emp-006', employee_id: 'WRK006', name: 'Ramesh Sharma', department: 'Underground Mining', face_registered: true, created_at: '2024-02-10T00:00:00Z' },
+        { id: 'emp-007', employee_id: 'WRK007', name: 'Dinesh Patel', department: 'Maintenance', face_registered: true, created_at: '2024-02-15T00:00:00Z' },
+        { id: 'emp-008', employee_id: 'WRK008', name: 'Prakash Jha', department: 'Safety', face_registered: true, created_at: '2024-02-20T00:00:00Z' },
+      ]);
     }
   };
 
