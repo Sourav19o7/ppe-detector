@@ -31,9 +31,11 @@ export interface TrackingState {
   position: Position;
   heading: number;           // radians
   isConnected: boolean;
+  isConnecting: boolean;     // NEW: connecting state
   isSimulating: boolean;
   stepCount: number;
   lastIMU: IMUData | null;
+  connectionAttempts: number; // NEW: track attempts
 }
 
 // ==================== CONSTANTS ====================
@@ -48,8 +50,10 @@ const STEP_LENGTH = 0.65;         // meters per step
 const HEADING_FILTER_ALPHA = 0.08;   // Lower = smoother heading
 const POSITION_FILTER_ALPHA = 0.12;  // Lower = smoother position
 
-// Reconnection settings
-const RECONNECT_INTERVAL = 3000;  // ms
+// Connection retry settings
+const RECONNECT_INTERVAL = 2000;   // ms between reconnect attempts
+const MAX_RECONNECT_ATTEMPTS = 5;  // Retry this many times before falling back to simulation
+const CONNECTION_TIMEOUT = 5000;   // ms - timeout for each connection attempt
 
 // Mock simulation settings
 const MOCK_UPDATE_INTERVAL = 100; // ms
@@ -100,16 +104,20 @@ export function useHelmetTracking({
     position: initialPosition,
     heading: 0,
     isConnected: false,
+    isConnecting: false,
     isSimulating: false,
     stepCount: 0,
     lastIMU: null,
+    connectionAttempts: 0,
   });
 
   // Refs for mutable values (don't trigger re-renders)
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const mockIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mockStepIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionAttemptsRef = useRef<number>(0);
 
   // PDR state refs
   const positionRef = useRef<Position>(initialPosition);
@@ -329,27 +337,61 @@ export function useHelmetTracking({
   }, []);
 
   /**
-   * Connect to helmet.py WebSocket
+   * Connect to helmet.py WebSocket with retry logic
    */
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
 
-    console.log('[HelmetTracking] Connecting to', HELMET_WS_URL);
+    // Clear any existing connection timeout
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+      connectionTimeoutRef.current = null;
+    }
+
+    connectionAttemptsRef.current += 1;
+    const attemptNum = connectionAttemptsRef.current;
+
+    console.log(`[HelmetTracking] Connection attempt ${attemptNum}/${MAX_RECONNECT_ATTEMPTS} to ${HELMET_WS_URL}`);
+
+    // Set connecting state
+    setState(prev => ({
+      ...prev,
+      isConnecting: true,
+      connectionAttempts: attemptNum,
+    }));
 
     try {
       const ws = new WebSocket(HELMET_WS_URL);
       wsRef.current = ws;
 
+      // Set connection timeout
+      connectionTimeoutRef.current = setTimeout(() => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          console.warn(`[HelmetTracking] Connection timeout on attempt ${attemptNum}`);
+          ws.close();
+        }
+      }, CONNECTION_TIMEOUT);
+
       ws.onopen = () => {
-        console.log('[HelmetTracking] Connected to helmet.py');
+        console.log('[HelmetTracking] ✓ Connected to helmet.py - REAL DATA MODE');
+
+        // Clear timeout and reset attempts
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
+        connectionAttemptsRef.current = 0;
+
         stopMockSimulation();
 
         setState(prev => ({
           ...prev,
           isConnected: true,
+          isConnecting: false,
           isSimulating: false,
+          connectionAttempts: 0,
         }));
 
         onConnectionChangeRef.current?.(true, false);
@@ -363,33 +405,66 @@ export function useHelmetTracking({
       };
 
       ws.onerror = (error) => {
-        console.error('[HelmetTracking] WebSocket error:', error);
+        console.error(`[HelmetTracking] WebSocket error on attempt ${attemptNum}:`, error);
       };
 
-      ws.onclose = () => {
-        console.log('[HelmetTracking] Disconnected from helmet.py');
+      ws.onclose = (event) => {
+        console.log(`[HelmetTracking] WebSocket closed (code: ${event.code}, reason: ${event.reason || 'none'})`);
         wsRef.current = null;
+
+        // Clear connection timeout
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
 
         setState(prev => ({
           ...prev,
           isConnected: false,
+          isConnecting: false,
         }));
 
         onConnectionChangeRef.current?.(false, false);
 
-        // Start mock simulation and schedule reconnect
+        // Handle reconnection with retry logic
         if (enabled) {
-          startMockSimulation();
-          reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_INTERVAL);
+          if (connectionAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+            // Keep trying to connect
+            console.log(`[HelmetTracking] Retrying in ${RECONNECT_INTERVAL}ms... (${connectionAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`);
+            reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_INTERVAL);
+          } else {
+            // Max attempts reached - fall back to simulation
+            console.log('[HelmetTracking] Max reconnection attempts reached. Starting SIMULATION MODE.');
+            console.log('[HelmetTracking] Make sure helmet.py is running on port 8000');
+            startMockSimulation();
+            // Continue trying to reconnect in background (less frequently)
+            reconnectTimeoutRef.current = setTimeout(() => {
+              connectionAttemptsRef.current = 0; // Reset attempts
+              connect();
+            }, RECONNECT_INTERVAL * 3);
+          }
         }
       };
     } catch (error) {
-      console.error('[HelmetTracking] Failed to create WebSocket:', error);
+      console.error(`[HelmetTracking] Failed to create WebSocket on attempt ${attemptNum}:`, error);
 
-      // Start mock simulation on connection failure
+      setState(prev => ({
+        ...prev,
+        isConnecting: false,
+      }));
+
+      // Handle retry logic
       if (enabled) {
-        startMockSimulation();
-        reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_INTERVAL);
+        if (connectionAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+          reconnectTimeoutRef.current = setTimeout(connect, RECONNECT_INTERVAL);
+        } else {
+          console.log('[HelmetTracking] Max reconnection attempts reached. Starting SIMULATION MODE.');
+          startMockSimulation();
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connectionAttemptsRef.current = 0;
+            connect();
+          }, RECONNECT_INTERVAL * 3);
+        }
       }
     }
   }, [enabled, parseHelmetMessage, processIMUData, startMockSimulation, stopMockSimulation]);
@@ -403,6 +478,11 @@ export function useHelmetTracking({
       reconnectTimeoutRef.current = null;
     }
 
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+      connectionTimeoutRef.current = null;
+    }
+
     stopMockSimulation();
 
     if (wsRef.current) {
@@ -410,10 +490,14 @@ export function useHelmetTracking({
       wsRef.current = null;
     }
 
+    connectionAttemptsRef.current = 0;
+
     setState(prev => ({
       ...prev,
       isConnected: false,
+      isConnecting: false,
       isSimulating: false,
+      connectionAttempts: 0,
     }));
   }, [stopMockSimulation]);
 

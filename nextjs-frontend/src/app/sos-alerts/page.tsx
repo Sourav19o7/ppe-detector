@@ -141,6 +141,10 @@ export default function SOSAlertsPage() {
       try {
         const response = await apiClient.get(`/api/sos-alerts?mine_id=${mineId}`);
         alertsData = response.alerts || [];
+        // If API returns empty, use mock data for demo
+        if (alertsData.length === 0) {
+          alertsData = generateMockSOSAlerts();
+        }
       } catch (err) {
         // Generate mock SOS alerts
         alertsData = generateMockSOSAlerts();
