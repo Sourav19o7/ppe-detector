@@ -37,7 +37,8 @@ export interface TrackingState {
 }
 
 // ==================== CONSTANTS ====================
-const HELMET_API_URL = 'http://localhost:8000/api/sensor-data';
+// Uses main.py backend endpoint (not helmet.py)
+const HELMET_API_URL = 'http://localhost:8000/api/helmet/imu-data';
 
 // Polling interval for REST API
 const POLL_INTERVAL = 200; // ms

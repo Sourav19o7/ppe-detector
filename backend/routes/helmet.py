@@ -14,6 +14,41 @@ from services.helmet_service import get_latest_helmet_data, get_all_helmet_data,
 router = APIRouter(prefix="/api/helmet", tags=["Helmet Sensors"])
 
 
+# ==================== Raw IMU Data for 3D Tracking ====================
+
+@router.get("/imu-data")
+async def get_imu_data():
+    """
+    Get raw IMU data for 3D position tracking.
+    Returns accelerometer, gyroscope, and orientation data.
+    No authentication required for real-time tracking.
+    """
+    helmet_data = get_all_helmet_data()
+
+    if not helmet_data:
+        return {}
+
+    # Get first helmet's data (worker_1)
+    data = helmet_data[0] if helmet_data else {}
+
+    if not data:
+        return {}
+
+    # Return in format expected by useHelmetTracking hook
+    return {
+        "Accel X (mg)": data.get("accel_x", 0),
+        "Accel Y (mg)": data.get("accel_y", 0),
+        "Accel Z (mg)": data.get("accel_z", 1000),
+        "Gyro X (mdps)": data.get("gyro_x", 0),
+        "Gyro Y (mdps)": data.get("gyro_y", 0),
+        "Gyro Z (mdps)": data.get("gyro_z", 0),
+        "Roll (Deg)": data.get("roll", 0),
+        "Pitch (Deg)": data.get("pitch", 0),
+        "Yaw (Deg)": data.get("yaw", 0),
+        "Timestamp (ms)": data.get("timestamp_ms", 0),
+    }
+
+
 # ==================== Latest Data ====================
 
 @router.get("/latest")
