@@ -44,6 +44,12 @@ export default function Map3DGeneratorPage() {
   const [addLights, setAddLights] = useState(true);
   const [addDust, setAddDust] = useState(true);
 
+  // 2D Map and Simulation
+  const [show2DMap, setShow2DMap] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const simulationRef = useRef<NodeJS.Timeout | null>(null);
+  const map2DCanvasRef = useRef<HTMLCanvasElement>(null);
+
   // Refs
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
   const processedCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -103,12 +109,12 @@ export default function Map3DGeneratorPage() {
     },
   });
 
-  // Config
+  // Config - BRIGHTER lighting for visibility
   const CONFIG = {
     camera: { height: 1.7, fov: 75, near: 0.1, far: 1000 },
     movement: { speed: 0.15, runMultiplier: 2, sensitivity: 0.002 },
-    fog: { color: 0x0a0a0a, density: 0.015 },
-    lighting: { ambient: 0x1a1a1a, point: 0xffaa44 }
+    fog: { color: 0x1a1a2e, density: 0.003 },  // Much lighter fog
+    lighting: { ambient: 0x606080, point: 0xffdd88 }  // Brighter ambient
   };
 
   // Handle file upload
@@ -512,6 +518,216 @@ export default function Map3DGeneratorPage() {
     // Initialize 3D scene after state update (init3DScene defined below)
   }, [trackingStore]);
 
+  // ==================== SIMULATION CONTROL ====================
+  const startSimulation = useCallback(() => {
+    if (simulationRef.current) return;
+
+    setIsSimulating(true);
+    let simHeading = 0;
+    let stepCount = 0;
+
+    simulationRef.current = setInterval(() => {
+      const state = useMineTrackingStore.getState();
+      const bounds = state.mineData?.bounds;
+
+      // Random heading changes for realistic movement
+      simHeading += (Math.random() - 0.5) * 0.3;
+
+      // Calculate new position
+      const stepLength = 1.5;
+      let newX = state.workerPosition.x + stepLength * Math.sin(simHeading);
+      let newZ = state.workerPosition.z - stepLength * Math.cos(simHeading);
+
+      // Keep within bounds if available
+      if (bounds) {
+        const margin = 3;
+        if (newX < bounds.minX + margin || newX > bounds.maxX - margin) {
+          simHeading = Math.PI - simHeading; // Reverse X direction
+          newX = state.workerPosition.x + stepLength * Math.sin(simHeading);
+        }
+        if (newZ < bounds.minZ + margin || newZ > bounds.maxZ - margin) {
+          simHeading = -simHeading; // Reverse Z direction
+          newZ = state.workerPosition.z - stepLength * Math.cos(simHeading);
+        }
+        newX = Math.max(bounds.minX + margin, Math.min(bounds.maxX - margin, newX));
+        newZ = Math.max(bounds.minZ + margin, Math.min(bounds.maxZ - margin, newZ));
+      }
+
+      stepCount++;
+      console.log(`[SIM] Step #${stepCount} pos=(${newX.toFixed(1)}, ${newZ.toFixed(1)}) heading=${(simHeading * 180 / Math.PI).toFixed(0)}°`);
+
+      // Update store
+      state.updateWorkerPosition({ x: newX, y: 1.7, z: newZ }, simHeading);
+      state.incrementStepCount();
+    }, 500); // Step every 500ms
+  }, []);
+
+  const stopSimulation = useCallback(() => {
+    if (simulationRef.current) {
+      clearInterval(simulationRef.current);
+      simulationRef.current = null;
+    }
+    setIsSimulating(false);
+  }, []);
+
+  // Cleanup simulation on unmount
+  useEffect(() => {
+    return () => {
+      if (simulationRef.current) {
+        clearInterval(simulationRef.current);
+      }
+    };
+  }, []);
+
+  // ==================== 2D MAP RENDERING ====================
+  const render2DMap = useCallback(() => {
+    const canvas = map2DCanvasRef.current;
+    const mineData = trackingStore.mineData;
+    if (!canvas || !mineData?.bounds) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const { minX, maxX, minZ, maxZ } = mineData.bounds;
+    const mapWidth = canvas.width;
+    const mapHeight = canvas.height;
+    const padding = 40;
+
+    // Calculate scale to fit mine in canvas
+    const mineWidth = maxX - minX;
+    const mineDepth = maxZ - minZ;
+    const scaleX = (mapWidth - padding * 2) / mineWidth;
+    const scaleZ = (mapHeight - padding * 2) / mineDepth;
+    const mapScale = Math.min(scaleX, scaleZ) * 0.85;
+
+    // Helper to convert world coords to canvas coords
+    const toMapX = (x: number) => padding + (x - minX + 2) * mapScale;
+    const toMapZ = (z: number) => padding + (z - minZ + 2) * mapScale;
+
+    // Clear canvas with dark background
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, mapWidth, mapHeight);
+
+    // Draw grid
+    ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)';
+    ctx.lineWidth = 1;
+    for (let x = Math.floor(minX); x <= Math.ceil(maxX); x += 5) {
+      ctx.beginPath();
+      ctx.moveTo(toMapX(x), toMapZ(minZ - 2));
+      ctx.lineTo(toMapX(x), toMapZ(maxZ + 2));
+      ctx.stroke();
+    }
+    for (let z = Math.floor(minZ); z <= Math.ceil(maxZ); z += 5) {
+      ctx.beginPath();
+      ctx.moveTo(toMapX(minX - 2), toMapZ(z));
+      ctx.lineTo(toMapX(maxX + 2), toMapZ(z));
+      ctx.stroke();
+    }
+
+    // Draw rooms as filled areas
+    ctx.fillStyle = 'rgba(74, 222, 128, 0.15)';
+    ctx.strokeStyle = 'rgba(74, 222, 128, 0.3)';
+    ctx.lineWidth = 1;
+    mineData.rooms.forEach(room => {
+      const rx = toMapX(room.center.x - room.width / 2);
+      const rz = toMapZ(room.center.z - room.depth / 2);
+      const rw = room.width * mapScale;
+      const rd = room.depth * mapScale;
+      ctx.fillRect(rx, rz, rw, rd);
+      ctx.strokeRect(rx, rz, rw, rd);
+    });
+
+    // Draw walls with glow effect
+    ctx.shadowColor = '#4ade80';
+    ctx.shadowBlur = 5;
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 3;
+    mineData.walls.forEach(wall => {
+      ctx.beginPath();
+      ctx.moveTo(toMapX(wall.start.x), toMapZ(wall.start.z));
+      ctx.lineTo(toMapX(wall.end.x), toMapZ(wall.end.z));
+      ctx.stroke();
+    });
+    ctx.shadowBlur = 0;
+
+    // Draw entrance marker
+    const entrance = useMineTrackingStore.getState().entrancePosition;
+    const entranceX = toMapX(entrance.x);
+    const entranceZ = toMapZ(entrance.z);
+
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(entranceX, entranceZ, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('GATE', entranceX, entranceZ + 25);
+
+    // Draw worker position with trail effect
+    const worker = useMineTrackingStore.getState().workerPosition;
+    const heading = useMineTrackingStore.getState().workerHeading;
+    const workerX = toMapX(worker.x);
+    const workerZ = toMapZ(worker.z);
+
+    // Pulsing outer glow
+    const pulse = Math.sin(Date.now() / 150) * 0.4 + 0.6;
+    ctx.fillStyle = `rgba(249, 115, 22, ${0.3 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(workerX, workerZ, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(249, 115, 22, ${0.5 * pulse})`;
+    ctx.beginPath();
+    ctx.arc(workerX, workerZ, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Direction indicator (triangle)
+    ctx.save();
+    ctx.translate(workerX, workerZ);
+    ctx.rotate(-heading + Math.PI);
+
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.moveTo(0, -18);
+    ctx.lineTo(-10, 10);
+    ctx.lineTo(10, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // Worker center
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Draw coordinates and info
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Worker: (${worker.x.toFixed(1)}, ${worker.z.toFixed(1)})`, 10, mapHeight - 30);
+    ctx.fillText(`Heading: ${(heading * 180 / Math.PI).toFixed(0)}°`, 10, mapHeight - 15);
+
+    ctx.textAlign = 'right';
+    ctx.fillText(`Steps: ${useMineTrackingStore.getState().stepCount}`, mapWidth - 10, mapHeight - 15);
+  }, [trackingStore.mineData]);
+
+  // 2D Map animation loop
+  useEffect(() => {
+    if (!show2DMap) return;
+
+    let animFrame: number;
+    const animate2D = () => {
+      render2DMap();
+      animFrame = requestAnimationFrame(animate2D);
+    };
+    animate2D();
+
+    return () => cancelAnimationFrame(animFrame);
+  }, [show2DMap, render2DMap]);
+
   // Effect to initialize scene when viewer is shown
   useEffect(() => {
     if (showViewer && processedData && threeReady) {
@@ -710,8 +926,14 @@ export default function Map3DGeneratorPage() {
   const createLighting = (scene: any, mineData: MineData) => {
     const THREE = window.THREE;
 
-    const ambient = new THREE.AmbientLight(CONFIG.lighting.ambient, 0.3);
+    // Strong ambient light for visibility
+    const ambient = new THREE.AmbientLight(CONFIG.lighting.ambient, 0.8);
     scene.add(ambient);
+
+    // Add directional light from above for overall illumination
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(0, 50, 0);
+    scene.add(dirLight);
 
     if (!addLights) return;
 
@@ -1638,6 +1860,34 @@ export default function Map3DGeneratorPage() {
                     <RotateCcw size={12} />
                   </button>
                 </div>
+
+                {/* Simulation & 2D Map Controls */}
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => isSimulating ? stopSimulation() : startSimulation()}
+                    className={`flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      isSimulating
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                    }`}
+                  >
+                    {isSimulating ? (
+                      <><Radio size={12} className="animate-pulse" /> Stop Sim</>
+                    ) : (
+                      <><Play size={12} /> Demo Sim</>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShow2DMap(!show2DMap)}
+                    className={`flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      show2DMap
+                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                        : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                    }`}
+                  >
+                    <Map size={12} /> {show2DMap ? 'Hide 2D' : 'Show 2D'}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1710,6 +1960,122 @@ export default function Map3DGeneratorPage() {
             {trackingStore.viewMode === 'explore' && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-2xl text-orange-500 opacity-70">
                 +
+              </div>
+            )}
+
+            {/* 2D Map Overlay - Full screen tracking view */}
+            {show2DMap && (
+              <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
+                <div className="relative bg-slate-800 rounded-2xl shadow-2xl border border-slate-600 p-6 max-w-4xl w-full mx-4">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                        <Map size={20} className="text-orange-400" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-white">2D Geolocation Tracking</h2>
+                        <p className="text-xs text-slate-400">Real-time worker position from helmet IMU</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {/* Status indicator */}
+                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                        isSimulating ? 'bg-yellow-500/20 text-yellow-400' :
+                        trackingStore.connectionStatus === 'connected' ? 'bg-green-500/20 text-green-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        <div className={`w-2 h-2 rounded-full ${
+                          isSimulating ? 'bg-yellow-400 animate-pulse' :
+                          trackingStore.connectionStatus === 'connected' ? 'bg-green-400' : 'bg-red-400'
+                        }`} />
+                        {isSimulating ? 'Simulating' :
+                         trackingStore.connectionStatus === 'connected' ? 'Live' : 'Offline'}
+                      </div>
+                      <button
+                        onClick={() => setShow2DMap(false)}
+                        className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                      >
+                        <ArrowLeft size={20} className="text-slate-400" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2D Map Canvas */}
+                  <div className="relative bg-slate-900 rounded-xl overflow-hidden">
+                    <canvas
+                      ref={map2DCanvasRef}
+                      width={800}
+                      height={500}
+                      className="w-full"
+                    />
+                  </div>
+
+                  {/* Stats bar */}
+                  <div className="flex items-center justify-between mt-4 px-2">
+                    <div className="flex gap-6">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-orange-400">{trackingStore.stepCount}</div>
+                        <div className="text-xs text-slate-400">Steps</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-400">
+                          {(Math.sqrt(
+                            Math.pow(trackingStore.workerPosition.x - trackingStore.entrancePosition.x, 2) +
+                            Math.pow(trackingStore.workerPosition.z - trackingStore.entrancePosition.z, 2)
+                          )).toFixed(1)}m
+                        </div>
+                        <div className="text-xs text-slate-400">From Gate</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-400">
+                          {((trackingStore.workerHeading * 180 / Math.PI) % 360).toFixed(0)}°
+                        </div>
+                        <div className="text-xs text-slate-400">Heading</div>
+                      </div>
+                    </div>
+
+                    {/* Quick controls */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => isSimulating ? stopSimulation() : startSimulation()}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          isSimulating
+                            ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                            : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                        }`}
+                      >
+                        {isSimulating ? <><Radio size={16} className="animate-pulse" /> Stop</> : <><Play size={16} /> Simulate</>}
+                      </button>
+                      <button
+                        onClick={() => trackingStore.resetWorkerPosition()}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-600 transition-colors"
+                      >
+                        <RotateCcw size={16} /> Reset
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Legend */}
+                  <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-700 text-xs text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-orange-500" />
+                      <span>Worker Position</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-green-500" />
+                      <span>Gate/Entrance</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-1 bg-green-400" />
+                      <span>Walls</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-green-500/20 border border-green-500/30" />
+                      <span>Rooms</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
