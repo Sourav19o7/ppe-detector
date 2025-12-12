@@ -198,7 +198,7 @@ async def main():
          │  Threshold: 5,000 PPM                   │
          │                                         │
          │  ACTION: IMMEDIATE EVACUATION           │
-         │  Workers Affected: 8                    │
+         │  Workers Affected: 2                    │
          │  Evacuation Triggered: YES              │
          │                                         │
          │  - RAKSHAM Mine Safety System           │

@@ -292,7 +292,7 @@ export default function ReportsPage() {
                     <div className="flex items-center gap-4 mt-3 text-sm">
                       <span className="flex items-center gap-1">
                         <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                        8 Workers Safely Evacuated
+                        2 Workers Safely Evacuated
                       </span>
                       <span className="flex items-center gap-1">
                         <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
@@ -300,7 +300,7 @@ export default function ReportsPage() {
                       </span>
                       <span className="flex items-center gap-1">
                         <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                        Response: 2 min 34 sec
+                        Response: 3 min 25 sec
                       </span>
                     </div>
                   </div>

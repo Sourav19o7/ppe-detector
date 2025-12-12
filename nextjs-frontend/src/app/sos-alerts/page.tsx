@@ -135,19 +135,21 @@ export default function SOSAlertsPage() {
       setLoading(true);
       const mineId = getMineId();
 
-      // Try to load from API, fallback to mock data
-      let alertsData: SOSAlert[] = [];
+      // Always use mock data for demo to ensure gas emergency alert shows
+      let alertsData: SOSAlert[] = generateMockSOSAlerts();
 
       try {
         const response = await apiClient.get(`/api/sos-alerts?mine_id=${mineId}`);
-        alertsData = response.alerts || [];
-        // If API returns empty, use mock data for demo
-        if (alertsData.length === 0) {
-          alertsData = generateMockSOSAlerts();
+        const apiAlerts = response.alerts || [];
+        // Merge API alerts with mock data, avoiding duplicates
+        if (apiAlerts.length > 0) {
+          const mockIds = alertsData.map(a => a.id);
+          const newApiAlerts = apiAlerts.filter((a: SOSAlert) => !mockIds.includes(a.id));
+          alertsData = [...alertsData, ...newApiAlerts];
         }
       } catch (err) {
-        // Generate mock SOS alerts
-        alertsData = generateMockSOSAlerts();
+        // Use mock data on error (already set above)
+        console.log('Using mock SOS alerts for demo');
       }
 
       setAlerts(alertsData);
@@ -246,12 +248,12 @@ export default function SOSAlertsPage() {
       status: 'active',
       location: { x: 20, y: 15, depth_m: 350, section: 'Zone A - Extraction' },
       created_at: new Date(now.getTime() - 3 * 60000).toISOString(),
-      nearby_workers_notified: 8,
+      nearby_workers_notified: 2,
       evacuation_triggered: true,
       audio_broadcast_sent: true,
       response_actions: [
         { action: 'EMERGENCY: METHANE spike detected at 15,200 PPM', timestamp: new Date(now.getTime() - 3 * 60000).toISOString(), by: 'Sensor System' },
-        { action: 'All helmet alarms activated (8 workers notified)', timestamp: new Date(now.getTime() - 3 * 60000 + 2000).toISOString(), by: 'System' },
+        { action: 'All helmet alarms activated (2 workers notified)', timestamp: new Date(now.getTime() - 3 * 60000 + 2000).toISOString(), by: 'System' },
         { action: 'SMS alert sent to Safety Officer (+91 88286 42788)', timestamp: new Date(now.getTime() - 3 * 60000 + 5000).toISOString(), by: 'System' },
         { action: 'Mass evacuation triggered', timestamp: new Date(now.getTime() - 3 * 60000 + 10000).toISOString(), by: 'Safety Officer' },
       ],

@@ -226,9 +226,9 @@ def get_demo_emergency_data() -> Dict[str, Any]:
             "gas_type": "Methane (CH4)",
             "peak_level": "15,200 PPM",
             "threshold": "5,000 PPM",
-            "workers_affected": 8,
-            "workers_evacuated": 8,
-            "response_time": "2 min 34 sec",
+            "workers_affected": 2,
+            "workers_evacuated": 2,
+            "response_time": "3 min 25 sec",
             "outcome": "Zero Casualties",
             "incident_date": "December 12, 2024",
             "incident_time": "10:30 AM IST"
@@ -265,14 +265,8 @@ def get_demo_emergency_data() -> Dict[str, Any]:
         ],
 
         "affected_workers": [
-            {"name": "Stavan Sheth", "employee_id": "EMP-2024-001", "zone": "Zone A - Extraction", "evacuation_time": "2 min 34 sec", "status": "SAFE"},
-            {"name": "Rajesh Kumar", "employee_id": "EMP-2024-015", "zone": "Zone A - Extraction", "evacuation_time": "2 min 45 sec", "status": "SAFE"},
-            {"name": "Amit Patel", "employee_id": "EMP-2024-023", "zone": "Zone A - Extraction", "evacuation_time": "2 min 52 sec", "status": "SAFE"},
-            {"name": "Suresh Yadav", "employee_id": "EMP-2024-034", "zone": "Zone A - Extraction", "evacuation_time": "3 min 01 sec", "status": "SAFE"},
-            {"name": "Vikram Singh", "employee_id": "EMP-2024-045", "zone": "Zone A - Extraction", "evacuation_time": "3 min 08 sec", "status": "SAFE"},
-            {"name": "Prakash Mehta", "employee_id": "EMP-2024-056", "zone": "Zone A - Extraction", "evacuation_time": "3 min 15 sec", "status": "SAFE"},
-            {"name": "Mohan Das", "employee_id": "EMP-2024-067", "zone": "Zone A - Extraction", "evacuation_time": "3 min 22 sec", "status": "SAFE"},
-            {"name": "Ravi Sharma", "employee_id": "EMP-2024-078", "zone": "Zone A - Extraction", "evacuation_time": "3 min 28 sec", "status": "SAFE"},
+            {"name": "Stavan Sheth", "employee_id": "EMP-2024-001", "zone": "Zone A - Extraction", "evacuation_time": "3 min 25 sec", "status": "SAFE"},
+            {"name": "Sourav Maity", "employee_id": "EMP-2024-002", "zone": "Zone A - Extraction", "evacuation_time": "3 min 30 sec", "status": "SAFE"},
         ],
 
         "timeline": [
@@ -280,10 +274,10 @@ def get_demo_emergency_data() -> Dict[str, Any]:
             {"time": "10:28 AM", "event": "Methane exceeds warning threshold (5,000 PPM)", "action": "Alert generated to Safety Officer"},
             {"time": "10:29 AM", "event": "Helmet sensor confirms gas spike", "action": "Worker Stavan Sheth notified via helmet alarm"},
             {"time": "10:30 AM", "event": "CRITICAL: Methane reaches 15,200 PPM", "action": "Mass evacuation triggered by Safety Officer"},
-            {"time": "10:30 AM", "event": "All 8 helmet buzzers activated", "action": "ESP32 EVACUATE_ALL command sent"},
+            {"time": "10:30 AM", "event": "All 2 helmet buzzers activated", "action": "ESP32 EVACUATE_ALL command sent"},
             {"time": "10:30 AM", "event": "SMS alert sent to Safety Officer", "action": "Emergency notification delivered"},
             {"time": "10:31 AM", "event": "Workers begin evacuation", "action": "Real-time tracking initiated"},
-            {"time": "10:33 AM", "event": "All 8 workers evacuated from Zone A", "action": "Headcount verified at assembly point"},
+            {"time": "10:33 AM", "event": "All 2 workers evacuated from Zone A", "action": "Headcount verified at assembly point"},
             {"time": "10:35 AM", "event": "Ventilation systems activated", "action": "Gas dispersal in progress"},
             {"time": "10:50 AM", "event": "Methane levels dropping", "action": "Continued monitoring"},
             {"time": "11:00 AM", "event": "Methane below safe threshold", "action": "Preliminary all-clear assessment"},
@@ -301,7 +295,7 @@ def get_demo_emergency_data() -> Dict[str, Any]:
             {"recipient": "Safety Officer (Tanush Maloo)", "type": "SMS", "time": "10:30:05 AM", "status": "Delivered"},
             {"recipient": "Safety Officer (Tanush Maloo)", "type": "Dashboard Alert", "time": "10:30:01 AM", "status": "Acknowledged"},
             {"recipient": "Mine Manager", "type": "Email", "time": "10:30:15 AM", "status": "Delivered"},
-            {"recipient": "All Zone A Workers (8)", "type": "Helmet Buzzer", "time": "10:30:02 AM", "status": "Activated"},
+            {"recipient": "All Zone A Workers (2)", "type": "Helmet Buzzer", "time": "10:30:02 AM", "status": "Activated"},
             {"recipient": "Emergency Response Team", "type": "Radio Alert", "time": "10:30:20 AM", "status": "Acknowledged"},
         ],
 
